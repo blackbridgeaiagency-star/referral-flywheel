@@ -41,9 +41,34 @@ yarn-error.log*
 .secrets.vault
 *.vault
 
-# Sensitive documentation
-.claude/CLAUDE.md
+# Sensitive documentation & Internal dev files
+.claude/
+**/END_OF_DAY_REPORT*.md
+**/DATA-AUDIT*.md
+**/DATA-CONSISTENCY*.md
+**/DATA_ACCURACY*.md
+BUGS.md
+COMPLETE-FIXES-REPORT.md
+COMPREHENSIVE-TEST-REPORT.md
+PROGRESS.md
+PROGRESS_SUMMARY.md
+P0-FIXES-VERIFICATION-REPORT.md
+LIFETIME_SUBSCRIPTION_IMPLEMENTATION.md
+SUBSCRIPTION_FILTER_IMPLEMENTATION.md
+REVENUE_ANALYSIS.md
+REVENUE_CALCULATION_FLOW.md
+WHOP_PAYMENT_TYPES_ANALYSIS.md
+MONTHLY_TRACKING_IMPLEMENTATION_REPORT.md
+docs/seedconvo.md
+docs/UI-IMPROVEMENTS-*.md
+docs/UI-REVIEW.md
 test-webhook.js
+
+# Test artifacts & reports
+test-results/
+playwright-report/
+screenshots/
+Workflows/
 
 
 # vercel
