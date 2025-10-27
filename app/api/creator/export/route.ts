@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
 import { format } from 'date-fns';
 
+// Force dynamic rendering (don't pre-render at build time)
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 /**
  * GET /api/creator/export?creatorId={id}&type={members|commissions|all}
  * Export creator data to CSV format

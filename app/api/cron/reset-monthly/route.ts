@@ -2,6 +2,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
 
+// Force dynamic rendering (don't pre-render at build time)
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 /**
  * Monthly Reset Cron Job
  *
