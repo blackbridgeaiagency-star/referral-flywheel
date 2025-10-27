@@ -34,10 +34,6 @@
       "source": "/(.*)",
       "headers": [
         {
-          "key": "X-Frame-Options",
-          "value": "ALLOW-FROM https://whop.com"
-        },
-        {
           "key": "X-Content-Type-Options",
           "value": "nosniff"
         },

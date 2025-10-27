@@ -25,11 +25,6 @@ const nextConfig = {
               "form-action 'self' https://whop.com",
             ].join('; '),
           },
-          // Allow Whop to embed this app
-          {
-            key: 'X-Frame-Options',
-            value: 'ALLOW-FROM https://whop.com',
-          },
           // Prevent MIME type sniffing
           {
             key: 'X-Content-Type-Options',
