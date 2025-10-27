@@ -1,0 +1,77 @@
+# BUG REPORT: Webhook returning 500 error
+
+## Phase 1: Investigation (@tester)
+
+@.claude/agents/tester.md
+@.claude/BUGS.md
+
+Reproduce the bug:
+1. Send test webhook from Whop
+2. Check Terminal A output
+3. Check ngrok logs
+4. Check Supabase logs
+
+Document findings in BUGS.md as BUG-XXX.
+
+---
+
+## Phase 2: Root Cause Analysis (@architect)
+
+@.claude/agents/architect.md
+@app/api/webhooks/whop/route.ts
+@.claude/BUGS.md (BUG-XXX)
+
+Analyze the error:
+- What's the error message?
+- Which line is failing?
+- What data is missing/malformed?
+- Is this a data issue or logic issue?
+
+Propose fix in DECISIONS.md.
+
+---
+
+## Phase 3: Fix Implementation (@builder)
+
+@.claude/agents/builder.md
+@app/api/webhooks/whop/route.ts
+
+Implement the fix from Architect's proposal.
+
+Requirements:
+- Add null checks
+- Add fallback values
+- Add error logging
+- Update tests
+
+Verify fix works locally.
+
+---
+
+## Phase 4: Verification (@tester)
+
+@.claude/agents/tester.md
+
+Test the fix:
+1. Send test webhook (should return 200)
+2. Verify member created
+3. Check database record
+4. Verify no console errors
+
+If passed:
+- Update BUGS.md (mark as Resolved)
+- Update PROGRESS.md (add to "Bugs Fixed")
+
+---
+
+## Phase 5: Documentation (@conductor)
+
+Update:
+1. BUGS.md: Add resolution details
+2. PROGRESS.md: Log fix
+3. DECISIONS.md: If architecture changed, add ADR
+
+Provide incident report:
+- Time to resolution: [X hours]
+- Root cause: [summary]
+- Prevention: [how to avoid]

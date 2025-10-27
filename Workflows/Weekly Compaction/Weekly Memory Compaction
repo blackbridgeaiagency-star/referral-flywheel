@@ -1,0 +1,94 @@
+# Weekly Memory Compaction
+
+**Goal**: Keep project memory lean and relevant.
+
+## Tasks
+
+1. **Review PROGRESS.md**
+   - Consolidate old entries (>2 weeks) into summary
+   - Keep last 2 weeks detailed
+   - Archive completed sprints
+
+2. **Review CLAUDE.md**
+   - Remove outdated information
+   - Update "Current State"
+   - Verify environment variables current
+   - Update file structure if changed
+
+3. **Review BUGS.md**
+   - Archive resolved bugs (move to "Resolved" section)
+   - Close stale bugs (>30 days inactive)
+   - Prioritize active bugs by severity
+
+4. **Review DECISIONS.md**
+   - Add summary index at top
+   - Link related ADRs
+   - Mark deprecated decisions
+
+## Output
+
+Generate compact summary:
+````markdown
+# Project Health Report - Week XX
+
+**Velocity**:
+- Features completed: X
+- Bugs fixed: X
+- Tests added: X
+
+**Active Work**:
+- In Progress: [list]
+- Blocked: [list]
+
+**Next Week Goals**:
+- [ ] Goal 1
+- [ ] Goal 2
+
+**Technical Debt**:
+- [Priority issues to address]
+````
+````
+
+---
+
+## 📐 **PART 9: INTEGRATION WITH CURSOR**
+
+### **Cursor + Claude Code Together**
+
+#### **Workflow Pattern**
+````
+┌─────────────────────────────────────────────┐
+│          START: Feature Request             │
+└────────────────┬────────────────────────────┘
+                 │
+                 v
+┌─────────────────────────────────────────────┐
+│  Claude Code (Planning & Architecture)      │
+│  - Read .claude/ memory                     │
+│  - @architect designs feature               │
+│  - Generate implementation plan             │
+│  - Update DECISIONS.md                      │
+└────────────────┬────────────────────────────┘
+                 │
+                 v
+┌─────────────────────────────────────────────┐
+│  Cursor (Visual Implementation)             │
+│  - Builder implements components            │
+│  - See changes in real-time                 │
+│  - Test in browser immediately              │
+│  - Quick iterations                         │
+└────────────────┬────────────────────────────┘
+                 │
+                 v
+┌─────────────────────────────────────────────┐
+│  Claude Code (Testing & Documentation)      │
+│  - @tester runs test suite                  │
+│  - @conductor updates .claude/ files        │
+│  - Generate commit message                  │
+│  - Push to Git                              │
+└────────────────┬────────────────────────────┘
+                 │
+                 v
+┌─────────────────────────────────────────────┐
+│          DONE: Feature Complete             │
+└─────────────────────────────────────────────┘

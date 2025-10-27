@@ -1,0 +1,524 @@
+markdown# CLAUDE CODE TODO: Update Conductor Agent for Efficient Orchestration
+
+---
+
+## 🎯 OBJECTIVE
+
+Update the existing `.claude/agents/conductor.md` file to include comprehensive strategies for efficiently orchestrating the 4 specialized agents (architect, builder, designer, tester) while maximizing token savings during project development.
+
+**DO NOT CREATE NEW FILES. ONLY EDIT `.claude/agents/conductor.md`**
+
+---
+
+## 📚 CONTEXT - Read These Files First
+
+Load these for understanding (DO NOT MODIFY):
+
+1. `@.claude/CLAUDE.md` - Project context
+2. `@.claude/agents/conductor.md` - File you WILL edit
+3. `@.claude/agents/architect.md` - Design agent (context only)
+4. `@.claude/agents/builder.md` - Implementation agent (context only)
+5. `@.claude/agents/designer.md` - UI/UX agent (context only)
+6. `@.claude/agents/tester.md` - QA agent (context only)
+
+**Understand**: 
+- Current commission structure: 10/70/20 (never change)
+- Tech stack: Next.js 14, TypeScript, Prisma, Supabase
+- Goal: Build features efficiently with minimal token usage
+
+---
+
+## ✏️ TASK: Update `.claude/agents/conductor.md`
+
+**File to Edit**: `.claude/agents/conductor.md`
+
+**What to Add**: Append these sections to the END of the conductor.md file
+
+---
+
+### Section 1: Token Optimization Strategies
+
+Add this section:
+````markdown
+---
+
+## 🎯 Token Optimization Strategies
+
+### Core Principle: Load Only What Each Agent Needs
+
+**The Problem**: Loading full project context (30K+ tokens) for every agent call wastes 70-90% of tokens.
+
+**The Solution**: Give each agent ONLY the files and context they need for their specific task.
+
+---
+
+### Strategy 1: Incremental Context Loading
+
+**Don't load everything upfront. Build context progressively.**
+
+❌ **BAD - Wastes ~25K tokens:**
+```markdown
+@.claude/CLAUDE.md (5K)
+@.claude/PROGRESS.md (3K)
+@.claude/DECISIONS.md (2K)
+@app/ (entire directory - 15K)
+
+Build a new feature
+```
+
+✅ **GOOD - Uses ~3K tokens:**
+```markdown
+@.claude/agents/architect.md (0.5K)
+@.claude/DECISIONS.md (relevant sections only - 1K)
+
+Design feature X architecture
+```
+
+**Token Savings**: 88% (3K vs 25K)
+
+---
+
+### Strategy 2: Output Reuse Between Agents
+
+**Pass previous agent outputs to next agent instead of re-reading context.**
+
+Example workflow:
+```markdown
+# Call 1: Architect designs
+@.claude/agents/architect.md
+@.claude/DECISIONS.md
+
+Design feature X
+→ Output: Design document (1K tokens)
+→ Cost: 2K input + 1K output = 3K total
+
+# Call 2: Builder implements  
+@.claude/agents/builder.md
++ [Paste architect's 1K output here]
+@specific-file.tsx (1K)
+
+Implement feature X using architect's design
+→ Cost: 2.5K input + 2K output = 4.5K total
+
+# Call 3: Designer styles
+@.claude/agents/designer.md
++ [Reference builder's component from previous output]
+@component-file.tsx (1K)
+
+Style feature X component
+→ Cost: 1.5K input + 1K output = 2.5K total
+
+TOTAL: 10K tokens (vs 60K if reloading full context each time)
+```
+
+**Token Savings**: 83% (10K vs 60K)
+
+---
+
+### Strategy 3: Targeted File Loading
+
+**Only load files that the agent will actually read or modify.**
+
+#### Architect (Planning Phase)
+```markdown
+# Architect doesn't need code - only decisions and data models
+@.claude/agents/architect.md
+@.claude/DECISIONS.md
+@prisma/schema.prisma (if data model changes)
+
+Design X feature
+→ ~2K tokens
+```
+
+#### Builder (Implementation Phase)
+```markdown
+# Builder needs specific files to modify
+@.claude/agents/builder.md
+@.claude/DECISIONS.md (only the ADR for this feature)
+@app/api/example/route.ts
+@lib/utils/helper.ts
+
+Implement X per ADR-XXX
+→ ~3K tokens
+```
+
+#### Designer (Styling Phase)
+```markdown
+# Designer needs only the component to style
+@.claude/agents/designer.md
+@components/Example.tsx
+
+Style component to match dark theme
+→ ~2K tokens
+```
+
+#### Tester (Validation Phase)
+```markdown
+# Tester needs files to test + test requirements
+@.claude/agents/tester.md
+@components/Example.tsx
+@app/api/example/route.ts
+
+Test X feature: [specific scenarios]
+→ ~2K tokens
+```
+
+**Token Savings Per Feature**: 70-80%
+
+---
+
+### Strategy 4: Lazy Context Expansion
+
+**Ask agent what files it needs BEFORE loading them.**
+```markdown
+# Step 1: Minimal planning (2K tokens)
+@.claude/agents/architect.md
+
+"I need to add CSV export. What files should I examine?"
+
+Architect responds: "Check /app/api/export and /lib/utils/csv.ts"
+
+# Step 2: Targeted implementation (3K tokens)
+@.claude/agents/builder.md
+@app/api/export/route.ts
+@lib/utils/csv.ts
+
+"Implement CSV export based on architect's recommendation"
+```
+
+This avoids loading unnecessary files upfront.
+
+---
+
+## 🎭 Agent Orchestration Patterns
+
+### Pattern 1: Simple Task (Use 1 Agent)
+
+**When**: Task is < 50 lines, clear scope, no design needed
+
+**Example**: Fix a bug, add a button, update text
+```markdown
+@.claude/agents/builder.md
+@file-to-modify.tsx
+
+Fix bug: [specific issue]
+→ 2K tokens (vs 20K with full orchestration)
+```
+
+**Token Savings**: 90%
+
+---
+
+### Pattern 2: Feature with Known Design (Use 2 Agents)
+
+**When**: Feature is straightforward, design obvious, just needs implementation + testing
+
+**Example**: Add a modal, create a form, add validation
+```markdown
+# Agent 1: Builder (implement)
+@.claude/agents/builder.md
+@relevant-files
+
+Implement [feature]
+→ 3K tokens
+
+# Agent 2: Tester (validate)
+@.claude/agents/tester.md
+@modified-files
+
+Test [feature]
+→ 2K tokens
+
+TOTAL: 5K tokens (vs 30K with all 4 agents)
+```
+
+**Token Savings**: 83%
+
+---
+
+### Pattern 3: Complex New Feature (Use All 4 Agents)
+
+**When**: Feature needs architecture, implementation, styling, and testing
+
+**Example**: Dashboard widget, new API endpoint, complex UI component
+```markdown
+# Agent 1: Architect (design)
+@.claude/agents/architect.md
+@.claude/DECISIONS.md
+@prisma/schema.prisma (if needed)
+
+Design [feature] architecture
+→ 2.5K tokens
+
+# Agent 2: Builder (implement)
+@.claude/agents/builder.md
++ architect's design output
+@specific-files-to-create-or-modify
+
+Implement per architect's design
+→ 3.5K tokens
+
+# Agent 3: Designer (style)
+@.claude/agents/designer.md
+@component-files
+
+Polish UI to match design system
+→ 2K tokens
+
+# Agent 4: Tester (validate)
+@.claude/agents/tester.md
+@all-modified-files
+
+Test end-to-end with edge cases
+→ 2.5K tokens
+
+TOTAL: 10.5K tokens (vs 50K+ single call)
+```
+
+**Token Savings**: 79%
+
+---
+
+## 🎯 Agent Selection Decision Tree
+
+Use this logic to decide which agents to invoke:
+````
+START: New task received
+
+├─ Is task < 50 lines of code?
+│  └─ YES → Use 1 agent only (builder OR designer)
+│            Token usage: ~2K
+│            Savings: 90%
+│
+├─ Is it a bug fix?
+│  └─ YES → Use 2 agents (builder → tester)
+│            Token usage: ~5K
+│            Savings: 75%
+│
+├─ Is it UI-only changes?
+│  └─ YES → Use 1 agent (designer only)
+│            Token usage: ~2K
+│            Savings: 90%
+│
+├─ Is it a new feature with clear design?
+│  └─ YES → Use 2-3 agents (builder → designer → tester)
+│            Token usage: ~7K
+│            Savings: 65%
+│
+└─ Is it a complex new feature?
+   └─ YES → Use all 4 agents (architect → builder → designer → tester)
+             Token usage: ~11K
+             Savings: 78%
+
+📊 Token Budget Targets
+Per Agent Type:
+
+Conductor (planning): 2-3K tokens
+Architect (design): 2-3K tokens
+Builder (implementation): 2-4K tokens
+Designer (styling): 1-2K tokens
+Tester (validation): 1-2K tokens
+
+Red Flags (Inefficiency Indicators):
+
+🚨 Any single agent call > 5K tokens
+🚨 Loading @.claude/CLAUDE.md for builder/designer/tester
+🚨 Loading entire directories instead of specific files
+🚨 Re-reading same files between agents
+🚨 Loading full files when only need one function
+
+Target Efficiency:
+
+Simple tasks: 90% token savings
+Medium tasks: 75% token savings
+Complex features: 70% token savings
+
+
+🔄 Orchestration Workflow
+Step-by-Step Process:
+
+Analyze Task Complexity
+
+Estimate lines of code needed
+Determine if design/architecture required
+Identify files that will be modified
+
+
+Select Agent(s)
+
+Use decision tree above
+Choose minimum agents needed
+Plan sequence of agent calls
+
+
+Load Minimal Context
+
+For each agent, load ONLY:
+
+Their agent definition file
+Relevant sections of .claude/ files
+Specific files they'll read/modify
+
+
+Never load entire directories
+
+
+Pass Outputs Forward
+
+Each agent's output becomes input for next
+Don't make next agent re-read files
+Build context incrementally
+
+
+Update Documentation
+
+After completion, update PROGRESS.md
+If architecture changed, update DECISIONS.md
+Track token usage for analysis
+
+
+
+
+💡 Example: Token-Efficient Feature Build
+Task: Add "Copy Referral Link" Button
+❌ Inefficient Approach (30K tokens):
+markdown@.claude/CLAUDE.md (5K)
+@.claude/PROGRESS.md (3K)
+@.claude/DECISIONS.md (2K)
+@app/customer/[experienceId]/page.tsx (3K)
+@components/dashboard/ (10K)
+@lib/utils/ (7K)
+
+"Add a copy button to the referral link card with success toast"
+→ 30K input + 5K output = 35K total tokens
+✅ Efficient Approach (4K tokens):
+markdown# Step 1: Simple task, clear scope → Use builder only
+
+@.claude/agents/builder.md (0.5K)
+@app/customer/[experienceId]/page.tsx (2K)
+
+"Add copy button to referral link card:
+- Use Clipboard API
+- Show success toast (use existing toast component)
+- Match existing button styling"
+
+→ 2.5K input + 1.5K output = 4K total tokens
+````
+
+**Token Savings**: 88% (4K vs 35K)
+
+---
+
+## 📈 Success Metrics
+
+Track these to measure orchestration efficiency:
+
+### Per-Task Metrics:
+- Total tokens used
+- Number of agent calls
+- Token savings vs traditional approach
+- Time to completion
+
+### Aggregate Metrics (Track in PROGRESS.md):
+- Average tokens per feature: Target < 12K
+- Average efficiency ratio: Target > 3x savings
+- Agent selection accuracy: Did we use right # of agents?
+
+### Cost Metrics:
+- Claude Opus: $15/1M input tokens, $75/1M output
+- Savings per feature: ~$0.30-0.60
+- Monthly savings at 20 features: ~$6-12
+
+---
+
+## 🎓 Lessons & Best Practices
+
+### Do This:
+✅ Start with minimal context, expand if needed  
+✅ Pass outputs between agents (don't re-read)  
+✅ Use decision tree for agent selection  
+✅ Load specific files, not directories  
+✅ Track token usage per task  
+
+### Don't Do This:
+❌ Load all .claude/ files for every agent  
+❌ Load entire codebase "just in case"  
+❌ Use all 4 agents for simple tasks  
+❌ Make agents re-analyze same context  
+❌ Ignore token budgets  
+
+---
+
+## 🚀 Your Mission as Conductor
+
+You are the efficiency optimizer. Your goal is to:
+
+1. **Analyze each task** and choose minimum agents needed
+2. **Load minimal context** for each agent (< 5K per call)
+3. **Reuse outputs** between agents to avoid redundant loading
+4. **Track token usage** and optimize over time
+5. **Achieve 70%+ token savings** compared to traditional approach
+
+**Remember**: Every token saved is money saved and faster execution. You're not just orchestrating agents—you're optimizing the entire development workflow.
+
+---
+
+**End of Token Optimization Section**
+````
+
+---
+
+## ✅ VERIFICATION
+
+After editing `.claude/agents/conductor.md`, confirm:
+
+- [ ] New section "Token Optimization Strategies" added
+- [ ] Includes 4 core strategies (incremental loading, output reuse, targeted files, lazy expansion)
+- [ ] Includes agent orchestration patterns (1 agent, 2 agents, 4 agents)
+- [ ] Includes agent selection decision tree
+- [ ] Includes token budget targets and red flags
+- [ ] Includes orchestration workflow steps
+- [ ] Includes example of efficient vs inefficient approach
+- [ ] Includes success metrics and tracking guidance
+- [ ] File structure preserved (only appended, didn't break existing content)
+
+---
+
+## 📊 COMPLETION REPORT
+
+After completing the edit, output:
+````markdown
+## Task Complete: Conductor Agent Updated
+
+### Changes Made:
+- File edited: `.claude/agents/conductor.md`
+- Sections added: 1 major section (Token Optimization Strategies)
+- Content added: ~2,500 words of orchestration guidance
+- Lines added: ~300
+
+### Key Additions:
+1. ✅ 4 token optimization strategies documented
+2. ✅ Agent orchestration patterns defined (1/2/4 agent scenarios)
+3. ✅ Decision tree for agent selection created
+4. ✅ Token budget targets established
+5. ✅ Orchestration workflow documented
+6. ✅ Example efficient vs inefficient comparison provided
+
+### Token Efficiency Impact:
+- Expected savings per task: 70-90%
+- Target efficiency ratio: 3-5x
+- Estimated monthly cost savings: $6-12 at 20 features/month
+
+### Ready For:
+- ✅ Immediate use in orchestrating multi-agent builds
+- ✅ Token-efficient feature development
+- ✅ Scalable project development with minimized costs
+
+Status: Complete ✅
+````
+
+---
+
+**END OF TODO LIST**
+
+Execute this single task, then report completion.

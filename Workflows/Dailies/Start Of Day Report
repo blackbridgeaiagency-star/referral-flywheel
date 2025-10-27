@@ -1,0 +1,23 @@
+# Start of Day - Context Loading
+
+@.claude/CLAUDE.md
+@.claude/PROGRESS.md
+@.claude/BUGS.md
+
+**Daily Standup:**
+
+1. What did we complete yesterday?
+   [Read PROGRESS.md last entry]
+
+2. What's blocking us?
+   [Read BUGS.md active bugs]
+
+3. What's the plan for today?
+   [Read PROGRESS.md "Next Steps"]
+
+Based on above, generate today's TODO list:
+- [ ] Task 1 (Agent: @builder)
+- [ ] Task 2 (Agent: @tester)
+- [ ] Task 3 (Agent: @designer)
+
+**Ready to begin? Confirm plan or adjust.**

@@ -1,0 +1,364 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - heading "TechWhop Dashboard" [level=1] [ref=e7]
+          - paragraph [ref=e8]: Monitor your referral program performance and manage rewards
+        - link "Back to Whop" [ref=e10] [cursor=pointer]:
+          - /url: https://whop.com/dashboard
+    - main [ref=e11]:
+      - generic [ref=e12]:
+        - generic [ref=e13]:
+          - heading "Revenue Overview" [level=2] [ref=e16]
+          - generic [ref=e17]:
+            - generic [ref=e21]:
+              - img [ref=e24]
+              - paragraph [ref=e26]: Total Revenue
+              - paragraph [ref=e27]: $234,990.84
+              - paragraph [ref=e28]: Since downloading this app
+            - generic [ref=e32]:
+              - img [ref=e35]
+              - paragraph [ref=e38]: Monthly Revenue
+              - paragraph [ref=e39]: $3,729.00
+              - paragraph [ref=e40]: +$2,789.28 from referrals
+            - generic [ref=e44]:
+              - img [ref=e47]
+              - paragraph [ref=e53]: Total Referral Links Clicked
+              - paragraph [ref=e54]: "156"
+              - paragraph [ref=e55]: All members combined
+            - generic [ref=e59]:
+              - img [ref=e62]
+              - paragraph [ref=e66]: Conversion Rate
+              - paragraph [ref=e67]: 46.2%
+              - paragraph [ref=e68]: 72 / 156 clicks
+        - generic [ref=e69]:
+          - heading "Community Health" [level=2] [ref=e72]
+          - generic [ref=e73]:
+            - generic [ref=e76]:
+              - img [ref=e79]
+              - paragraph [ref=e84]: Active Members
+              - paragraph [ref=e85]: "100"
+              - paragraph [ref=e86]: 28 Organic, 72 referred
+            - generic [ref=e89]:
+              - img [ref=e92]
+              - paragraph [ref=e96]: Total Referrals
+              - paragraph [ref=e97]: "72"
+              - paragraph [ref=e98]: 0.7 avg per member
+            - generic [ref=e101]:
+              - img [ref=e104]
+              - paragraph [ref=e107]: Monthly Growth
+              - paragraph [ref=e108]: +48%
+              - paragraph [ref=e109]: $76294.13 this month
+            - generic [ref=e112]:
+              - img [ref=e115]
+              - paragraph [ref=e118]: Avg Earnings/Member
+              - paragraph [ref=e119]: $2349.91
+              - paragraph [ref=e120]: Lifetime per member
+          - generic [ref=e121]:
+            - generic [ref=e122]:
+              - paragraph [ref=e123]: Click-through Rate
+              - paragraph [ref=e124]: 156 clicks
+              - paragraph [ref=e125]: Total attribution clicks tracked
+            - generic [ref=e126]:
+              - paragraph [ref=e127]: Conversion Quality
+              - paragraph [ref=e128]: 46.2%
+              - paragraph [ref=e129]: Clicks that converted to sales
+            - generic [ref=e130]:
+              - paragraph [ref=e131]: Revenue from Top 10
+              - paragraph [ref=e132]: $2939.19
+              - paragraph [ref=e133]: 1.3% of total revenue
+        - generic [ref=e134]:
+          - generic [ref=e135]:
+            - heading "Top Referrers" [level=3] [ref=e136]:
+              - img [ref=e137]
+              - text: Top Referrers
+            - paragraph [ref=e142]: Top 10 members ranked by total referrals
+          - table [ref=e145]:
+            - rowgroup [ref=e146]:
+              - row "Rank Member Total Referrals This Month Tier" [ref=e147]:
+                - cell "Rank" [ref=e148]
+                - cell "Member" [ref=e149]
+                - cell "Total Referrals" [ref=e150]
+                - cell "This Month" [ref=e151]
+                - cell "Tier" [ref=e152]
+            - rowgroup [ref=e153]:
+              - row "🥇 Kevin Gonzalez KEVIN-BRVTF2 48 gold" [ref=e154]:
+                - cell "🥇" [ref=e155]:
+                  - generic [ref=e156]: 🥇
+                - cell "Kevin Gonzalez KEVIN-BRVTF2" [ref=e157]:
+                  - generic [ref=e158]:
+                    - paragraph [ref=e159]: Kevin Gonzalez
+                    - paragraph [ref=e160]: KEVIN-BRVTF2
+                - cell "48" [ref=e161]:
+                  - paragraph [ref=e162]: "48"
+                - cell [ref=e163]:
+                  - paragraph
+                - cell "gold" [ref=e164]:
+                  - generic [ref=e165]: gold
+              - row "🥈 Diane Sanchez DIANE-7VDEG3 46 gold" [ref=e166]:
+                - cell "🥈" [ref=e167]:
+                  - generic [ref=e168]: 🥈
+                - cell "Diane Sanchez DIANE-7VDEG3" [ref=e169]:
+                  - generic [ref=e170]:
+                    - paragraph [ref=e171]: Diane Sanchez
+                    - paragraph [ref=e172]: DIANE-7VDEG3
+                - cell "46" [ref=e173]:
+                  - paragraph [ref=e174]: "46"
+                - cell [ref=e175]:
+                  - paragraph
+                - cell "gold" [ref=e176]:
+                  - generic [ref=e177]: gold
+              - row "🥉 Nancy Davis NANCY-P7VUBY 45 gold" [ref=e178]:
+                - cell "🥉" [ref=e179]:
+                  - generic [ref=e180]: 🥉
+                - cell "Nancy Davis NANCY-P7VUBY" [ref=e181]:
+                  - generic [ref=e182]:
+                    - paragraph [ref=e183]: Nancy Davis
+                    - paragraph [ref=e184]: NANCY-P7VUBY
+                - cell "45" [ref=e185]:
+                  - paragraph [ref=e186]: "45"
+                - cell [ref=e187]:
+                  - paragraph
+                - cell "gold" [ref=e188]:
+                  - generic [ref=e189]: gold
+              - row "4 Dorothy Young DOROTHY-W4XKMC 44 gold" [ref=e190]:
+                - cell "4" [ref=e191]:
+                  - generic [ref=e192]: "4"
+                - cell "Dorothy Young DOROTHY-W4XKMC" [ref=e193]:
+                  - generic [ref=e194]:
+                    - paragraph [ref=e195]: Dorothy Young
+                    - paragraph [ref=e196]: DOROTHY-W4XKMC
+                - cell "44" [ref=e197]:
+                  - paragraph [ref=e198]: "44"
+                - cell [ref=e199]:
+                  - paragraph
+                - cell "gold" [ref=e200]:
+                  - generic [ref=e201]: gold
+              - row "5 Thomas Thomas THOMAS-NUXKAP 43 gold" [ref=e202]:
+                - cell "5" [ref=e203]:
+                  - generic [ref=e204]: "5"
+                - cell "Thomas Thomas THOMAS-NUXKAP" [ref=e205]:
+                  - generic [ref=e206]:
+                    - paragraph [ref=e207]: Thomas Thomas
+                    - paragraph [ref=e208]: THOMAS-NUXKAP
+                - cell "43" [ref=e209]:
+                  - paragraph [ref=e210]: "43"
+                - cell [ref=e211]:
+                  - paragraph
+                - cell "gold" [ref=e212]:
+                  - generic [ref=e213]: gold
+              - row "6 Michelle Hill MICHELLE-HCDV73 37 gold" [ref=e214]:
+                - cell "6" [ref=e215]:
+                  - generic [ref=e216]: "6"
+                - cell "Michelle Hill MICHELLE-HCDV73" [ref=e217]:
+                  - generic [ref=e218]:
+                    - paragraph [ref=e219]: Michelle Hill
+                    - paragraph [ref=e220]: MICHELLE-HCDV73
+                - cell "37" [ref=e221]:
+                  - paragraph [ref=e222]: "37"
+                - cell [ref=e223]:
+                  - paragraph
+                - cell "gold" [ref=e224]:
+                  - generic [ref=e225]: gold
+              - row "7 Sarah Anderson SARAH-PEQM3K 36 gold" [ref=e226]:
+                - cell "7" [ref=e227]:
+                  - generic [ref=e228]: "7"
+                - cell "Sarah Anderson SARAH-PEQM3K" [ref=e229]:
+                  - generic [ref=e230]:
+                    - paragraph [ref=e231]: Sarah Anderson
+                    - paragraph [ref=e232]: SARAH-PEQM3K
+                - cell "36" [ref=e233]:
+                  - paragraph [ref=e234]: "36"
+                - cell [ref=e235]:
+                  - paragraph
+                - cell "gold" [ref=e236]:
+                  - generic [ref=e237]: gold
+              - row "8 Jessica Garcia JESSICA-NSZP83 36 gold" [ref=e238]:
+                - cell "8" [ref=e239]:
+                  - generic [ref=e240]: "8"
+                - cell "Jessica Garcia JESSICA-NSZP83" [ref=e241]:
+                  - generic [ref=e242]:
+                    - paragraph [ref=e243]: Jessica Garcia
+                    - paragraph [ref=e244]: JESSICA-NSZP83
+                - cell "36" [ref=e245]:
+                  - paragraph [ref=e246]: "36"
+                - cell [ref=e247]:
+                  - paragraph
+                - cell "gold" [ref=e248]:
+                  - generic [ref=e249]: gold
+              - row "9 Jonathan Perez JONATHAN-9M8EFR 35 gold" [ref=e250]:
+                - cell "9" [ref=e251]:
+                  - generic [ref=e252]: "9"
+                - cell "Jonathan Perez JONATHAN-9M8EFR" [ref=e253]:
+                  - generic [ref=e254]:
+                    - paragraph [ref=e255]: Jonathan Perez
+                    - paragraph [ref=e256]: JONATHAN-9M8EFR
+                - cell "35" [ref=e257]:
+                  - paragraph [ref=e258]: "35"
+                - cell [ref=e259]:
+                  - paragraph
+                - cell "gold" [ref=e260]:
+                  - generic [ref=e261]: gold
+              - row "10 Rachel Jackson RACHEL-728CGM 34 gold" [ref=e262]:
+                - cell "10" [ref=e263]:
+                  - generic [ref=e264]: "10"
+                - cell "Rachel Jackson RACHEL-728CGM" [ref=e265]:
+                  - generic [ref=e266]:
+                    - paragraph [ref=e267]: Rachel Jackson
+                    - paragraph [ref=e268]: RACHEL-728CGM
+                - cell "34" [ref=e269]:
+                  - paragraph [ref=e270]: "34"
+                - cell [ref=e271]:
+                  - paragraph
+                - cell "gold" [ref=e272]:
+                  - generic [ref=e273]: gold
+        - generic [ref=e274]:
+          - heading "Reward Management" [level=2] [ref=e275]
+          - generic [ref=e276]:
+            - generic [ref=e277]:
+              - generic [ref=e278]:
+                - heading "Reward Tiers" [level=3] [ref=e279]:
+                  - img [ref=e280]
+                  - text: Reward Tiers
+                - paragraph [ref=e284]: Customize rewards for members who hit referral milestones
+              - generic [ref=e285]:
+                - generic [ref=e286]:
+                  - generic [ref=e287]: Bronze Tier
+                  - generic [ref=e288]:
+                    - generic [ref=e289]:
+                      - generic [ref=e290]: Referrals Required
+                      - spinbutton [ref=e291]: "5"
+                    - generic [ref=e292]:
+                      - generic [ref=e293]: Reward
+                      - textbox "e.g., 1 month free" [ref=e294]: 1 month free
+                - generic [ref=e295]:
+                  - generic [ref=e296]: Silver Tier
+                  - generic [ref=e297]:
+                    - generic [ref=e298]:
+                      - generic [ref=e299]: Referrals Required
+                      - spinbutton [ref=e300]: "10"
+                    - generic [ref=e301]:
+                      - generic [ref=e302]: Reward
+                      - textbox "e.g., 1 month free" [ref=e303]: 3 months free
+                - generic [ref=e304]:
+                  - generic [ref=e305]: Gold Tier
+                  - generic [ref=e306]:
+                    - generic [ref=e307]:
+                      - generic [ref=e308]: Referrals Required
+                      - spinbutton [ref=e309]: "25"
+                    - generic [ref=e310]:
+                      - generic [ref=e311]: Reward
+                      - textbox "e.g., 1 month free" [ref=e312]: 6 months free
+                - generic [ref=e313]:
+                  - generic [ref=e314]: Platinum Tier
+                  - generic [ref=e315]:
+                    - generic [ref=e316]:
+                      - generic [ref=e317]: Referrals Required
+                      - spinbutton [ref=e318]: "50"
+                    - generic [ref=e319]:
+                      - generic [ref=e320]: Reward
+                      - textbox "e.g., 1 month free" [ref=e321]: Lifetime access
+            - generic [ref=e322]:
+              - generic [ref=e323]:
+                - heading "Settings" [level=3] [ref=e324]
+                - paragraph [ref=e325]: Configure how your referral program operates
+              - generic [ref=e326]:
+                - generic [ref=e327]:
+                  - generic [ref=e328]:
+                    - text: Auto-Approve Rewards
+                    - paragraph [ref=e329]: Automatically grant rewards when members hit milestones
+                  - checkbox [checked] [ref=e331]
+                - generic [ref=e333]:
+                  - generic [ref=e334]: Welcome Message (Optional)
+                  - textbox "Enter a custom welcome message for new members..." [ref=e335]
+                  - paragraph [ref=e336]: 0/500 characters
+            - generic [ref=e337]:
+              - button "Save Changes" [ref=e338] [cursor=pointer]:
+                - img [ref=e339]
+                - text: Save Changes
+              - button "Export Data (CSV)" [ref=e343] [cursor=pointer]:
+                - img [ref=e344]
+                - text: Export Data (CSV)
+        - generic [ref=e348]:
+          - generic [ref=e349]:
+            - heading "Custom Competition Rewards" [level=3] [ref=e350]:
+              - img [ref=e351]
+              - text: Custom Competition Rewards
+            - paragraph [ref=e357]: Set time-based competitions with individual prizes for top performers
+          - generic [ref=e358]:
+            - generic [ref=e359]:
+              - generic [ref=e360]:
+                - generic [ref=e361] [cursor=pointer]: Enable Custom Rewards
+                - generic [ref=e362]: Active
+              - switch "Enable Custom Rewards" [checked] [ref=e363] [cursor=pointer]
+              - checkbox [checked]
+            - generic [ref=e364]:
+              - generic [ref=e365]:
+                - generic [ref=e366]:
+                  - img [ref=e367]
+                  - text: Competition Period
+                - combobox [ref=e370] [cursor=pointer]:
+                  - img [ref=e371]
+                - combobox [ref=e373]
+              - generic [ref=e374]:
+                - text: Competition Size
+                - combobox [ref=e375] [cursor=pointer]:
+                  - img [ref=e376]
+                - combobox [ref=e378]
+            - generic [ref=e379]:
+              - heading "Individual Prize Settings" [level=3] [ref=e380]
+              - generic [ref=e381]:
+                - generic [ref=e382]:
+                  - generic [ref=e384]: 🥇
+                  - generic [ref=e385]:
+                    - generic [ref=e386]: 1st Place Prize
+                    - textbox "1st Place Prize" [ref=e387]:
+                      - /placeholder: e.g., MacBook Pro M3, $5000 Cash, Premium Lifetime
+                      - text: MacBook Pro M3
+                - generic [ref=e388]:
+                  - generic [ref=e390]: 🥈
+                  - generic [ref=e391]:
+                    - generic [ref=e392]: 2nd Place Prize
+                    - textbox "2nd Place Prize" [ref=e393]:
+                      - /placeholder: e.g., iPad Pro, $2000 Cash, 1 Year Free
+                      - text: iPad Pro 12.9"
+                - generic [ref=e394]:
+                  - generic [ref=e396]: 🥉
+                  - generic [ref=e397]:
+                    - generic [ref=e398]: 3rd Place Prize
+                    - textbox "3rd Place Prize" [ref=e399]:
+                      - /placeholder: e.g., AirPods Pro, $1000 Cash, 6 Months Free
+                      - text: iPhone 15 Pro Max
+                - generic [ref=e400]:
+                  - generic [ref=e402]: 4th
+                  - generic [ref=e403]:
+                    - generic [ref=e404]: 4th Place Prize
+                    - textbox "4th Place Prize" [ref=e405]:
+                      - /placeholder: e.g., Apple Watch, $500 Gift Card, 3 Months Free
+                      - text: Apple Watch Ultra
+                - generic [ref=e406]:
+                  - generic [ref=e408]: 5th
+                  - generic [ref=e409]:
+                    - generic [ref=e410]: 5th Place Prize
+                    - textbox "5th Place Prize" [ref=e411]:
+                      - /placeholder: e.g., Gaming Headset, $250 Credit, 2 Months Free
+                      - text: AirPods Pro
+                - generic [ref=e412]:
+                  - generic [ref=e414]: 6-10
+                  - generic [ref=e415]:
+                    - generic [ref=e416]: 6th-10th Place Prize
+                    - textbox "6th-10th Place Prize" [ref=e417]:
+                      - /placeholder: e.g., $100 Amazon Gift Card, 1 Month Free, Exclusive Badge
+                      - text: $500 Amazon Gift Card
+                    - paragraph [ref=e418]: Same prize for all members ranked 6th through 10th
+            - button "Save Competition Settings" [ref=e420] [cursor=pointer]:
+              - img [ref=e421]
+              - text: Save Competition Settings
+    - contentinfo [ref=e425]:
+      - paragraph [ref=e427]: Powered by Referral Flywheel • Built for Whop Communities
+  - alert [ref=e428]
+```
