@@ -48,6 +48,12 @@ export async function getReferralList(memberId: string, limit: number = 10) {
           where: { id: memberId },
           select: { referralCode: true }
         }).then(m => m?.referralCode ? [m.referralCode] : [])
+      },
+      commissions: {
+        some: {
+          paymentType: 'initial',
+          status: 'paid'
+        }
       }
     },
     select: {
@@ -66,14 +72,6 @@ export async function getReferralList(memberId: string, limit: number = 10) {
           createdAt: 'asc'
         },
         take: 1  // Get first commission (conversion date)
-      }
-    },
-    where: {
-      commissions: {
-        some: {
-          paymentType: 'initial',
-          status: 'paid'
-        }
       }
     },
     orderBy: {

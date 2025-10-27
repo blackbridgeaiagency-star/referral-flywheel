@@ -73,7 +73,8 @@ export async function deleteCache(key: string): Promise<void> {
  */
 export async function deleteCacheByPattern(pattern: string): Promise<void> {
   const regex = new RegExp(pattern.replace(/\*/g, '.*'));
-  for (const key of memoryCache.keys()) {
+  const keys = Array.from(memoryCache.keys());
+  for (const key of keys) {
     if (regex.test(key)) {
       memoryCache.delete(key);
     }

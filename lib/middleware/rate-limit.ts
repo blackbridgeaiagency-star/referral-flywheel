@@ -196,7 +196,8 @@ export function clearRateLimit(identifier: string, type?: keyof typeof RATE_LIMI
     cache.delete(identifier);
   } else {
     // Clear from all caches
-    for (const [, cache] of rateLimitCaches) {
+    const caches = Array.from(rateLimitCaches.values());
+    for (const cache of caches) {
       cache.delete(identifier);
     }
   }

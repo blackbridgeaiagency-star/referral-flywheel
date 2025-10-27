@@ -1,7 +1,7 @@
 // lib/webhook/webhook-queue.ts
 import { prisma } from '@/lib/db/prisma';
 import { withRetry, shouldRetry } from '@/lib/utils/webhook-retry';
-import { trackError, trackEvent } from '@/lib/monitoring/error-tracking';
+import { trackError, trackEvent, ErrorCategory } from '@/lib/monitoring/error-tracking';
 
 /**
  * Advanced Webhook Queue System
@@ -96,7 +96,8 @@ export class WebhookQueue {
     // In production, store in webhook_queue table
     console.log(`📥 Webhook queued: ${type} with priority ${priority}`);
 
-    trackEvent('webhook_enqueued', 'webhook', {
+    trackEvent('webhook_enqueued', {
+      category: 'webhook',
       type,
       priority,
       queueName: this.queueName,
@@ -147,7 +148,7 @@ export class WebhookQueue {
 
       } catch (error) {
         console.error('❌ Queue processing error:', error);
-        trackError(error as Error, 'webhook', 'error', {
+        trackError(error as Error, ErrorCategory.WEBHOOK, {
           action: 'queue_processing',
         });
 
@@ -196,7 +197,8 @@ export class WebhookQueue {
       // Mark as completed
       await this.updateJobStatus(job.id, WebhookStatus.COMPLETED);
 
-      trackEvent('webhook_processed', 'webhook', {
+      trackEvent('webhook_processed', {
+        category: 'webhook',
         type: job.type,
         attempts: job.attempts + 1,
         duration: Date.now() - job.createdAt.getTime(),
@@ -227,10 +229,13 @@ export class WebhookQueue {
         console.log(`🔄 Webhook ${job.id} scheduled for retry in ${retryDelay}ms`);
       }
 
-      trackError(error as Error, 'webhook', 'error', {
-        jobId: job.id,
-        type: job.type,
-        attempts: job.attempts,
+      trackError(error as Error, ErrorCategory.WEBHOOK, {
+        action: 'job_processing',
+        metadata: {
+          jobId: job.id,
+          type: job.type,
+          attempts: job.attempts,
+        }
       });
     }
   }
@@ -290,7 +295,8 @@ export class WebhookQueue {
 
     console.error(`☠️ Webhook ${job.id} moved to dead letter queue: ${reason}`);
 
-    trackEvent('webhook_dead_letter', 'webhook', {
+    trackEvent('webhook_dead_letter', {
+      category: 'webhook',
       jobId: job.id,
       type: job.type,
       attempts: job.attempts,

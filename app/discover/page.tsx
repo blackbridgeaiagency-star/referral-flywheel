@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CommunityCard } from '../../components/discover/community-card';
+import { CommunityCard } from '@/components/discover/community-card';
 import { Sparkles, TrendingUp, Users, DollarSign } from 'lucide-react';
 
 interface Community {

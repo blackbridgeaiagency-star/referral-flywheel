@@ -90,7 +90,7 @@ export function CustomCompetitionBanner({
   }, [timeframe]);
 
   // Determine prizes to show based on competition type
-  const prizes = [];
+  const prizes: { rank: string; rankNum: number; prize: string; icon: string; color: string }[] = [];
   if (reward1st) prizes.push({ rank: '1st', rankNum: 1, prize: reward1st, icon: '🥇', color: 'gold' });
   if (reward2nd) prizes.push({ rank: '2nd', rankNum: 2, prize: reward2nd, icon: '🥈', color: 'silver' });
   if (reward3rd) prizes.push({ rank: '3rd', rankNum: 3, prize: reward3rd, icon: '🥉', color: 'bronze' });

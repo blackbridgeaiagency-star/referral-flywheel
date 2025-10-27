@@ -147,14 +147,14 @@ export class AnalyticsEngine {
     // Get clicks and conversions
     const clicks = await prisma.attributionClick.findMany({
       where: {
-        clickedAt: {
+        createdAt: {
           gte: startDate,
           lte: endDate,
         },
-        ...(creatorId && { creatorId }),
+        // Note: AttributionClick doesn't have direct creatorId, would need to join through member
       },
       select: {
-        clickedAt: true,
+        createdAt: true,
         converted: true,
         convertedAt: true,
         conversionValue: true,
@@ -371,7 +371,7 @@ export class AnalyticsEngine {
       // Step 1: Clicks
       prisma.attributionClick.count({
         where: {
-          clickedAt: { gte: startDate, lte: endDate },
+          createdAt: { gte: startDate, lte: endDate },
         },
       }),
 
@@ -701,7 +701,7 @@ export class AnalyticsEngine {
    */
   private calculateConversionRate(
     clicks: Array<{
-      clickedAt: Date;
+      createdAt: Date;
       converted: boolean;
       convertedAt: Date | null;
       conversionValue: number | null;
@@ -711,7 +711,7 @@ export class AnalyticsEngine {
     const buckets = new Map<string, { clicks: number; conversions: number }>();
 
     clicks.forEach(click => {
-      const key = this.getTimeBucketKey(click.clickedAt, period);
+      const key = this.getTimeBucketKey(click.createdAt, period);
       const existing = buckets.get(key) || { clicks: 0, conversions: 0 };
 
       existing.clicks++;

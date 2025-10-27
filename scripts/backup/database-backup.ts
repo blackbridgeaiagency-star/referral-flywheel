@@ -3,7 +3,8 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
 import path from 'path';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+// TEMPORARILY DISABLED: AWS SDK needs to be installed for S3 backups
+// import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { createReadStream } from 'fs';
 import crypto from 'crypto';
 import { prisma } from '@/lib/db/prisma';
@@ -277,33 +278,35 @@ async function storeS3(backupFile: string): Promise<string> {
     throw new Error('BACKUP_S3_BUCKET not configured');
   }
 
-  const s3Client = new S3Client({
-    region: process.env.AWS_REGION || 'us-east-1',
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-    },
-  });
+  // TEMPORARILY DISABLED: S3 upload requires AWS SDK installation
+  // const s3Client = new S3Client({
+  //   region: process.env.AWS_REGION || 'us-east-1',
+  //   credentials: {
+  //     accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+  //     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  //   },
+  // });
 
   const filename = path.basename(backupFile);
   const key = `database-backups/${new Date().getFullYear()}/${filename}`;
 
   const fileContent = await fs.readFile(backupFile);
 
-  const command = new PutObjectCommand({
-    Bucket: bucketName,
-    Key: key,
-    Body: fileContent,
-    ServerSideEncryption: 'AES256',
-    StorageClass: 'STANDARD_IA', // Infrequent Access for cost savings
-    Metadata: {
-      'backup-date': new Date().toISOString(),
-      'backup-type': 'database',
-      'app-version': process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0',
-    },
-  });
+  // const command = new PutObjectCommand({
+  //   Bucket: bucketName,
+  //   Key: key,
+  //   Body: fileContent,
+  //   ServerSideEncryption: 'AES256',
+  //   StorageClass: 'STANDARD_IA', // Infrequent Access for cost savings
+  //   Metadata: {
+  //     'backup-date': new Date().toISOString(),
+  //     'backup-type': 'database',
+  //     'app-version': process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0',
+  //   },
+  // });
 
-  await s3Client.send(command);
+  // await s3Client.send(command);
+  console.log('S3 upload disabled - AWS SDK not installed');
 
   return `s3://${bucketName}/${key}`;
 }

@@ -39,7 +39,7 @@ export const MESSAGE_TEMPLATES: MessageTemplate[] = [
     name: 'Twitter - Social Proof',
     platform: 'twitter',
     category: 'social-proof',
-    message: `I've made ${earnings} just by sharing my {community} link\n\nHere's how it works:\n✅ You join with my link\n✅ I earn 10% of your payments (forever)\n✅ You get full access + your own referral link\n\nJoin here: {link}`,
+    message: `I've made {earnings} just by sharing my {community} link\n\nHere's how it works:\n✅ You join with my link\n✅ I earn 10% of your payments (forever)\n✅ You get full access + your own referral link\n\nJoin here: {link}`,
     variables: ['earnings', 'community', 'link'],
   },
   {
@@ -47,7 +47,7 @@ export const MESSAGE_TEMPLATES: MessageTemplate[] = [
     name: 'Twitter - Excited Energy',
     platform: 'twitter',
     category: 'excited',
-    message: `🚨 THIS IS INSANE 🚨\n\n{community} literally pays me 10% commission on every person I refer.\n\nI've referred {referrals} people and earned ${earnings}\n\nYou can do the same. Join with my link:\n{link}`,
+    message: `🚨 THIS IS INSANE 🚨\n\n{community} literally pays me 10% commission on every person I refer.\n\nI've referred {referrals} people and earned {earnings}\n\nYou can do the same. Join with my link:\n{link}`,
     variables: ['community', 'referrals', 'earnings', 'link'],
   },
 
@@ -59,7 +59,7 @@ export const MESSAGE_TEMPLATES: MessageTemplate[] = [
     name: 'Facebook - Personal Testimonial',
     platform: 'facebook',
     category: 'testimonial',
-    message: `Friends! 👋\n\nI wanted to share something cool I found - {community}.\n\nNot only is the content amazing, but they have this unique referral system where I earn 10% commission on anyone who joins with my link. It's completely passive income!\n\nI've already made ${earnings} just by sharing with people who'd benefit from it.\n\nIf you're interested, use my link and we both win:\n{link}\n\nHappy to answer any questions!`,
+    message: `Friends! 👋\n\nI wanted to share something cool I found - {community}.\n\nNot only is the content amazing, but they have this unique referral system where I earn 10% commission on anyone who joins with my link. It's completely passive income!\n\nI've already made {earnings} just by sharing with people who'd benefit from it.\n\nIf you're interested, use my link and we both win:\n{link}\n\nHappy to answer any questions!`,
     variables: ['community', 'earnings', 'link'],
   },
   {
@@ -87,7 +87,7 @@ export const MESSAGE_TEMPLATES: MessageTemplate[] = [
     name: 'LinkedIn - ROI Focus',
     platform: 'linkedin',
     category: 'professional',
-    message: `ROI update on my {community} membership:\n\n📊 Investment: $49/month\n💰 Earnings from referrals: ${earnings}\n👥 People I've helped: {referrals}\n📈 Net result: Positive cash flow\n\nThis is a rare case where sharing something valuable actually pays back. The content is worth it alone, but the referral model makes it compelling.\n\nInterested? Use my link:\n{link}`,
+    message: `ROI update on my {community} membership:\n\n📊 Investment: $49/month\n💰 Earnings from referrals: {earnings}\n👥 People I've helped: {referrals}\n📈 Net result: Positive cash flow\n\nThis is a rare case where sharing something valuable actually pays back. The content is worth it alone, but the referral model makes it compelling.\n\nInterested? Use my link:\n{link}`,
     variables: ['community', 'earnings', 'referrals', 'link'],
   },
 
@@ -107,7 +107,7 @@ export const MESSAGE_TEMPLATES: MessageTemplate[] = [
     name: 'WhatsApp - Exciting News',
     platform: 'whatsapp',
     category: 'excited',
-    message: `Dude! I've made ${earnings} this month just sharing my {community} link 🤯\n\nYou need to get in on this. Use my link and you'll get your own too:\n{link}`,
+    message: `Dude! I've made {earnings} this month just sharing my {community} link 🤯\n\nYou need to get in on this. Use my link and you'll get your own too:\n{link}`,
     variables: ['earnings', 'community', 'link'],
   },
   {
@@ -127,7 +127,7 @@ export const MESSAGE_TEMPLATES: MessageTemplate[] = [
     name: 'Discord - Community Share',
     platform: 'discord',
     category: 'casual',
-    message: `@everyone Hey fam! 🎉\n\nJust wanted to share {community} - it's been super valuable for me.\n\nThe cool part: they have a referral system where you can earn passive income by sharing. I've made ${earnings} so far!\n\nIf you want to check it out, use my link:\n{link}\n\nYou'll get your own referral link too once you join 🚀`,
+    message: `@everyone Hey fam! 🎉\n\nJust wanted to share {community} - it's been super valuable for me.\n\nThe cool part: they have a referral system where you can earn passive income by sharing. I've made {earnings} so far!\n\nIf you want to check it out, use my link:\n{link}\n\nYou'll get your own referral link too once you join 🚀`,
     variables: ['community', 'earnings', 'link'],
   },
   {
@@ -147,7 +147,7 @@ export const MESSAGE_TEMPLATES: MessageTemplate[] = [
     name: 'Reddit - Honest Review',
     platform: 'reddit',
     category: 'value',
-    message: `[Honest Review] {community}\n\nI joined {community} a few months ago and wanted to share my experience.\n\n**The Good:**\n- High-quality content\n- Active community\n- Unique referral system (10% lifetime commission)\n\n**The Not-So-Good:**\n- [Be honest about cons]\n\n**My Results:**\n- ${earnings} earned from {referrals} referrals\n- Worth the membership cost for the content alone\n\n**Full Disclosure:** The link below is my referral link, so I'll earn commission if you join. But I genuinely think it's worth checking out.\n\n{link}\n\nHappy to answer questions!`,
+    message: `[Honest Review] {community}\n\nI joined {community} a few months ago and wanted to share my experience.\n\n**The Good:**\n- High-quality content\n- Active community\n- Unique referral system (10% lifetime commission)\n\n**The Not-So-Good:**\n- [Be honest about cons]\n\n**My Results:**\n- {earnings} earned from {referrals} referrals\n- Worth the membership cost for the content alone\n\n**Full Disclosure:** The link below is my referral link, so I'll earn commission if you join. But I genuinely think it's worth checking out.\n\n{link}\n\nHappy to answer questions!`,
     variables: ['community', 'earnings', 'referrals', 'link'],
   },
 
@@ -160,7 +160,7 @@ export const MESSAGE_TEMPLATES: MessageTemplate[] = [
     platform: 'email',
     category: 'professional',
     subject: 'Thought you might find {community} interesting',
-    message: `Hi there,\n\nI hope this email finds you well!\n\nI wanted to reach out because I recently joined {community} and thought it might be valuable for you too.\n\nWhat makes it interesting:\n• [Benefit 1 relevant to recipient]\n• [Benefit 2 relevant to recipient]\n• Members can earn passive income through referrals (I've made ${earnings} so far)\n\nIf you're interested, you can join here:\n{link}\n\nNo pressure at all - just wanted to share something I've found valuable!\n\nBest,\n{name}`,
+    message: `Hi there,\n\nI hope this email finds you well!\n\nI wanted to reach out because I recently joined {community} and thought it might be valuable for you too.\n\nWhat makes it interesting:\n• [Benefit 1 relevant to recipient]\n• [Benefit 2 relevant to recipient]\n• Members can earn passive income through referrals (I've made {earnings} so far)\n\nIf you're interested, you can join here:\n{link}\n\nNo pressure at all - just wanted to share something I've found valuable!\n\nBest,\n{name}`,
     variables: ['community', 'earnings', 'link', 'name'],
   },
   {
@@ -169,7 +169,7 @@ export const MESSAGE_TEMPLATES: MessageTemplate[] = [
     platform: 'email',
     category: 'casual',
     subject: 'You need to see this!',
-    message: `Hey!\n\nQuick email because I found something cool and thought of you.\n\nI joined {community} and it's been awesome. The best part? They have this referral thing where I can earn money by sharing it with friends.\n\nI've already made ${earnings} and helped {referrals} people find something valuable.\n\nWanna check it out? Use my link:\n{link}\n\nLet me know what you think!\n\n{name}`,
+    message: `Hey!\n\nQuick email because I found something cool and thought of you.\n\nI joined {community} and it's been awesome. The best part? They have this referral thing where I can earn money by sharing it with friends.\n\nI've already made {earnings} and helped {referrals} people find something valuable.\n\nWanna check it out? Use my link:\n{link}\n\nLet me know what you think!\n\n{name}`,
     variables: ['community', 'earnings', 'referrals', 'link', 'name'],
   },
 
@@ -181,7 +181,7 @@ export const MESSAGE_TEMPLATES: MessageTemplate[] = [
     name: 'Telegram - Limited Time Feel',
     platform: 'telegram',
     category: 'urgency',
-    message: `🚀 Opportunity alert!\n\n{community} has a referral program where you can earn 10% commission on everyone you refer.\n\nI'm already at ${earnings} earned from {referrals} referrals.\n\nThe earlier you start, the more you can earn. Get in now:\n{link}\n\n💰 Your link = Your passive income stream`,
+    message: `🚀 Opportunity alert!\n\n{community} has a referral program where you can earn 10% commission on everyone you refer.\n\nI'm already at {earnings} earned from {referrals} referrals.\n\nThe earlier you start, the more you can earn. Get in now:\n{link}\n\n💰 Your link = Your passive income stream`,
     variables: ['community', 'earnings', 'referrals', 'link'],
   },
 
@@ -201,7 +201,7 @@ export const MESSAGE_TEMPLATES: MessageTemplate[] = [
     name: 'General - Results Focused',
     platform: 'general',
     category: 'social-proof',
-    message: `My {community} Results:\n💰 ${earnings} earned\n👥 {referrals} referrals\n📈 100% passive\n\nWant the same? Use my link:\n{link}`,
+    message: `My {community} Results:\n💰 {earnings} earned\n👥 {referrals} referrals\n📈 100% passive\n\nWant the same? Use my link:\n{link}`,
     variables: ['community', 'earnings', 'referrals', 'link'],
   },
   {

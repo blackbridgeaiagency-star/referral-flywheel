@@ -268,8 +268,6 @@ function showBrowserNotification(notification: Notification) {
     icon: '/icons/icon-192x192.png',
     badge: '/icons/badge-72x72.png',
     tag: notification.id,
-    renotify: true,
-    vibrate: [200, 100, 200],
     data: notification.data,
   };
 

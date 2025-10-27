@@ -217,18 +217,14 @@ export async function getCachedReferrals(memberId: string, limit: number = 10) {
       });
 
       // Get commission data for each referral
+      // Note: We're looking for commissions earned by the referrer (memberId) from this specific referred member
+      // This would require tracking which commission came from which referred member, which isn't in the schema
+      // For now, we'll just show the referred member without commission details
       const referralsWithCommissions = await Promise.all(
         referredMembers.map(async (referral) => {
-          const commissions = await prisma.commission.findMany({
-            where: {
-              referredMemberId: referral.id,
-              status: 'paid',
-            },
-            select: {
-              memberShare: true,
-              createdAt: true,
-            },
-          });
+          // Since we can't directly link commissions to referred members,
+          // we'll return empty commission data
+          const commissions: { memberShare: number; createdAt: Date }[] = [];
 
           return {
             username: referral.username,

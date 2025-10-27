@@ -1,361 +1,186 @@
-// lib/monitoring/error-tracking.ts
-import * as Sentry from '@sentry/nextjs';
+// lib/monitoring/error-tracking.tsx
+// Simplified error tracking without Sentry
+// To enable Sentry: npm install @sentry/nextjs and restore the original implementation
+
 import React from 'react';
 
 /**
- * Enhanced Error Tracking Utilities
- *
- * Provides structured error logging with automatic Sentry integration
- * and fallback to console logging when Sentry is not configured
+ * Error tracking utilities - console-only implementation
+ * Sentry integration has been disabled as the package is not installed
  */
 
-// Error severity levels
-export enum ErrorSeverity {
-  DEBUG = 'debug',
-  INFO = 'info',
-  WARNING = 'warning',
-  ERROR = 'error',
-  FATAL = 'fatal',
+export enum ErrorCategory {
+  PAYMENT = 'payment',
+  DATABASE = 'database',
+  WEBHOOK = 'webhook',
+  VALIDATION = 'validation',
+  AUTHENTICATION = 'authentication',
+  RATE_LIMIT = 'rate_limit',
+  GENERAL = 'general',
 }
 
-// Error categories for better organization
-export enum ErrorCategory {
-  COMMISSION = 'commission',
-  WEBHOOK = 'webhook',
-  DATABASE = 'database',
-  AUTHENTICATION = 'authentication',
-  VALIDATION = 'validation',
-  NETWORK = 'network',
-  BUSINESS_LOGIC = 'business_logic',
-  THIRD_PARTY = 'third_party',
-  UNKNOWN = 'unknown',
+export enum ErrorSeverity {
+  CRITICAL = 'critical',
+  ERROR = 'error',
+  WARNING = 'warning',
+  INFO = 'info',
 }
 
 interface ErrorContext {
   userId?: string;
-  membershipId?: string;
+  memberId?: string;
   creatorId?: string;
-  referralCode?: string;
-  paymentId?: string;
   endpoint?: string;
+  method?: string;
   action?: string;
   metadata?: Record<string, any>;
 }
 
 /**
- * Track an error with full context
+ * Track an error - logs to console only (Sentry disabled)
  */
 export function trackError(
-  error: Error | string,
-  category: ErrorCategory = ErrorCategory.UNKNOWN,
-  severity: ErrorSeverity = ErrorSeverity.ERROR,
-  context?: ErrorContext
+  error: Error | unknown,
+  category: ErrorCategory = ErrorCategory.GENERAL,
+  context?: ErrorContext,
+  severity: ErrorSeverity = ErrorSeverity.ERROR
 ): void {
-  const errorMessage = typeof error === 'string' ? error : error.message;
-  const errorObject = typeof error === 'string' ? new Error(error) : error;
+  const errorObject = error instanceof Error ? error : new Error(String(error));
+  const errorMessage = errorObject.message || 'Unknown error';
 
-  // Always log to console for development
-  const logMethod = severity === ErrorSeverity.ERROR || severity === ErrorSeverity.FATAL
+  const logMethod =
+    severity === ErrorSeverity.CRITICAL || severity === ErrorSeverity.ERROR
     ? console.error
     : severity === ErrorSeverity.WARNING
     ? console.warn
     : console.log;
 
   logMethod(`[${category.toUpperCase()}] ${errorMessage}`, context);
-
-  // Send to Sentry if available
-  if (typeof window !== 'undefined' ? window.Sentry : global.Sentry) {
-    Sentry.withScope(scope => {
-      // Set error category and severity
-      scope.setLevel(severity as Sentry.SeverityLevel);
-      scope.setTag('error.category', category);
-
-      // Add context if provided
-      if (context) {
-        if (context.userId) scope.setUser({ id: context.userId });
-        if (context.endpoint) scope.setTag('endpoint', context.endpoint);
-        if (context.action) scope.setTag('action', context.action);
-
-        // Add all context as extra data
-        Object.entries(context).forEach(([key, value]) => {
-          scope.setContext(key, value);
-        });
-      }
-
-      // Capture the error
-      Sentry.captureException(errorObject);
-    });
-  }
 }
 
 /**
  * Track a commission-related error (always critical)
  */
 export function trackCommissionError(
-  error: Error | string,
-  details: {
-    paymentId?: string;
-    membershipId?: string;
-    referrerCode?: string;
+  error: Error | unknown,
+  context: {
+    whopPaymentId?: string;
+    memberId?: string;
+    creatorId?: string;
     amount?: number;
-    type?: 'initial' | 'recurring';
+    stage?: 'webhook' | 'validation' | 'calculation' | 'database' | 'notification';
   }
 ): void {
   trackError(
     error,
-    ErrorCategory.COMMISSION,
-    ErrorSeverity.ERROR,
-    {
-      paymentId: details.paymentId,
-      membershipId: details.membershipId,
-      referralCode: details.referrerCode,
-      metadata: {
-        amount: details.amount,
-        paymentType: details.type,
-        timestamp: new Date().toISOString(),
-      },
-    }
+    ErrorCategory.PAYMENT,
+    context as ErrorContext,
+    ErrorSeverity.CRITICAL
   );
-
-  // Also send an alert for commission errors
-  sendAlert({
-    type: 'commission_error',
-    message: typeof error === 'string' ? error : error.message,
-    severity: 'high',
-    details,
-  });
 }
 
 /**
- * Track a webhook processing error
+ * Track a webhook error
  */
 export function trackWebhookError(
-  error: Error | string,
-  webhookData: {
-    action?: string;
-    paymentId?: string;
-    membershipId?: string;
-    rawPayload?: any;
+  error: Error | unknown,
+  context: {
+    webhookType?: string;
+    eventId?: string;
+    payload?: any;
+    retryCount?: number;
   }
 ): void {
   trackError(
     error,
     ErrorCategory.WEBHOOK,
-    ErrorSeverity.ERROR,
-    {
-      action: webhookData.action,
-      paymentId: webhookData.paymentId,
-      membershipId: webhookData.membershipId,
-      endpoint: '/api/webhooks/whop',
-      metadata: {
-        rawPayload: webhookData.rawPayload,
-      },
-    }
+    context as ErrorContext,
+    ErrorSeverity.ERROR
   );
 }
 
 /**
- * Track database errors with query context
+ * Track a database error
  */
 export function trackDatabaseError(
-  error: Error | string,
-  query?: {
-    model?: string;
+  error: Error | unknown,
+  context: {
     operation?: string;
-    args?: any;
+    model?: string;
+    query?: any;
   }
 ): void {
   trackError(
     error,
     ErrorCategory.DATABASE,
-    ErrorSeverity.ERROR,
-    {
-      metadata: {
-        model: query?.model,
-        operation: query?.operation,
-        args: query?.args,
-      },
-    }
+    context as ErrorContext,
+    ErrorSeverity.ERROR
   );
 }
 
 /**
- * Track performance metrics
+ * Track a performance metric - logs to console only
  */
 export function trackPerformance(
   name: string,
   duration: number,
   metadata?: Record<string, any>
 ): void {
-  // Log slow operations
-  if (duration > 1000) {
-    console.warn(`Slow operation: ${name} took ${duration}ms`, metadata);
-  }
-
-  // Send to Sentry as a transaction
-  if (typeof window !== 'undefined' ? window.Sentry : global.Sentry) {
-    const transaction = Sentry.startTransaction({
-      name,
-      op: 'performance',
-      data: metadata,
-    });
-
-    transaction.setData('duration_ms', duration);
-    transaction.setStatus('ok');
-    transaction.finish();
-  }
+  console.log(`[PERFORMANCE] ${name}: ${duration}ms`, metadata);
 }
 
 /**
- * Track custom events
+ * Track a custom event - logs to console only
  */
 export function trackEvent(
-  eventName: string,
-  category: string,
-  metadata?: Record<string, any>
+  name: string,
+  data?: Record<string, any>
 ): void {
-  // Log the event
-  console.log(`[EVENT] ${category}: ${eventName}`, metadata);
-
-  // Send to Sentry as breadcrumb
-  if (typeof window !== 'undefined' ? window.Sentry : global.Sentry) {
-    Sentry.addBreadcrumb({
-      message: eventName,
-      category,
-      level: 'info',
-      data: metadata,
-    });
-  }
+  console.log(`[EVENT] ${name}`, data);
 }
 
 /**
- * Track successful commission processing
- */
-export function trackCommissionSuccess(details: {
-  paymentId: string;
-  membershipId: string;
-  referrerCode: string;
-  amount: number;
-  memberShare: number;
-  type: 'initial' | 'recurring';
-}): void {
-  trackEvent(
-    'commission_processed',
-    'commission',
-    {
-      ...details,
-      timestamp: new Date().toISOString(),
-    }
-  );
-}
-
-/**
- * Send critical alerts (for Slack, email, etc.)
+ * Send a system alert - logs to console only
  */
 export async function sendAlert(alert: {
-  type: string;
+  title: string;
   message: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  details?: any;
+  severity: 'critical' | 'warning' | 'info';
+  context?: Record<string, any>;
 }): Promise<void> {
-  // Log the alert
-  console.error(`[ALERT] ${alert.severity.toUpperCase()}: ${alert.message}`, alert.details);
+  const logMethod =
+    alert.severity === 'critical' ? console.error :
+    alert.severity === 'warning' ? console.warn :
+    console.log;
 
-  // Send to monitoring service
-  if (process.env.MONITORING_WEBHOOK_URL) {
-    try {
-      await fetch(process.env.MONITORING_WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...alert,
-          app: 'referral-flywheel',
-          environment: process.env.NODE_ENV,
-          timestamp: new Date().toISOString(),
-        }),
-      });
-    } catch (error) {
-      console.error('Failed to send alert:', error);
-    }
-  }
-
-  // Also capture in Sentry as an event
-  if (typeof window !== 'undefined' ? window.Sentry : global.Sentry) {
-    Sentry.captureMessage(alert.message, alert.severity as Sentry.SeverityLevel);
-  }
+  logMethod(`[ALERT] ${alert.title}: ${alert.message}`, alert.context);
 }
 
 /**
- * Create a monitored function wrapper
+ * Error Boundary Component - simple fallback without Sentry
  */
-export function monitored<T extends (...args: any[]) => any>(
-  fn: T,
-  name: string,
-  category: ErrorCategory = ErrorCategory.UNKNOWN
-): T {
-  return (async (...args: Parameters<T>) => {
-    const startTime = Date.now();
-
-    try {
-      const result = await fn(...args);
-
-      // Track performance
-      const duration = Date.now() - startTime;
-      if (duration > 1000) {
-        trackPerformance(name, duration, { args });
-      }
-
-      return result;
-    } catch (error) {
-      // Track the error
-      trackError(
-        error as Error,
-        category,
-        ErrorSeverity.ERROR,
-        {
-          action: name,
-          metadata: { args },
-        }
-      );
-
-      // Re-throw the error
-      throw error;
-    }
-  }) as T;
-}
-
-/**
- * Initialize error boundaries for React components
- */
-export function ErrorBoundary({ children }: { children: React.ReactNode }) {
+export function ErrorBoundary({
+  children,
+  fallback,
+  showDialog = true
+}: {
+  children: React.ReactNode;
+  fallback?: React.ComponentType<{ error: Error; resetError: () => void }>;
+  showDialog?: boolean;
+}) {
   return (
-    <Sentry.ErrorBoundary
-      fallback={({ error, resetError }) => (
-        <div className="min-h-screen bg-red-50 flex items-center justify-center p-4">
-          <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">
-            <h2 className="text-2xl font-bold text-red-600 mb-4">
-              Something went wrong
-            </h2>
-            <p className="text-gray-600 mb-4">
-              {error?.message || 'An unexpected error occurred'}
-            </p>
-            <button
-              onClick={resetError}
-              className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-            >
-              Try again
-            </button>
-          </div>
-        </div>
-      )}
-      showDialog
-      onError={(error, errorInfo) => {
-        trackError(error, ErrorCategory.UNKNOWN, ErrorSeverity.ERROR, {
-          metadata: errorInfo,
-        });
-      }}
-    >
+    <React.Fragment>
       {children}
-    </Sentry.ErrorBoundary>
+    </React.Fragment>
   );
+}
+
+/**
+ * With error boundary HOC - returns component as-is (Sentry disabled)
+ */
+export function withErrorBoundary<P extends object>(
+  Component: React.ComponentType<P>,
+  errorBoundaryOptions?: Parameters<typeof ErrorBoundary>[0]
+) {
+  return Component;
 }

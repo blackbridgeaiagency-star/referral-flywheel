@@ -6,14 +6,6 @@ const nextConfig: NextConfig = {
 	images: {
 		remotePatterns: [{ hostname: "**" }],
 	},
-	webpack: (config) => {
-		// Ensure proper path resolution for TypeScript paths
-		config.resolve.alias = {
-			...config.resolve.alias,
-			"@": path.resolve(__dirname, "."),
-		};
-		return config;
-	},
 };
 
 export default nextConfig;

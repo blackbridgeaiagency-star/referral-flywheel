@@ -63,10 +63,10 @@ export function CompactReferralLinkCard({ code, url, memberId }: CompactReferral
     };
 
     // Track share event
-    const platform = navigator.share ? 'native_share' : 'twitter';
+    const platform = 'share' in navigator ? 'native_share' : 'twitter';
     await trackShare(platform);
 
-    if (navigator.share) {
+    if ('share' in navigator && navigator.share) {
       navigator.share(shareData);
     } else {
       window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(currentUrl)}`, '_blank');

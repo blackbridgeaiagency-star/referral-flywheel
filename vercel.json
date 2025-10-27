@@ -4,19 +4,8 @@
   "framework": "nextjs",
   "outputDirectory": ".next",
   "regions": ["iad1"],
-  "env": {
-    "DATABASE_URL": "@database_url",
-    "WHOP_API_KEY": "@whop_api_key",
-    "WHOP_WEBHOOK_SECRET": "@whop_webhook_secret",
-    "NEXT_PUBLIC_WHOP_APP_ID": "@whop_app_id",
-    "NEXT_PUBLIC_WHOP_COMPANY_ID": "@whop_company_id",
-    "NEXT_PUBLIC_APP_URL": "@app_url",
-    "CRON_SECRET": "@cron_secret",
-    "IP_HASH_SALT": "@ip_hash_salt"
-  },
   "build": {
     "env": {
-      "DATABASE_URL": "@database_url",
       "NODE_ENV": "production"
     }
   },
