@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { generateFingerprint } from '@/lib/utils/fingerprint';
 import { hashIP, extractRealIP } from '@/lib/utils/ip-hash';
-import { checkIpRateLimit } from '@/lib/security/rate-limit-utils';
+import { applyRateLimit } from '@/lib/security/rate-limit-utils';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,24 +25,26 @@ export async function GET(
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // P1 FIX: RATE LIMITING (Prevent click farming & DoS)
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    const realIP = extractRealIP(request);
-    const rateLimitResult = await checkIpRateLimit(realIP, 'referral-redirect', {
-      windowMs: 60000, // 1 minute window
-      maxRequests: 30,  // 30 clicks per minute max
-    });
+    const realIP = extractRealIP(request) || 'unknown';
+    const rateLimitResult = await applyRateLimit(
+      `referral-redirect:${realIP}`,
+      30,  // 30 clicks per minute max
+      60000 // 1 minute window
+    );
 
-    if (!rateLimitResult.allowed) {
+    if (!rateLimitResult.success) {
       console.log(`⚠️ Rate limit exceeded for IP: ${realIP}`);
+      const retryAfterSeconds = Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000);
       return NextResponse.json(
         {
           error: 'Too many requests',
           message: 'You are clicking referral links too quickly. Please wait a moment.',
-          retryAfter: rateLimitResult.retryAfter,
+          retryAfter: retryAfterSeconds,
         },
         {
           status: 429,
           headers: {
-            'Retry-After': Math.ceil((rateLimitResult.retryAfter || 60000) / 1000).toString(),
+            'Retry-After': retryAfterSeconds.toString(),
           }
         }
       );
@@ -79,7 +81,7 @@ export async function GET(
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // 2. GENERATE FINGERPRINT & CHECK FOR DUPLICATE CLICKS
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    const fingerprint = generateFingerprint(request);
+    const fingerprint: string = await generateFingerprint(request);
 
     // Check if this fingerprint already has an active click
     const existingClick = await prisma.attributionClick.findFirst({
