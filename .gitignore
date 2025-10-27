@@ -76,6 +76,9 @@ SECURITY-CHECKLIST.md
 *-secrets.sh
 *.credentials
 
+# Backup files
+*.bak
+
 
 # vercel
 .vercel
