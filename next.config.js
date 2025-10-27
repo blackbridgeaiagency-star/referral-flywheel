@@ -14,21 +14,21 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://whop.com",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://whop.com https://*.whop.com",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",
               "font-src 'self' data:",
-              "connect-src 'self' https://whop.com",
-              "frame-src https://whop.com",
-              "frame-ancestors 'none'",
+              "connect-src 'self' https://whop.com https://*.whop.com",
+              "frame-src https://whop.com https://*.whop.com",
+              "frame-ancestors https://whop.com https://*.whop.com",
               "base-uri 'self'",
               "form-action 'self' https://whop.com",
             ].join('; '),
           },
-          // Prevent clickjacking
+          // Allow Whop to embed this app
           {
             key: 'X-Frame-Options',
-            value: 'DENY',
+            value: 'ALLOW-FROM https://whop.com',
           },
           // Prevent MIME type sniffing
           {

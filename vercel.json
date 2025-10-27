@@ -35,7 +35,7 @@
       "headers": [
         {
           "key": "X-Frame-Options",
-          "value": "DENY"
+          "value": "ALLOW-FROM https://whop.com"
         },
         {
           "key": "X-Content-Type-Options",
