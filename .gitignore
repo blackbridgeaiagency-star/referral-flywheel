@@ -70,6 +70,12 @@ playwright-report/
 screenshots/
 Workflows/
 
+# Security - files with hardcoded secrets
+temp-env-setup.sh
+SECURITY-CHECKLIST.md
+*-secrets.sh
+*.credentials
+
 
 # vercel
 .vercel
