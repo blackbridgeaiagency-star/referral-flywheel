@@ -111,6 +111,7 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
                 totalRevenue: dashboardData.revenueStats.totalRevenue,
                 totalMonthlyRevenue: dashboardData.revenueStats.monthlyRecurringRevenue,
                 referralContribution: dashboardData.revenueStats.referralContribution,
+                activeSubscriptions: dashboardData.revenueStats.referredCount, // Use referred count as active subscriptions
                 totalActiveClicks: dashboardData.revenueStats.totalActiveClicks,
                 convertedActiveClicks: dashboardData.revenueStats.convertedClicks,
                 organicCount: dashboardData.revenueStats.organicCount,

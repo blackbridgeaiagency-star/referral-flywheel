@@ -53,7 +53,8 @@ export async function GET(request: Request) {
     });
 
     // Track successful backup
-    trackEvent('database_backup_success', 'maintenance', {
+    trackEvent('database_backup_success', {
+      category: 'maintenance',
       type: backupType,
       size: result.size,
       duration: result.duration,
@@ -63,10 +64,10 @@ export async function GET(request: Request) {
     // Send success notification for full backups
     if (backupType === 'full') {
       await sendAlert({
-        type: 'database_backup',
+        title: 'Database Backup Complete',
         message: `Full database backup completed successfully (${(result.size / 1024 / 1024).toFixed(2)} MB)`,
-        severity: 'low',
-        details: result,
+        severity: 'info',
+        context: result,
       });
     }
 
@@ -86,10 +87,10 @@ export async function GET(request: Request) {
 
     // Track and alert on failure
     await sendAlert({
-      type: 'database_backup_failed',
+      title: 'Database Backup Failed',
       message: `Database backup failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       severity: 'critical',
-      details: {
+      context: {
         error: error instanceof Error ? error.stack : error,
         timestamp: new Date().toISOString(),
       },
@@ -127,7 +128,6 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({
-      success: true,
       message: 'Manual backup completed',
       ...result,
     });

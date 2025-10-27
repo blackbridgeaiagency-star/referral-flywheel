@@ -136,7 +136,8 @@ export default async function MemberDashboard({
           memberId={data.memberId}
           initialData={data.earningsHistory.map(e => ({
             date: typeof e.date === 'string' ? e.date.split('T')[0] : new Date(e.date).toISOString().split('T')[0],
-            earnings: e.amount
+            earnings: e.earnings,
+            count: 1  // Default count for backwards compatibility
           }))}
         />
 
