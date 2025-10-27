@@ -39,7 +39,7 @@ export default function DiscoverPage() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-purple-600/20 rounded-full blur-3xl animate-pulse"></div>
 
         <div className="max-w-7xl mx-auto px-4 py-20 sm:py-32 text-center relative z-10">
-          <div className="mb-8">
+          <div className="flex justify-center mb-8">
             <img
               src="/logo.png"
               alt="Referral Flywheel Logo"
