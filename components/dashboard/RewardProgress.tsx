@@ -1,8 +1,8 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { calculatePotentialEarnings } from '@/lib/constants/metrics';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Badge } from '../ui/badge';
+import { calculatePotentialEarnings } from '../../lib/constants/metrics';
 import { Trophy } from 'lucide-react';
 
 interface RewardTier {

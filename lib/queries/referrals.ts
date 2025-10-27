@@ -1,5 +1,5 @@
 // lib/queries/referrals.ts
-import { prisma } from '@/lib/db/prisma';
+import { prisma } from '../db/prisma';
 import { startOfMonth } from 'date-fns';
 
 /**

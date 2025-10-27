@@ -1,12 +1,12 @@
 // app/seller-product/[experienceId]/page.tsx
 import { Suspense } from 'react';
-import { prisma } from '@/lib/db/prisma';
-import { getCompleteCreatorDashboardData } from '@/lib/data/centralized-queries';
-import { RevenueMetrics } from '@/components/dashboard/RevenueMetrics';
-import { TopPerformersTable } from '@/components/dashboard/TopPerformersTable';
-import { CommunityStatsGrid } from '@/components/dashboard/CommunityStatsGrid';
-import { RewardManagementForm } from '@/components/dashboard/RewardManagementForm';
-import { formatCurrency } from '@/lib/utils/commission';
+import { prisma } from '../../../lib/db/prisma';
+import { getCompleteCreatorDashboardData } from '../../../lib/data/centralized-queries';
+import { RevenueMetrics } from '../../../components/dashboard/RevenueMetrics';
+import { TopPerformersTable } from '../../../components/dashboard/TopPerformersTable';
+import { CommunityStatsGrid } from '../../../components/dashboard/CommunityStatsGrid';
+import { RewardManagementForm } from '../../../components/dashboard/RewardManagementForm';
+import { formatCurrency } from '../../../lib/utils/commission';
 
 interface CreatorDashboardPageProps {
   params: {

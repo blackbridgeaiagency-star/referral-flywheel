@@ -1,5 +1,5 @@
 // lib/utils/attribution.ts
-import { prisma } from '@/lib/db/prisma';
+import { prisma } from '../db/prisma';
 
 /**
  * Check for attribution via cookie or database lookup

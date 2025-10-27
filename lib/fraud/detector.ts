@@ -13,7 +13,7 @@
  * - 71-100: High risk (auto-block)
  */
 
-import { prisma } from '@/lib/db/prisma';
+import { prisma } from '../db/prisma';
 
 export interface FraudCheck {
   riskScore: number; // 0-100

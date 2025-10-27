@@ -1,8 +1,8 @@
 // app/api/admin/stats/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
-import { withRateLimit } from '@/lib/security/rate-limit-utils';
-import { cache } from '@/lib/cache/redis';
+import { prisma } from '../../../../lib/db/prisma';
+import { withRateLimit } from '../../../../lib/security/rate-limit-utils';
+import { cache } from '../../../../lib/cache/redis';
 
 export async function GET(request: NextRequest) {
   return withRateLimit(request, async () => {

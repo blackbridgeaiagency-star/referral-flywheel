@@ -1,5 +1,5 @@
 // lib/cache/cached-queries.ts
-import { prisma } from '@/lib/db/prisma';
+import { prisma } from '../db/prisma';
 import { cache, CACHE_CONFIG, CacheInvalidation } from './redis';
 
 /**

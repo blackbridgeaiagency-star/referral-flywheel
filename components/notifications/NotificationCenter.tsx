@@ -2,8 +2,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
-import { useWebSocket } from '@/lib/websocket/use-websocket';
+import { Card } from '../ui/card';
+import { useWebSocket } from '../../lib/websocket/use-websocket';
 import {
   Bell,
   X,
@@ -21,7 +21,7 @@ import {
   Clock,
   AlertCircle
 } from 'lucide-react';
-import { NotificationType, NotificationPriority } from '@/lib/websocket/websocket-server';
+import { NotificationType, NotificationPriority } from '../../lib/websocket/websocket-server';
 
 interface NotificationCenterProps {
   userId: string;

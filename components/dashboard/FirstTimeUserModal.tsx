@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { X, Sparkles, Link2, TrendingUp } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Button } from '../ui/button';
+import { Card } from '../ui/card';
 
 interface FirstTimeUserModalProps {
   membershipId: string;

@@ -1,6 +1,6 @@
 // lib/queue/webhook-queue.ts
-import { prisma } from '@/lib/db/prisma';
-import { cache } from '@/lib/cache/redis';
+import { prisma } from '../db/prisma';
+import { cache } from '../cache/redis';
 
 /**
  * Webhook job status

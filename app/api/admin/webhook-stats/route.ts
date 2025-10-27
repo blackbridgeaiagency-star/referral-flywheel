@@ -1,7 +1,7 @@
 // app/api/admin/webhook-stats/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
-import { withRateLimit } from '@/lib/middleware/rate-limit';
+import { prisma } from '../../../../lib/db/prisma';
+import { withRateLimit } from '../../../../lib/middleware/rate-limit';
 import { subHours, subDays, startOfHour, format } from 'date-fns';
 
 /**

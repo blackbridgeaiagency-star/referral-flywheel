@@ -2,9 +2,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
+import { Card } from '../ui/card';
 import { X, Download, Smartphone, Bell, Wifi, Share2 } from 'lucide-react';
-import { usePWA } from '@/lib/pwa/pwa-manager';
+import { usePWA } from '../../lib/pwa/pwa-manager';
 
 export default function InstallPrompt() {
   const {

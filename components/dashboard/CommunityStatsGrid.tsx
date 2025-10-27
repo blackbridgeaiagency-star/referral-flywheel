@@ -1,5 +1,5 @@
 // components/dashboard/CommunityStatsGrid.tsx
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '../ui/card';
 import { Users, Target, TrendingUp, UserPlus } from 'lucide-react';
 
 interface CommunityStatsGridProps {

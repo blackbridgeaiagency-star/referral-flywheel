@@ -1,8 +1,8 @@
 // lib/websocket/websocket-server.ts
 import { Server as HTTPServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
-import { prisma } from '@/lib/db/prisma';
-import { cache } from '@/lib/cache/redis';
+import { prisma } from '../db/prisma';
+import { cache } from '../cache/redis';
 
 /**
  * Notification types

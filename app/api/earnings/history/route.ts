@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getMemberEarningsByRange } from '@/lib/queries/earnings';
+import { getMemberEarningsByRange } from '../../../../lib/queries/earnings';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

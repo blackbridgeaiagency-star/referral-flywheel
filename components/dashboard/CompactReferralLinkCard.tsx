@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card } from '../ui/card';
+import { Button } from '../ui/button';
 import { Copy, Check, Share2, Edit2, X, Sparkles } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Input } from '../ui/input';
 
 interface CompactReferralLinkCardProps {
   code: string;

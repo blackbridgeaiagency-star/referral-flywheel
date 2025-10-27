@@ -1,6 +1,6 @@
 // app/api/creator/custom-rewards-v2/route.ts
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
+import { prisma } from '../../../../lib/db/prisma';
 
 export async function POST(request: Request) {
   try {

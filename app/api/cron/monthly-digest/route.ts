@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
-import { sendEmail } from '@/lib/email/client';
-import { generateMonthlyEarningsSummaryEmail } from '@/lib/email/templates/monthly-earnings-summary';
+import { prisma } from '../../../../lib/db/prisma';
+import { sendEmail } from '../../../../lib/email/client';
+import { generateMonthlyEarningsSummaryEmail } from '../../../../lib/email/templates/monthly-earnings-summary';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

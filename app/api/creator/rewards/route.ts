@@ -1,7 +1,7 @@
 // app/api/creator/rewards/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { prisma } from '@/lib/db/prisma';
+import { prisma } from '../../../../lib/db/prisma';
 
 /**
  * Zod schema for updating reward tiers

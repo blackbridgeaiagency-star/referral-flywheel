@@ -1,5 +1,5 @@
 // lib/db/query-optimizer.ts
-import { prisma } from '@/lib/db/prisma';
+import { prisma } from '../db/prisma';
 import { Prisma } from '@prisma/client';
 import { LRUCache } from 'lru-cache';
 

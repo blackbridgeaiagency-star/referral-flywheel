@@ -6,15 +6,15 @@
  */
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
 import {
   MESSAGE_TEMPLATES,
   fillTemplate,
   getTemplatesByPlatform,
   type MessageTemplate,
-} from '@/lib/templates/message-templates';
+} from '../../lib/templates/message-templates';
 import { Copy, Check } from 'lucide-react';
 
 interface TemplateSelectorProps {

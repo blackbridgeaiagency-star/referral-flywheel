@@ -1,6 +1,6 @@
 // app/api/cron/reset-monthly/route.ts
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
+import { prisma } from '../../../../lib/db/prisma';
 
 /**
  * Monthly Reset Cron Job

@@ -1,5 +1,5 @@
 // lib/queries/creator.ts
-import { prisma } from '@/lib/db/prisma';
+import { prisma } from '../db/prisma';
 import { subDays, startOfMonth, startOfYear, startOfDay } from 'date-fns';
 
 /**

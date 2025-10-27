@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { prisma } from '@/lib/db/prisma';
-import { generateReferralCode } from '@/lib/utils/referral-code';
+import { prisma } from '../../../../../lib/db/prisma';
+import { generateReferralCode } from '../../../../../lib/utils/referral-code';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

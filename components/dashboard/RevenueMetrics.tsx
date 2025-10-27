@@ -1,6 +1,6 @@
 // components/dashboard/RevenueMetrics.tsx
-import { Card, CardContent } from '@/components/ui/card';
-import { formatCurrency } from '@/lib/utils/commission';
+import { Card, CardContent } from '../ui/card';
+import { formatCurrency } from '../../lib/utils/commission';
 import { TrendingUp, DollarSign, MousePointerClick, Percent } from 'lucide-react';
 
 interface RevenueMetricsProps {

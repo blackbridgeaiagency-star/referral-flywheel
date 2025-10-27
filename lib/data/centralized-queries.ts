@@ -15,7 +15,7 @@
  * ALL metrics are calculated from raw Commission and Member records.
  */
 
-import { prisma } from '@/lib/db/prisma';
+import { prisma } from '../db/prisma';
 import { startOfMonth, subMonths } from 'date-fns';
 
 // ========================================

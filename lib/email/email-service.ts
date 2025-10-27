@@ -1,7 +1,7 @@
 // lib/email/email-service.ts
 import nodemailer from 'nodemailer';
 import { render } from '@react-email/render';
-import { prisma } from '@/lib/db/prisma';
+import { prisma } from '../db/prisma';
 
 /**
  * Email Notification Service

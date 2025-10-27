@@ -1,6 +1,6 @@
 // app/api/creator/export/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
+import { prisma } from '../../../../lib/db/prisma';
 import { format } from 'date-fns';
 
 /**

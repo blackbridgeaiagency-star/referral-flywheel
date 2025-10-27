@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { X, Trophy, ArrowUp, ArrowDown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { formatCurrency } from '@/lib/utils/commission';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { formatCurrency } from '../../lib/utils/commission';
 
 interface LeaderboardEntry {
   id: string;

@@ -1,19 +1,19 @@
 // app/api/webhooks/whop/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { prisma } from '@/lib/db/prisma';
-import { generateReferralCode } from '@/lib/utils/referral-code';
-import { calculateCommission } from '@/lib/utils/commission';
-import { checkAttribution } from '@/lib/utils/attribution';
-import { sendWelcomeMessage } from '@/lib/whop/messaging';
-import { withRetry, shouldRetry } from '@/lib/utils/webhook-retry';
-import { withRateLimit } from '@/lib/security/rate-limit-utils';
+import { prisma } from '../../../../lib/db/prisma';
+import { generateReferralCode } from '../../../../lib/utils/referral-code';
+import { calculateCommission } from '../../../../lib/utils/commission';
+import { checkAttribution } from '../../../../lib/utils/attribution';
+import { sendWelcomeMessage } from '../../../../lib/whop/messaging';
+import { withRetry, shouldRetry } from '../../../../lib/utils/webhook-retry';
+import { withRateLimit } from '../../../../lib/security/rate-limit-utils';
 import {
   isSubscriptionPayment,
   normalizeBillingPeriod,
   calculateMonthlyValue,
   getBillingPeriodLabel,
-} from '@/lib/utils/billing';
+} from '../../../../lib/utils/billing';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

@@ -8,7 +8,7 @@
  * - Most effective sharing channels
  */
 
-import { prisma } from '@/lib/db/prisma';
+import { prisma } from '../db/prisma';
 
 // Add this model to Prisma schema later:
 // model ShareEvent {

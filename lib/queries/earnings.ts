@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/db/prisma';
+import { prisma } from '../db/prisma';
 import { subDays, subMonths, format, startOfMonth, endOfMonth } from 'date-fns';
 
 export async function getMemberEarnings(memberId: string, days: number = 30) {

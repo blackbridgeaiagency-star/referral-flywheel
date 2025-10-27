@@ -10,8 +10,8 @@
  */
 
 import { NextResponse } from 'next/server';
-import { checkDatabaseHealth, getConnectionPoolStats } from '@/lib/db/queries-optimized';
-import { getCacheStats } from '@/lib/cache';
+import { checkDatabaseHealth, getConnectionPoolStats } from '../../../lib/db/queries-optimized';
+import { getCacheStats } from '../../../lib/cache/index';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,7 +63,7 @@ export async function GET() {
     // Check materialized views exist
     let materializedViewsStatus;
     try {
-      const { prismaOptimized } = await import('@/lib/db/queries-optimized');
+      const { prismaOptimized } = await import('../../../lib/db/queries-optimized');
       const viewCheck = await prismaOptimized.$queryRaw<Array<{ exists: boolean }>>`
         SELECT EXISTS (
           SELECT 1 FROM pg_matviews WHERE matviewname = 'member_stats_mv'

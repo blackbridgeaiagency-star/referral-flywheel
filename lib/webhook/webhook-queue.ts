@@ -1,7 +1,7 @@
 // lib/webhook/webhook-queue.ts
-import { prisma } from '@/lib/db/prisma';
-import { withRetry, shouldRetry } from '@/lib/utils/webhook-retry';
-import { trackError, trackEvent, ErrorCategory } from '@/lib/monitoring/error-tracking';
+import { prisma } from '../db/prisma';
+import { withRetry, shouldRetry } from '../utils/webhook-retry';
+import { trackError, trackEvent, ErrorCategory } from '../monitoring/error-tracking';
 
 /**
  * Advanced Webhook Queue System

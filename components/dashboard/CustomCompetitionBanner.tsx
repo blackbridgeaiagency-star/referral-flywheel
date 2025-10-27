@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '../ui/card';
 import { Trophy, Clock, Award, Gift, ChevronDown, ChevronUp, Target } from 'lucide-react';
-import { Toast } from '@/components/ui/toast';
+import { Toast } from '../ui/toast';
 
 interface CustomCompetitionBannerProps {
   isEnabled: boolean;

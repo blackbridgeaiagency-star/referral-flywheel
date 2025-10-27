@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { formatCurrency } from '@/lib/utils/commission';
+import { Card, CardContent } from '../ui/card';
+import { formatCurrency } from '../../lib/utils/commission';
 import { DollarSign, TrendingUp, Users, Trophy, TrendingDown, ArrowDown, ArrowUp } from 'lucide-react';
 
 interface StatsGridProps {

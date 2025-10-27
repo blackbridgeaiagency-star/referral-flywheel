@@ -1,13 +1,13 @@
 // app/customer/[experienceId]/page.tsx
-import { prisma } from '@/lib/db/prisma';
-import { CompactReferralLinkCard } from '@/components/dashboard/CompactReferralLinkCard';
-import { CustomCompetitionBanner } from '@/components/dashboard/CustomCompetitionBanner';
-import { StatsGrid } from '@/components/dashboard/StatsGrid';
-import { RewardProgress } from '@/components/dashboard/RewardProgress';
-import { EarningsChartWrapper } from '@/components/dashboard/EarningsChartWrapper';
-import { LeaderboardButton } from '@/components/dashboard/LeaderboardButton';
-import { formatCurrency } from '@/lib/utils/commission';
-import { getCompleteMemberDashboardData } from '@/lib/data/centralized-queries';
+import { prisma } from '../../../lib/db/prisma';
+import { CompactReferralLinkCard } from '../../../components/dashboard/CompactReferralLinkCard';
+import { CustomCompetitionBanner } from '../../../components/dashboard/CustomCompetitionBanner';
+import { StatsGrid } from '../../../components/dashboard/StatsGrid';
+import { RewardProgress } from '../../../components/dashboard/RewardProgress';
+import { EarningsChartWrapper } from '../../../components/dashboard/EarningsChartWrapper';
+import { LeaderboardButton } from '../../../components/dashboard/LeaderboardButton';
+import { formatCurrency } from '../../../lib/utils/commission';
+import { getCompleteMemberDashboardData } from '../../../lib/data/centralized-queries';
 import { notFound } from 'next/navigation';
 
 // Disable caching to always fetch fresh creator settings

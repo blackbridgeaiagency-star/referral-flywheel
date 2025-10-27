@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
-import { generateFingerprint } from '@/lib/utils/fingerprint';
-import { hashIP, extractRealIP } from '@/lib/utils/ip-hash';
-import { applyRateLimit } from '@/lib/security/rate-limit-utils';
+import { prisma } from '../../../lib/db/prisma';
+import { generateFingerprint } from '../../../lib/utils/fingerprint';
+import { hashIP, extractRealIP } from '../../../lib/utils/ip-hash';
+import { applyRateLimit } from '../../../lib/security/rate-limit-utils';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -81,7 +81,7 @@ export async function GET(
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // 2. GENERATE FINGERPRINT & CHECK FOR DUPLICATE CLICKS
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    const fingerprint: string = await generateFingerprint(request);
+    const fingerprint: string = generateFingerprint(request);
 
     // Check if this fingerprint already has an active click
     const existingClick = await prisma.attributionClick.findFirst({

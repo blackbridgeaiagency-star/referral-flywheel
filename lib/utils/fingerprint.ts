@@ -5,14 +5,14 @@ import crypto from 'crypto';
  * Generate visitor fingerprint (GDPR-safe, no PII)
  * Combines user agent + IP hash for uniqueness
  */
-export async function generateFingerprint(request: Request): Promise<string> {
+export function generateFingerprint(request: Request): string {
   const userAgent = request.headers.get('user-agent') || 'unknown';
-  const ip = request.headers.get('x-forwarded-for') || 
-             request.headers.get('x-real-ip') || 
+  const ip = request.headers.get('x-forwarded-for') ||
+             request.headers.get('x-real-ip') ||
              'unknown';
-  
+
   const data = `${userAgent}|${ip}`;
-  
+
   return crypto
     .createHash('sha256')
     .update(data)

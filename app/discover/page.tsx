@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CommunityCard } from '@/components/discover/community-card';
-import { Sparkles, TrendingUp, Users, DollarSign } from 'lucide-react';
+import { CommunityCard } from '../../components/discover/community-card';
+import { TrendingUp, Users, DollarSign } from 'lucide-react';
 
 interface Community {
   id: string;
@@ -39,8 +39,12 @@ export default function DiscoverPage() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-purple-600/20 rounded-full blur-3xl animate-pulse"></div>
 
         <div className="max-w-7xl mx-auto px-4 py-20 sm:py-32 text-center relative z-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-purple-600/30 to-pink-600/30 border-2 border-purple-500 mb-8 animate-pulse shadow-2xl shadow-purple-600/50">
-            <Sparkles className="w-10 h-10 text-purple-300" />
+          <div className="inline-flex items-center justify-center w-20 h-20 mb-8 animate-pulse">
+            <img
+              src="/icon.png"
+              alt="Referral Flywheel Logo"
+              className="w-20 h-20 rounded-2xl shadow-2xl shadow-purple-600/50"
+            />
           </div>
 
           <h1 className="text-6xl sm:text-7xl font-bold mb-8 leading-tight">

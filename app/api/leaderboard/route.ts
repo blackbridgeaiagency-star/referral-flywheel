@@ -1,7 +1,7 @@
 // app/api/leaderboard/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
-import { withRateLimit } from '@/lib/security/rate-limit-utils';
+import { prisma } from '../../../lib/db/prisma';
+import { withRateLimit } from '../../../lib/security/rate-limit-utils';
 
 export async function GET(request: NextRequest) {
   return withRateLimit(request, async () => {
