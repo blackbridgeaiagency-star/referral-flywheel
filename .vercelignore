@@ -1,0 +1,25 @@
+# Vercel ignore file
+# Only exclude what should not be deployed
+
+# Development files
+.vscode
+.idea
+
+# Test files
+**/__tests__
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+test-results/
+playwright-report/
+
+# Scripts
+scripts/
+
+# Docs (deploy them)
+# docs/
+
+# Keep components and lib!
+# !components/
+# !lib/
