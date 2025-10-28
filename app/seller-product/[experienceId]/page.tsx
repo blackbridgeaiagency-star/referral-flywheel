@@ -17,12 +17,13 @@ interface CreatorDashboardPageProps {
 export default async function CreatorDashboardPage({ params }: CreatorDashboardPageProps) {
   const { experienceId } = params;
 
-  // ========================================
-  // P0 CRITICAL: Automatic Creator Onboarding
-  // Auto-create creator record if it doesn't exist
-  // This ensures new app installations work immediately
-  // ========================================
-  let creator = await prisma.creator.findFirst({
+  try {
+    // ========================================
+    // P0 CRITICAL: Automatic Creator Onboarding
+    // Auto-create creator record if it doesn't exist
+    // This ensures new app installations work immediately
+    // ========================================
+    let creator = await prisma.creator.findFirst({
     where: { productId: experienceId },
     select: {
       id: true,
@@ -229,6 +230,38 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
       </footer>
     </div>
   );
+  } catch (error) {
+    console.error('Error loading creator dashboard:', error);
+    return (
+      <div className="min-h-screen bg-[#0F0F0F] flex items-center justify-center p-4">
+        <div className="max-w-2xl w-full bg-[#1A1A1A] border border-red-500/30 rounded-xl p-8">
+          <h1 className="text-3xl font-bold text-red-400 mb-4">Dashboard Loading Error</h1>
+          <p className="text-gray-300 mb-4">
+            There was an error loading your dashboard. This might be because:
+          </p>
+          <ul className="list-disc list-inside text-gray-400 mb-6 space-y-2">
+            <li>Database connection issue</li>
+            <li>Missing environment variables</li>
+            <li>Data query error</li>
+          </ul>
+          <div className="bg-gray-900 border border-gray-700 rounded p-4 mb-6">
+            <p className="text-sm font-mono text-red-300">
+              {error instanceof Error ? error.message : 'Unknown error'}
+            </p>
+          </div>
+          <p className="text-gray-400 text-sm">
+            Product ID: <span className="text-purple-400 font-mono">{experienceId}</span>
+          </p>
+          <a
+            href="https://whop.com/dashboard"
+            className="inline-block mt-6 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+          >
+            Back to Whop Dashboard
+          </a>
+        </div>
+      </div>
+    );
+  }
 }
 
 /**
