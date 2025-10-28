@@ -3,6 +3,36 @@ const nextConfig = {
   images: {
     domains: ['whop.com'],
   },
+  // Fix for build tracing issues and Maximum call stack size exceeded
+  experimental: {
+    outputFileTracingExcludes: {
+      '*': [
+        'node_modules/@swc/core-linux-x64-gnu',
+        'node_modules/@swc/core-linux-x64-musl',
+        'node_modules/@esbuild/linux-x64',
+        'node_modules/playwright',
+        'node_modules/@playwright',
+        '.next/cache/**',
+      ],
+    },
+    // Reduce memory usage during build
+    workerThreads: false,
+    cpus: 1,
+  },
+  // Increase build memory limit
+  env: {
+    NODE_OPTIONS: '--max-old-space-size=4096',
+  },
+  // Disable static optimization for API routes that need database
+  typescript: {
+    // Don't fail build on type errors (fix them separately)
+    ignoreBuildErrors: false,
+  },
+  // Reduce bundle analyzer overhead
+  productionBrowserSourceMaps: false,
+  // Optimize builds
+  swcMinify: true,
+  compress: true,
   // P2 FIX: Security Headers
   async headers() {
     return [

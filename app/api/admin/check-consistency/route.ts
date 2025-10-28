@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
 import { startOfMonth } from 'date-fns';
 
+// Force dynamic rendering - do not pre-render this route
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 /**
  * Real-Time Data Consistency Checker
  *

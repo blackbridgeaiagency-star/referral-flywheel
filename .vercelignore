@@ -4,6 +4,9 @@
 # Development files
 .vscode
 .idea
+.env.local
+.env.development
+.secrets.vault
 
 # Test files
 **/__tests__
@@ -13,12 +16,45 @@
 **/*.spec.tsx
 test-results/
 playwright-report/
+playwright/
+tests/
 
-# Scripts
-scripts/
+# Scripts (exclude test and seed scripts)
+scripts/test-*.ts
+scripts/seed*.ts
+scripts/*-test.ts
+scripts/ui-refinement/
 
-# Docs (deploy them)
+# Media files not needed in production
+screenshots/
+*.png
+*.jpg
+*.jpeg
+FlywheelLogo.png
+UserspcapaDocumentsreferral-flywheelscreenshotslogo-test.png
+
+# Documentation (optional)
+# Uncomment if you don't want docs deployed
+# *.md
+# !README.md
 # docs/
+
+# Build artifacts
+.next/cache/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Problematic files
+NUL
+CON
+PRN
+AUX
 
 # Keep components and lib!
 # !components/
