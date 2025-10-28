@@ -19,10 +19,6 @@ const nextConfig = {
     workerThreads: false,
     cpus: 1,
   },
-  // Increase build memory limit
-  env: {
-    NODE_OPTIONS: '--max-old-space-size=4096',
-  },
   // Disable static optimization for API routes that need database
   typescript: {
     // Don't fail build on type errors (fix them separately)
