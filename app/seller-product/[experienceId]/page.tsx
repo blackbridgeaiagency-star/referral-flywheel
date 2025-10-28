@@ -232,32 +232,157 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
   );
   } catch (error) {
     console.error('Error loading creator dashboard:', error);
+
+    // Determine error type and provide specific guidance
+    let errorTitle = "Dashboard Loading Error";
+    let errorDetails = [];
+    let troubleshootingSteps = [];
+    let errorCode = "UNKNOWN";
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    if (errorMessage.includes("Can't reach database server")) {
+      errorTitle = "Database Connection Failed";
+      errorCode = "DB_UNREACHABLE";
+      errorDetails = [
+        "Cannot connect to the database server",
+        "The Supabase project may be paused or inactive",
+        "Database credentials may be incorrect"
+      ];
+      troubleshootingSteps = [
+        "Check if your Supabase project is active at supabase.com",
+        "Verify DATABASE_URL is correctly set in Vercel environment variables",
+        "Ensure password is properly URL-encoded if it contains special characters",
+        "Use pooling connection (port 6543) with ?pgbouncer=true"
+      ];
+    } else if (errorMessage.includes("P1001") || errorMessage.includes("timeout")) {
+      errorTitle = "Database Connection Timeout";
+      errorCode = "DB_TIMEOUT";
+      errorDetails = [
+        "Database server is unreachable",
+        "Network connection issues",
+        "Firewall or security group blocking connection"
+      ];
+      troubleshootingSteps = [
+        "Check Supabase dashboard for any ongoing issues",
+        "Verify network connectivity from Vercel",
+        "Check if IP allowlist is configured in Supabase"
+      ];
+    } else if (errorMessage.includes("authentication failed") || errorMessage.includes("P1000")) {
+      errorTitle = "Database Authentication Failed";
+      errorCode = "DB_AUTH";
+      errorDetails = [
+        "Invalid database credentials",
+        "Password may have changed",
+        "User permissions issue"
+      ];
+      troubleshootingSteps = [
+        "Verify database password in Supabase settings",
+        "Update DATABASE_URL in Vercel with correct password",
+        "Check if password contains special characters that need encoding"
+      ];
+    } else if (errorMessage.includes("P1003")) {
+      errorTitle = "Database Not Found";
+      errorCode = "DB_NOT_FOUND";
+      errorDetails = [
+        "The specified database does not exist",
+        "Wrong database name in connection string"
+      ];
+      troubleshootingSteps = [
+        "Verify database name in DATABASE_URL",
+        "Check Supabase project settings for correct database name",
+        "Ensure using 'postgres' as the database name"
+      ];
+    } else if (errorMessage.includes("relation") && errorMessage.includes("does not exist")) {
+      errorTitle = "Database Schema Issue";
+      errorCode = "DB_SCHEMA";
+      errorDetails = [
+        "Database tables are missing",
+        "Migrations have not been run",
+        "Schema out of sync"
+      ];
+      troubleshootingSteps = [
+        "Run 'npx prisma db push' to create tables",
+        "Verify Prisma schema matches database",
+        "Check if migrations need to be applied"
+      ];
+    } else {
+      errorDetails = [
+        "An unexpected error occurred",
+        "This might be a temporary issue",
+        "Please check the error details below"
+      ];
+      troubleshootingSteps = [
+        "Check Vercel function logs for more details",
+        "Verify all environment variables are set",
+        "Try accessing /api/health for system status",
+        "Test database connection at /api/debug/db-test"
+      ];
+    }
+
     return (
       <div className="min-h-screen bg-[#0F0F0F] flex items-center justify-center p-4">
         <div className="max-w-2xl w-full bg-[#1A1A1A] border border-red-500/30 rounded-xl p-8">
-          <h1 className="text-3xl font-bold text-red-400 mb-4">Dashboard Loading Error</h1>
-          <p className="text-gray-300 mb-4">
-            There was an error loading your dashboard. This might be because:
-          </p>
-          <ul className="list-disc list-inside text-gray-400 mb-6 space-y-2">
-            <li>Database connection issue</li>
-            <li>Missing environment variables</li>
-            <li>Data query error</li>
-          </ul>
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-red-400 mb-2">{errorTitle}</h1>
+              <span className="inline-block px-2 py-1 bg-red-900/30 text-red-400 text-xs rounded font-mono">
+                ERROR: {errorCode}
+              </span>
+            </div>
+            <div className="text-right">
+              <p className="text-gray-500 text-xs">Product ID</p>
+              <p className="text-purple-400 font-mono text-sm">{experienceId}</p>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <p className="text-gray-300 mb-3 font-semibold">What went wrong:</p>
+            <ul className="list-disc list-inside text-gray-400 space-y-2">
+              {errorDetails.map((detail, i) => (
+                <li key={i}>{detail}</li>
+              ))}
+            </ul>
+          </div>
+
           <div className="bg-gray-900 border border-gray-700 rounded p-4 mb-6">
-            <p className="text-sm font-mono text-red-300">
-              {error instanceof Error ? error.message : 'Unknown error'}
+            <p className="text-xs text-gray-500 mb-1">Error Message:</p>
+            <p className="text-sm font-mono text-red-300 break-all">
+              {errorMessage}
             </p>
           </div>
-          <p className="text-gray-400 text-sm">
-            Product ID: <span className="text-purple-400 font-mono">{experienceId}</span>
-          </p>
-          <a
-            href="https://whop.com/dashboard"
-            className="inline-block mt-6 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
-          >
-            Back to Whop Dashboard
-          </a>
+
+          <div className="mb-6">
+            <p className="text-gray-300 mb-3 font-semibold">Troubleshooting Steps:</p>
+            <ol className="list-decimal list-inside text-gray-400 space-y-2">
+              {troubleshootingSteps.map((step, i) => (
+                <li key={i} className="text-sm">{step}</li>
+              ))}
+            </ol>
+          </div>
+
+          <div className="flex gap-3">
+            <a
+              href="/api/health"
+              target="_blank"
+              className="inline-block px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors text-sm"
+            >
+              Check System Health
+            </a>
+            <a
+              href="/api/debug/db-test"
+              target="_blank"
+              className="inline-block px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors text-sm"
+            >
+              Test Database
+            </a>
+            <a
+              href="https://whop.com/dashboard"
+              className="inline-block px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded transition-colors text-sm"
+            >
+              Back to Whop Dashboard
+            </a>
+          </div>
         </div>
       </div>
     );

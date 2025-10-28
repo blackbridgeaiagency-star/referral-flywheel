@@ -1,17 +1,17 @@
 /**
  * Health check endpoint
- * Monitor database, cache, and system health
+ * Monitor database and system health
  *
  * GET /api/health
  *
  * Returns:
  * - 200 OK: All systems healthy
- * - 503 Service Unavailable: Database or critical service down
+ * - 206 Partial Content: Some systems degraded
+ * - 503 Service Unavailable: Critical service down
  */
 
 import { NextResponse } from 'next/server';
-import { checkDatabaseHealth, getConnectionPoolStats } from '../../../lib/db/queries-optimized';
-import { getCacheStats } from '../../../lib/cache/index';
+import { prisma } from '@/lib/db/prisma';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,97 +23,84 @@ interface HealthStatus {
     database: {
       healthy: boolean;
       latency: number; // ms
-      connectionPool?: {
-        total: number;
-        active: number;
-        idle: number;
-        waiting: number;
-      };
+      error?: string;
     };
-    cache: {
+    environment: {
       healthy: boolean;
-      size: number;
-      hitRate?: number;
+      missing: string[];
     };
-    materializedViews?: {
-      memberStats: boolean;
-      creatorAnalytics: boolean;
+    memory: {
+      used: number; // MB
+      total: number; // MB
+      percentage: number;
     };
   };
   version: string;
   environment: string;
 }
 
+const startTime = Date.now();
+
 export async function GET() {
   const start = Date.now();
+  let dbHealthy = false;
+  let dbLatency = 0;
+  let dbError: string | undefined;
 
   try {
-    // Check database health
-    const dbHealth = await checkDatabaseHealth();
-    let poolStats;
+    // Check database health with a simple query
+    const dbStart = Date.now();
     try {
-      poolStats = await getConnectionPoolStats();
+      await prisma.$queryRaw`SELECT 1`;
+      dbHealthy = true;
+      dbLatency = Date.now() - dbStart;
     } catch (error) {
-      console.warn('Failed to get connection pool stats:', error);
+      dbHealthy = false;
+      dbError = error instanceof Error ? error.message : 'Unknown database error';
+      console.error('Database health check failed:', error);
     }
 
-    // Check cache health
-    const cacheStats = getCacheStats();
+    // Check required environment variables
+    const requiredEnvVars = [
+      'DATABASE_URL',
+      'WHOP_API_KEY',
+      'WHOP_WEBHOOK_SECRET',
+      'NEXT_PUBLIC_WHOP_APP_ID',
+      'NEXT_PUBLIC_WHOP_COMPANY_ID',
+      'NEXT_PUBLIC_APP_URL'
+    ];
 
-    // Check materialized views exist
-    let materializedViewsStatus;
-    try {
-      const { prismaOptimized } = await import('../../../lib/db/queries-optimized');
-      const viewCheck = await prismaOptimized.$queryRaw<Array<{ exists: boolean }>>`
-        SELECT EXISTS (
-          SELECT 1 FROM pg_matviews WHERE matviewname = 'member_stats_mv'
-        ) as exists
-      `;
-      const memberStatsExists = viewCheck[0]?.exists || false;
+    const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+    const envHealthy = missingVars.length === 0;
 
-      const viewCheck2 = await prismaOptimized.$queryRaw<Array<{ exists: boolean }>>`
-        SELECT EXISTS (
-          SELECT 1 FROM pg_matviews WHERE matviewname = 'creator_analytics_mv'
-        ) as exists
-      `;
-      const creatorAnalyticsExists = viewCheck2[0]?.exists || false;
-
-      materializedViewsStatus = {
-        memberStats: memberStatsExists,
-        creatorAnalytics: creatorAnalyticsExists,
-      };
-    } catch (error) {
-      console.warn('Failed to check materialized views:', error);
-      materializedViewsStatus = {
-        memberStats: false,
-        creatorAnalytics: false,
-      };
-    }
+    // Check memory usage
+    const memUsage = process.memoryUsage();
+    const memoryInfo = {
+      used: Math.round(memUsage.heapUsed / 1024 / 1024), // MB
+      total: Math.round(memUsage.heapTotal / 1024 / 1024), // MB
+      percentage: Math.round((memUsage.heapUsed / memUsage.heapTotal) * 100)
+    };
 
     // Determine overall health status
-    const allViewsHealthy = materializedViewsStatus.memberStats && materializedViewsStatus.creatorAnalytics;
-    const status = !dbHealth.healthy
-      ? 'unhealthy'
-      : !allViewsHealthy
-      ? 'degraded'
-      : 'healthy';
+    const status = !dbHealthy ? 'unhealthy' :
+                  !envHealthy ? 'degraded' :
+                  'healthy';
 
     const healthStatus: HealthStatus = {
       status,
       timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
+      uptime: Math.floor((Date.now() - startTime) / 1000), // seconds
       checks: {
         database: {
-          healthy: dbHealth.healthy,
-          latency: dbHealth.latency,
-          connectionPool: poolStats,
+          healthy: dbHealthy,
+          latency: dbLatency,
+          ...(dbError && { error: dbError })
         },
-        cache: {
-          healthy: true,
-          size: cacheStats.size,
-          hitRate: cacheStats.hitRate,
+        environment: {
+          healthy: envHealthy,
+          missing: missingVars
         },
-        materializedViews: materializedViewsStatus,
+        memory: memoryInfo
       },
       version: process.env.npm_package_version || '0.1.0',
       environment: process.env.NODE_ENV || 'development',
@@ -122,7 +109,9 @@ export async function GET() {
     const responseTime = Date.now() - start;
 
     // Return appropriate status code
-    const statusCode = status === 'unhealthy' ? 503 : 200;
+    const statusCode = status === 'unhealthy' ? 503 :
+                      status === 'degraded' ? 206 :
+                      200;
 
     return NextResponse.json(
       {
@@ -134,6 +123,7 @@ export async function GET() {
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'X-Response-Time': `${responseTime}ms`,
+          'X-Health-Status': status
         },
       }
     );
@@ -151,8 +141,39 @@ export async function GET() {
         status: 503,
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'X-Health-Status': 'unhealthy'
         },
       }
     );
+  } finally {
+    // Always disconnect to prevent connection leaks
+    try {
+      await prisma.$disconnect();
+    } catch (disconnectError) {
+      console.error('Error disconnecting from database:', disconnectError);
+    }
   }
+}
+
+// Simple HEAD request for basic monitoring
+export async function HEAD() {
+  let isHealthy = true;
+
+  try {
+    // Quick database check
+    await prisma.$queryRaw`SELECT 1`;
+  } catch {
+    isHealthy = false;
+  } finally {
+    try {
+      await prisma.$disconnect();
+    } catch {}
+  }
+
+  return new Response(null, {
+    status: isHealthy ? 200 : 503,
+    headers: {
+      'X-Health-Status': isHealthy ? 'healthy' : 'unhealthy'
+    }
+  });
 }
