@@ -1,12 +1,13 @@
 // lib/db/prisma.ts
 import { PrismaClient } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
 // Configuration for connection pooling and retry
-const prismaOptions = {
+const prismaOptions: Prisma.PrismaClientOptions = {
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   datasources: {
     db: {
@@ -14,7 +15,7 @@ const prismaOptions = {
     },
   },
   // Error formatting to make debugging easier
-  errorFormat: 'pretty' as const,
+  errorFormat: 'pretty',
 };
 
 // Create PrismaClient with connection retry logic
