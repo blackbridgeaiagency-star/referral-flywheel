@@ -18,13 +18,62 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
   const { experienceId } = params;
 
   // ========================================
-  // P0 CRITICAL: Performance Optimization
-  // Batch queries in parallel to reduce load time from 6.1s to <3s
+  // P0 CRITICAL: Automatic Creator Onboarding
+  // Auto-create creator record if it doesn't exist
+  // This ensures new app installations work immediately
   // ========================================
-  const [creator, dashboardData] = await Promise.all([
-    // Creator lookup
-    prisma.creator.findFirst({
-      where: { productId: experienceId },
+  let creator = await prisma.creator.findFirst({
+    where: { productId: experienceId },
+    select: {
+      id: true,
+      companyName: true,
+      tier1Count: true,
+      tier1Reward: true,
+      tier2Count: true,
+      tier2Reward: true,
+      tier3Count: true,
+      tier3Reward: true,
+      tier4Count: true,
+      tier4Reward: true,
+      autoApproveRewards: true,
+      welcomeMessage: true,
+      customRewardEnabled: true,
+      customRewardTimeframe: true,
+      customRewardType: true,
+      customReward1st: true,
+      customReward2nd: true,
+      customReward3rd: true,
+      customReward4th: true,
+      customReward5th: true,
+      customReward6to10: true,
+    },
+  });
+
+  // Auto-create creator if this is their first time accessing the app
+  if (!creator) {
+    console.log(`🚀 Auto-creating creator for product: ${experienceId}`);
+
+    creator = await prisma.creator.create({
+      data: {
+        productId: experienceId,
+        companyId: experienceId, // Use productId as companyId for now
+        companyName: 'My Community', // Default name - creator can update in settings
+        // Default tier rewards
+        tier1Count: 3,
+        tier1Reward: 'Early Supporter Badge',
+        tier2Count: 5,
+        tier2Reward: 'Community Champion Badge',
+        tier3Count: 10,
+        tier3Reward: 'VIP Access',
+        tier4Count: 25,
+        tier4Reward: 'Lifetime Pro Access',
+        autoApproveRewards: false,
+        welcomeMessage: 'Welcome to our referral program! Share your unique link to earn rewards.',
+        // Custom competition rewards (disabled by default)
+        customRewardEnabled: false,
+        customRewardTimeframe: 'monthly',
+        customRewardType: 'top_earners',
+      },
       select: {
         id: true,
         companyName: true,
@@ -48,30 +97,16 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
         customReward5th: true,
         customReward6to10: true,
       },
-    }),
+    });
 
-    // Dashboard data (all metrics in parallel internally)
-    getCompleteCreatorDashboardData(experienceId),
-  ]);
-
-  if (!creator) {
-    return (
-      <div className="min-h-screen bg-[#0F0F0F] flex items-center justify-center p-4">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-white mb-4">Creator Not Found</h1>
-          <p className="text-gray-400 mb-6">
-            This referral program doesn't exist or hasn't been set up yet.
-          </p>
-          <a
-            href="https://whop.com/dashboard"
-            className="text-purple-500 hover:text-purple-400 underline"
-          >
-            Go to Whop Dashboard
-          </a>
-        </div>
-      </div>
-    );
+    console.log(`✅ Creator auto-created successfully: ${creator.id}`);
   }
+
+  // ========================================
+  // P0 CRITICAL: Performance Optimization
+  // Fetch dashboard data after ensuring creator exists
+  // ========================================
+  const dashboardData = await getCompleteCreatorDashboardData(experienceId);
 
   return (
     <div className="min-h-screen bg-[#0F0F0F]">
