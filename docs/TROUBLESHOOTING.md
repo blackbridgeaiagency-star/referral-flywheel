@@ -1,308 +1,242 @@
 # Troubleshooting Guide
+**Common Issues and Solutions**
 
-## Common Issues
+---
 
-### Referral Link Not Working
+## 🔧 Common Issues
+
+### Issue: Referral Link Not Working
 
 **Symptoms:**
-- Link shows 404 error
+- 404 error when clicking link
 - Link redirects to wrong page
-- Attribution not being tracked
+- "Invalid referral code" message
 
 **Solutions:**
+1. Verify link format: `domain.com/r/CODE`
+2. Check if member exists in dashboard
+3. Try in incognito mode (clear cookies)
+4. Regenerate referral code in dashboard
 
-1. **Check link format**
-   ```
-   Correct: https://yourdomain.com/r/FIRSTNAME-ABC123
-   Wrong: https://yourdomain.com/referral/...
-   ```
+---
 
-2. **Verify member exists**
-   ```sql
-   -- Check in database
-   SELECT * FROM Member WHERE referralCode = 'FIRSTNAME-ABC123';
-   ```
-
-3. **Check attribution tracking**
-   - Open browser console (F12)
-   - Visit referral link
-   - Look for attribution errors
-   - Check cookies are enabled
-
-4. **Test in incognito mode**
-   - Some browser extensions block tracking
-   - Ad blockers can interfere
-
-### Earnings Not Showing
+### Issue: No Commission Showing
 
 **Symptoms:**
-- Member made referral but earnings show $0
-- Dashboard shows wrong numbers
-- Commission not calculated
+- Referred someone but no earnings
+- Dashboard shows 0 earnings
+- Missing transactions
 
 **Solutions:**
+1. Wait 24-48 hours for payment to clear
+2. Verify referred person completed payment
+3. Check if they used your link (within 30 days)
+4. Contact creator to verify member exists
 
-1. **Verify webhook received**
-   ```bash
-   # Check server logs
-   grep "Webhook received" logs/*.log
-   ```
+**How Attribution Works:**
+- 30-day cookie window
+- Must complete payment within 30 days of click
+- Commission appears after first payment clears
 
-2. **Check commission record**
-   ```sql
-   SELECT * FROM Commission
-   WHERE memberId = 'member_id'
-   ORDER BY createdAt DESC;
-   ```
+---
 
-3. **Verify attribution**
-   ```sql
-   SELECT * FROM AttributionClick
-   WHERE memberId = 'member_id'
-   AND converted = true;
-   ```
+### Issue: Welcome Message Not Received
 
-4. **Check calculation**
-   - Sale amount should be in database
-   - 10/70/20 split should be correct
-   - Status should be 'paid'
+**Symptoms:**
+- New member didn't get welcome DM
+- Missing referral link
+- No onboarding message
 
-### How to Contact Support
+**Solutions:**
+1. Check Whop DM inbox
+2. Check email spam folder
+3. Verify email settings in Whop
+4. Manually share link via creator
 
-**Email Template:**
-```
-Subject: [Issue Type] - Brief Description
+**Note:** Welcome messages sent via Whop DM or email fallback
 
-Environment: Production / Development
-URL: https://...
-Member ID: mem_...
-Referral Code: FIRSTNAME-ABC123
+---
 
-Steps to reproduce:
-1. ...
-2. ...
-3. ...
-
-Expected behavior:
-...
-
-Actual behavior:
-...
-
-Screenshots/Logs:
-[Attach if available]
-```
-
-### Dashboard Not Loading
+### Issue: Dashboard Not Loading
 
 **Symptoms:**
 - Blank screen
-- Infinite loading spinner
-- 500 error
+- Loading spinner forever
+- Database error messages
 
 **Solutions:**
+1. Refresh page (Ctrl+R / Cmd+R)
+2. Clear browser cache
+3. Try different browser
+4. Check internet connection
+5. Wait 5 minutes (server might be restarting)
 
-1. **Check browser console**
-   - Open DevTools (F12)
-   - Look for error messages
-   - Check network tab for failed requests
+---
 
-2. **Clear cache**
-   ```bash
-   # Browser
-   Ctrl+Shift+Delete → Clear cache
-
-   # Server (if self-hosting)
-   npm run build
-   ```
-
-3. **Verify database connection**
-   ```bash
-   # Test connection
-   npx prisma db push --preview-feature
-   ```
-
-4. **Check environment variables**
-   ```bash
-   # Required variables
-   DATABASE_URL=...
-   WHOP_API_KEY=...
-   NEXT_PUBLIC_APP_URL=...
-   ```
-
-### Webhook Not Processing
+### Issue: Can't Access Creator Dashboard
 
 **Symptoms:**
-- No commissions created
-- Members not importing
-- Referrals not tracking
+- 404 error
+- Permission denied
+- Wrong experience ID
 
 **Solutions:**
+1. Verify you're the community owner
+2. Check URL format: `/seller-product/[experienceId]`
+3. Try accessing via Whop Dashboard View integration
+4. Clear cookies and re-authenticate
 
-1. **Verify webhook URL**
-   ```
-   Correct: https://yourdomain.com/api/webhooks/whop
-   Must be: HTTPS (not HTTP)
-   Must be: Publicly accessible
-   ```
+**Correct URLs:**
+- Creator: `/seller-product/biz_xxx` or `/seller-product/prod_xxx`
+- Member: `/customer/mem_xxx`
 
-2. **Check webhook signature**
-   ```typescript
-   // Log signature validation
-   console.log('Signature valid:', signature === expectedSignature);
-   ```
+---
 
-3. **Test webhook locally**
-   ```bash
-   # Use ngrok
-   ngrok http 3000
-
-   # Update Whop webhook URL to ngrok URL
-   https://abc123.ngrok.io/api/webhooks/whop
-   ```
-
-4. **Check webhook logs**
-   - Go to Whop Dashboard
-   - Navigate to Webhooks section
-   - Review delivery logs
-   - Check response codes
-
-### Database Errors
+### Issue: Rewards Not Unlocking
 
 **Symptoms:**
-- "Connection pool timeout"
-- "Prisma client not found"
-- "Unique constraint failed"
+- Hit milestone but no reward
+- Dashboard says "pending"
+- Reward tier not showing
 
 **Solutions:**
+1. Verify you hit the exact referral count
+2. Check if creator has "auto-approve" enabled
+3. Wait 24 hours for processing
+4. Contact creator to manually approve
 
-1. **Connection pool timeout**
-   ```env
-   # Increase connection limit in DATABASE_URL
-   DATABASE_URL="postgresql://...?connection_limit=20"
-   ```
+**How Rewards Work:**
+- Automatic if creator enabled auto-approve
+- Manual approval otherwise
+- Shown in dashboard under "Rewards Progress"
 
-2. **Prisma client issues**
-   ```bash
-   # Regenerate client
-   npx prisma generate
+---
 
-   # Reset if needed
-   npx prisma migrate reset
-   ```
+### Issue: Email/Notifications Not Working
 
-3. **Unique constraint errors**
-   - Usually means duplicate data
-   - Check referral codes are unique
-   - Verify email uniqueness
-
-## Error Codes Reference
-
-### API Error Codes
-
-| Code | Meaning | Solution |
-|------|---------|----------|
-| `INVALID_CODE` | Referral code not found | Check code format, verify member exists |
-| `UNAUTHORIZED` | Missing authentication | Provide API key or Whop session |
-| `VALIDATION_ERROR` | Invalid input data | Check request parameters |
-| `DATABASE_ERROR` | DB operation failed | Check connection, verify schema |
-| `WEBHOOK_SIGNATURE_INVALID` | Webhook security fail | Verify webhook secret matches |
-
-### HTTP Status Codes
-
-- `200`: Success
-- `400`: Bad request (check parameters)
-- `401`: Unauthorized (check auth)
-- `404`: Not found (check URL)
-- `500`: Server error (check logs)
-
-## Performance Issues
-
-### Slow Dashboard Loading
+**Symptoms:**
+- No welcome emails
+- Missing payment notifications
+- No commission alerts
 
 **Solutions:**
+1. Check spam/junk folder
+2. Add noreply@referralflywheel.app to contacts
+3. Verify email in Whop settings
+4. Check notification preferences
 
-1. **Enable caching**
-   ```typescript
-   // Add revalidation to API routes
-   export const revalidate = 60; // Cache for 60 seconds
-   ```
+**Note:** Some emails may be delayed up to 15 minutes
 
-2. **Optimize database queries**
-   ```sql
-   -- Add indexes
-   CREATE INDEX idx_member_creator ON Member(creatorId);
-   CREATE INDEX idx_commission_member ON Commission(memberId);
-   ```
+---
 
-3. **Reduce data fetching**
-   - Use pagination
-   - Limit leaderboard results
-   - Cache frequently accessed data
+### Issue: Build Errors (Developers)
 
-### High Server Load
+**Symptoms:**
+- `npm run build` fails
+- TypeScript errors
+- Missing dependencies
 
 **Solutions:**
-
-1. **Implement rate limiting**
-   ```typescript
-   // Add to API routes
-   import rateLimit from 'express-rate-limit';
-   ```
-
-2. **Optimize webhook processing**
-   - Process webhooks async
-   - Use queue system (Bull, BullMQ)
-   - Batch database operations
-
-3. **Scale database**
-   - Upgrade to larger instance
-   - Add read replicas
-   - Implement connection pooling
-
-## Getting Help
-
-### Before Contacting Support
-
-- [ ] Check this troubleshooting guide
-- [ ] Search existing GitHub issues
-- [ ] Review documentation
-- [ ] Test in development environment
-- [ ] Gather error logs and screenshots
-
-### Support Channels
-
-1. **GitHub Issues**: Bug reports and feature requests
-2. **Email**: support@referral-flywheel.com
-3. **Discord**: [Community link]
-4. **Documentation**: [Docs link]
-
-### Emergency Contact
-
-For critical production issues:
-- Email: emergency@referral-flywheel.com
-- Include: "URGENT" in subject line
-- Response time: < 2 hours
-
-## Useful Commands
-
 ```bash
-# Check application status
-npm run dev # Start development
-npm run build # Build production
-npm run start # Start production
+# Delete node_modules and reinstall
+rm -rf node_modules
+npm install
 
-# Database operations
-npx prisma studio # Visual database editor
-npx prisma db push # Apply schema changes
-npx prisma migrate dev # Create migration
+# Reset Next.js cache
+rm -rf .next
+npm run build
 
-# Debugging
-npm run test # Run tests
-npm run lint # Check for errors
-npm run type-check # TypeScript validation
+# Check environment variables
+cat .env.local
 
-# Logs
-tail -f logs/app.log # Watch application logs
-tail -f logs/webhook.log # Watch webhook logs
+# Verify database connection
+npm run db:test
 ```
+
+---
+
+## 🔍 Debugging Steps
+
+### For Members:
+1. Check dashboard for accurate referral count
+2. Verify link format is correct
+3. Test link in incognito mode
+4. Contact community creator for help
+
+### For Creators:
+1. Check webhook configuration in Whop
+2. Verify environment variables are set
+3. Test webhook with Whop dashboard
+4. Check database connection
+5. Review server logs for errors
+
+---
+
+## 📞 Getting Support
+
+### Self-Service
+1. Check this troubleshooting guide
+2. Read relevant documentation
+3. Test in incognito mode
+4. Clear cache and cookies
+
+### Contact Support
+- **Email**: support@referralflywheel.app
+- **Discord**: [Join our community](#)
+- **GitHub Issues**: [Report bugs](#)
+
+### What to Include:
+- Detailed description of issue
+- Steps to reproduce
+- Screenshots/error messages
+- Browser and OS version
+- Experience ID (if applicable)
+
+---
+
+## 🐛 Known Issues
+
+### Issue: Logo Not Loading
+**Status**: Fixed in v1.1.0
+**Workaround**: Logo now has SVG fallback
+
+### Issue: Webhook Delays
+**Status**: Investigating
+**Impact**: Commissions may take 24-48 hours to appear
+**Workaround**: Be patient, they will appear
+
+### Issue: Mobile Layout on Small Screens
+**Status**: In Progress
+**Impact**: Some elements may overflow on phones < 375px
+**Workaround**: Use landscape mode
+
+---
+
+## 🔐 Security Issues
+
+### Issue: Suspicious Activity
+**Report immediately** if you notice:
+- Unauthorized access to dashboard
+- Strange referrals you didn't make
+- Unexpected commission changes
+- Suspicious payment activity
+
+**Contact**: security@referralflywheel.app
+
+---
+
+## ✅ Quick Checks
+
+### Before Reporting an Issue:
+- [ ] Tried in incognito mode
+- [ ] Cleared browser cache
+- [ ] Checked spam folder for emails
+- [ ] Waited 24-48 hours for commissions
+- [ ] Verified environment variables (developers)
+- [ ] Checked internet connection
+- [ ] Tried different browser
+- [ ] Read relevant documentation
+
+---
+
+*Last Updated: 2025-10-29*

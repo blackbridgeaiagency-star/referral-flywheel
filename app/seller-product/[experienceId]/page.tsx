@@ -2,6 +2,7 @@
 import { Suspense } from 'react';
 import { prisma } from '../../../lib/db/prisma';
 import { getCompleteCreatorDashboardData } from '../../../lib/data/centralized-queries';
+import { createCreatorWithWhopData } from '../../../lib/whop/sync-creator';
 import { RevenueMetrics } from '../../../components/dashboard/RevenueMetrics';
 import { TopPerformersTable } from '../../../components/dashboard/TopPerformersTable';
 import { CommunityStatsGrid } from '../../../components/dashboard/CommunityStatsGrid';
@@ -68,54 +69,101 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
   if (!creator) {
     console.log(`🚀 Auto-creating creator for ${isCompanyId ? 'company' : 'product'}: ${experienceId}`);
 
-    creator = await prisma.creator.create({
-      data: {
-        productId: isCompanyId ? experienceId : experienceId, // If companyId, use it as productId for now
-        companyId: isCompanyId ? experienceId : experienceId, // If productId, use it as companyId for now
-        companyName: 'My Community', // Default name - creator can update in settings
-        // Default tier rewards
-        tier1Count: 3,
-        tier1Reward: 'Early Supporter Badge',
-        tier2Count: 5,
-        tier2Reward: 'Community Champion Badge',
-        tier3Count: 10,
-        tier3Reward: 'VIP Access',
-        tier4Count: 25,
-        tier4Reward: 'Lifetime Pro Access',
-        autoApproveRewards: false,
-        welcomeMessage: 'Welcome to our referral program! Share your unique link to earn rewards.',
-        // Custom competition rewards (disabled by default)
-        customRewardEnabled: false,
-        customRewardTimeframe: 'monthly',
-        customRewardType: 'top_earners',
-      },
-      select: {
-        id: true,
-        companyName: true,
-        productId: true,
-        tier1Count: true,
-        tier1Reward: true,
-        tier2Count: true,
-        tier2Reward: true,
-        tier3Count: true,
-        tier3Reward: true,
-        tier4Count: true,
-        tier4Reward: true,
-        autoApproveRewards: true,
-        welcomeMessage: true,
-        customRewardEnabled: true,
-        customRewardTimeframe: true,
-        customRewardType: true,
-        customReward1st: true,
-        customReward2nd: true,
-        customReward3rd: true,
-        customReward4th: true,
-        customReward5th: true,
-        customReward6to10: true,
-      },
-    });
+    try {
+      // ✨ NEW: Fetch real company data from Whop API
+      const creatorData = await createCreatorWithWhopData({
+        companyId: experienceId,
+        productId: experienceId,
+      });
 
-    console.log(`✅ Creator auto-created successfully: ${creator.id}`);
+      // Fetch the newly created creator with all fields
+      creator = await prisma.creator.findUnique({
+        where: { id: creatorData.creatorId },
+        select: {
+          id: true,
+          companyName: true,
+          productId: true,
+          tier1Count: true,
+          tier1Reward: true,
+          tier2Count: true,
+          tier2Reward: true,
+          tier3Count: true,
+          tier3Reward: true,
+          tier4Count: true,
+          tier4Reward: true,
+          autoApproveRewards: true,
+          welcomeMessage: true,
+          customRewardEnabled: true,
+          customRewardTimeframe: true,
+          customRewardType: true,
+          customReward1st: true,
+          customReward2nd: true,
+          customReward3rd: true,
+          customReward4th: true,
+          customReward5th: true,
+          customReward6to10: true,
+        },
+      });
+
+      console.log(`✅ Creator auto-created with Whop data: ${creatorData.companyName} (${creatorData.creatorId})`);
+    } catch (error) {
+      console.error('❌ Failed to create creator with Whop data, using fallback:', error);
+
+      // Fallback: Create with defaults if Whop API fails
+      creator = await prisma.creator.create({
+        data: {
+          productId: experienceId,
+          companyId: experienceId,
+          companyName: 'My Community',
+          tier1Count: 3,
+          tier1Reward: 'Early Supporter Badge',
+          tier2Count: 5,
+          tier2Reward: 'Community Champion Badge',
+          tier3Count: 10,
+          tier3Reward: 'VIP Access',
+          tier4Count: 25,
+          tier4Reward: 'Lifetime Pro Access',
+          autoApproveRewards: false,
+          welcomeMessage: 'Welcome to our referral program! Share your unique link to earn rewards.',
+          customRewardEnabled: false,
+          customRewardTimeframe: 'monthly',
+          customRewardType: 'top_earners',
+        },
+        select: {
+          id: true,
+          companyName: true,
+          productId: true,
+          tier1Count: true,
+          tier1Reward: true,
+          tier2Count: true,
+          tier2Reward: true,
+          tier3Count: true,
+          tier3Reward: true,
+          tier4Count: true,
+          tier4Reward: true,
+          autoApproveRewards: true,
+          welcomeMessage: true,
+          customRewardEnabled: true,
+          customRewardTimeframe: true,
+          customRewardType: true,
+          customReward1st: true,
+          customReward2nd: true,
+          customReward3rd: true,
+          customReward4th: true,
+          customReward5th: true,
+          customReward6to10: true,
+        },
+      });
+
+      console.log(`✅ Creator auto-created with fallback data: ${creator.id}`);
+    }
+  }
+
+  // ========================================
+  // P0 CRITICAL: Safety check after auto-creation
+  // ========================================
+  if (!creator) {
+    throw new Error('Failed to create or find creator. Please contact support.');
   }
 
   // ========================================

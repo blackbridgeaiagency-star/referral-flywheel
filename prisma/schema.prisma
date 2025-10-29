@@ -39,6 +39,14 @@ model Creator {
   welcomeMessage  String?                  // Custom welcome message
   isActive        Boolean   @default(true)
 
+  // COMMUNITY METADATA (Auto-fetched from Whop)
+  logoUrl         String?                  // Community logo URL from Whop
+  description     String?                  // Community description
+
+  // ONBOARDING TRACKING
+  onboardingCompleted Boolean @default(false)  // Has creator completed onboarding wizard?
+  onboardingStep      Int     @default(0)      // Current step in onboarding (0-5)
+
   // CUSTOM REWARDS (Time-based competitions)
   customRewardTimeframe String?  @default("monthly")  // monthly, weekly, daily
   customRewardType      String?  @default("top3")     // top3, top5, top10

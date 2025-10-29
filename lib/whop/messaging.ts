@@ -1,7 +1,8 @@
 // lib/whop/messaging.ts
-// TEMPORARILY DISABLED: Whop SDK import issue - 'WhopAPI' is not exported
-// import { WhopAPI } from '@whop/sdk';
-// const whop = new WhopAPI(process.env.WHOP_API_KEY!);
+import { sendDirectMessage } from './api-client';
+import { sendEmail } from '../email/resend-client';
+import { render } from '@react-email/render';
+import WelcomeMemberEmail from '../../emails/welcome-member';
 
 /**
  * Send welcome message with referral link via Whop DM
@@ -13,6 +14,7 @@ export async function sendWelcomeMessage(
     referralCode: string;
   },
   creator: {
+    companyId: string;
     companyName: string;
     tier1Count: number;
     tier1Reward: string;
@@ -22,12 +24,19 @@ export async function sendWelcomeMessage(
     tier3Reward: string;
     tier4Count: number;
     tier4Reward: string;
+    welcomeMessage?: string | null;
   }
-) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com';
+): Promise<{ success: boolean; method: string }> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://referral-flywheel-iskpol0bx-blackbridges-projects.vercel.app';
   const referralLink = `${appUrl}/r/${member.referralCode}`;
-  
-  const message = `🎉 Welcome to ${creator.companyName}!
+
+  // Use custom welcome message if provided, otherwise use default template
+  const message = creator.welcomeMessage
+    ? creator.welcomeMessage
+        .replace(/{memberName}/g, member.username)
+        .replace(/{creatorName}/g, creator.companyName)
+        .replace(/{referralLink}/g, referralLink)
+    : `🎉 Welcome to ${creator.companyName}!
 
 💰 EARN MONEY BY SHARING
 You have a unique referral link that pays you 10% LIFETIME commission on every person you refer.
@@ -49,20 +58,96 @@ Compete with other members and unlock exclusive rewards:
 
 Ready to start earning? View your dashboard to get started!`;
 
-  // TEMPORARILY DISABLED: Whop SDK not available
-  // Just log the message for now
-  console.log(`📧 Welcome message for ${member.username}:`);
-  console.log(message);
-  console.log(`✅ Welcome message logged (Whop SDK disabled)`);
+  try {
+    console.log(`📧 Sending welcome message to ${member.username} (${member.userId})`);
 
-  // TODO: Re-enable when Whop SDK is fixed
-  // try {
-  //   await whop.messages.send({
-  //     user_id: member.userId,
-  //     content: message,
-  //   });
-  //   console.log(`✅ Welcome message sent to ${member.username}`);
-  // } catch (error) {
-  //   console.error('❌ Failed to send welcome message:', error);
-  // }
+    // Attempt to send via Whop DM
+    const result = await sendDirectMessage(
+      member.userId,
+      message,
+      {
+        companyId: creator.companyId,
+        subject: `Welcome to ${creator.companyName}!`,
+      }
+    );
+
+    if (result.success) {
+      console.log(`✅ Welcome message sent via Whop DM to ${member.username}`);
+      return { success: true, method: 'whop_dm' };
+    } else {
+      // DM failed, try email fallback
+      console.log(`⚠️ Whop DM failed for ${member.username}, attempting email fallback...`);
+      return await sendWelcomeEmail(member, creator);
+    }
+  } catch (error) {
+    console.error(`❌ Error sending welcome message to ${member.username}:`, error);
+    // Try email as final fallback
+    return await sendWelcomeEmail(member, creator);
+  }
+}
+
+/**
+ * Send welcome email (fallback method)
+ */
+async function sendWelcomeEmail(
+  member: {
+    userId: string;
+    username: string;
+    referralCode: string;
+    email?: string;
+  },
+  creator: {
+    companyName: string;
+    tier1Count: number;
+    tier1Reward: string;
+    tier2Count: number;
+    tier2Reward: string;
+    tier3Count: number;
+    tier3Reward: string;
+    tier4Count: number;
+    tier4Reward: string;
+  }
+): Promise<{ success: boolean; method: string }> {
+  if (!member.email) {
+    console.error(`❌ Cannot send email - no email address for ${member.username}`);
+    return { success: false, method: 'no_email' };
+  }
+
+  try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://referral-flywheel-iskpol0bx-blackbridges-projects.vercel.app';
+    const referralLink = `${appUrl}/r/${member.referralCode}`;
+
+    const emailHtml = await render(
+      WelcomeMemberEmail({
+        memberName: member.username,
+        creatorName: creator.companyName,
+        referralLink,
+        tier1Count: creator.tier1Count,
+        tier1Reward: creator.tier1Reward,
+        tier2Count: creator.tier2Count,
+        tier2Reward: creator.tier2Reward,
+        tier3Count: creator.tier3Count,
+        tier3Reward: creator.tier3Reward,
+        tier4Count: creator.tier4Count,
+        tier4Reward: creator.tier4Reward,
+      })
+    );
+
+    const result = await sendEmail({
+      to: member.email,
+      subject: `Welcome to ${creator.companyName}! Start earning 10% commissions`,
+      html: emailHtml,
+    });
+
+    if (result.success) {
+      console.log(`✅ Welcome email sent to ${member.email}`);
+      return { success: true, method: 'email' };
+    } else {
+      console.error(`❌ Failed to send welcome email to ${member.email}`);
+      return { success: false, method: 'email_failed' };
+    }
+  } catch (error) {
+    console.error(`❌ Error sending welcome email:`, error);
+    return { success: false, method: 'email_error' };
+  }
 }

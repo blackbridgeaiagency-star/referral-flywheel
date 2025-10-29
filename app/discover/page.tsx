@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { CommunityCard } from '../../components/discover/community-card';
+import { Logo } from '../../components/ui/logo';
 import { TrendingUp, Users, DollarSign } from 'lucide-react';
 
 interface Community {
@@ -40,11 +41,7 @@ export default function DiscoverPage() {
 
         <div className="max-w-7xl mx-auto px-4 py-20 sm:py-32 text-center relative z-10">
           <div className="flex justify-center mb-8">
-            <img
-              src="/logo.png"
-              alt="Referral Flywheel Logo"
-              className="w-32 h-32 object-contain drop-shadow-2xl"
-            />
+            <Logo size={128} />
           </div>
 
           <h1 className="text-6xl sm:text-7xl font-bold mb-8 leading-tight">

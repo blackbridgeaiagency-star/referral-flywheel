@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { prisma } from '../../../../../lib/db/prisma';
 import { generateReferralCode } from '../../../../../lib/utils/referral-code';
+import { getCompany } from '../../../../../lib/whop/api-client';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -62,7 +63,30 @@ export async function POST(request: Request) {
       }
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      // 3. CREATE OR UPDATE CREATOR
+      // 3. FETCH COMPANY DETAILS FROM WHOP API
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      let companyData = {
+        name: data.company_name || 'New Community',
+        logoUrl: null as string | null,
+        description: null as string | null,
+      };
+
+      try {
+        console.log(`📡 Fetching company details from Whop API...`);
+        const whopCompany = await getCompany(data.company_id);
+        companyData = {
+          name: whopCompany.name || companyData.name,
+          logoUrl: whopCompany.image_url || null,
+          description: whopCompany.description || null,
+        };
+        console.log(`✅ Company data fetched: ${companyData.name}`);
+      } catch (apiError) {
+        console.warn(`⚠️ Could not fetch company details from Whop:`, apiError);
+        // Continue with default data
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // 4. CREATE OR UPDATE CREATOR
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       let creator = await prisma.creator.findUnique({
         where: { companyId: data.company_id }
@@ -70,12 +94,24 @@ export async function POST(request: Request) {
 
       if (creator) {
         console.log(`✅ Creator already exists: ${creator.companyName}`);
+        // Update with latest Whop data
+        creator = await prisma.creator.update({
+          where: { companyId: data.company_id },
+          data: {
+            companyName: companyData.name,
+            logoUrl: companyData.logoUrl,
+            description: companyData.description,
+          }
+        });
+        console.log(`✅ Creator updated with latest Whop data`);
       } else {
         creator = await prisma.creator.create({
           data: {
             companyId: data.company_id,
-            companyName: data.company_name || 'New Community',
+            companyName: companyData.name,
             productId: data.product_id,
+            logoUrl: companyData.logoUrl,
+            description: companyData.description,
             welcomeMessage: 'Welcome! You can now earn 10% commissions by referring friends.',
             isActive: true,
           }
