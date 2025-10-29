@@ -122,20 +122,22 @@ export default async function MemberDashboard({
       <div className="min-h-screen bg-[#0F0F0F] text-white">
       {/* Header with integrated Leaderboard button */}
       <header className="border-b border-gray-800 bg-[#1A1A1A]/50 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
             {/* Leaderboard Button */}
-            <LeaderboardButton
-              memberId={data.memberId}
-              creatorId={data.creatorId}
-            />
+            <div className="w-full sm:w-auto">
+              <LeaderboardButton
+                memberId={data.memberId}
+                creatorId={data.creatorId}
+              />
+            </div>
 
             {/* Header Text */}
-            <div>
-              <h1 className="text-2xl font-bold">
-                Welcome to {creator.companyName}
+            <div className="flex-1">
+              <h1 className="text-xl sm:text-2xl font-bold">
+                Welcome to {creator.companyName}'s Community
               </h1>
-              <p className="text-gray-400 text-sm">
+              <p className="text-gray-400 text-xs sm:text-sm">
                 Earn 10% lifetime commission on every referral
               </p>
             </div>
@@ -143,7 +145,7 @@ export default async function MemberDashboard({
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
         {/* Compact Referral Link Card - MOVED TO TOP FOR PROMINENCE */}
         <CompactReferralLinkCard code={data.referralCode} url={referralUrl} memberId={data.memberId} />
 

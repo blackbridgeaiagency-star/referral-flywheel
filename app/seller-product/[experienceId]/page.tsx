@@ -6,6 +6,7 @@ import { RevenueMetrics } from '../../../components/dashboard/RevenueMetrics';
 import { TopPerformersTable } from '../../../components/dashboard/TopPerformersTable';
 import { CommunityStatsGrid } from '../../../components/dashboard/CommunityStatsGrid';
 import { RewardManagementForm } from '../../../components/dashboard/RewardManagementForm';
+import { CreatorOnboardingBanner } from '../../../components/dashboard/CreatorOnboardingBanner';
 import { formatCurrency } from '../../../lib/utils/commission';
 
 interface CreatorDashboardPageProps {
@@ -128,22 +129,22 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
     <div className="min-h-screen bg-[#0F0F0F]">
       {/* Header */}
       <header className="bg-[#1A1A1A] border-b border-[#2A2A2A]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
             <div>
-              <h1 className="text-3xl font-bold text-white mb-2">
-                {creator.companyName} Dashboard
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1 sm:mb-2">
+                {creator.companyName} Affiliate Dashboard
               </h1>
-              <p className="text-gray-400">
+              <p className="text-gray-400 text-sm sm:text-base">
                 Monitor your referral program performance and manage rewards
               </p>
             </div>
-            <div className="mt-4 sm:mt-0">
+            <div className="w-full sm:w-auto">
               <a
                 href="https://whop.com/dashboard"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                className="inline-flex items-center justify-center w-full sm:w-auto px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm sm:text-base rounded-lg transition-colors"
               >
                 Back to Whop
               </a>
@@ -153,8 +154,15 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <div className="space-y-8">
+          {/* First-Time Creator Onboarding */}
+          <CreatorOnboardingBanner
+            showOnboarding={creator.companyName === 'My Community'}
+            creatorId={creator.id}
+            currentName={creator.companyName}
+          />
+
           {/* Revenue Metrics - ✅ USING CENTRALIZED DATA */}
           <Suspense fallback={<LoadingCard />}>
             <RevenueMetrics

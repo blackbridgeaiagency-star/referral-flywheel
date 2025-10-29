@@ -24,7 +24,17 @@ export async function GET(request: NextRequest) {
       if (scope === 'community' && creatorId) {
         // Community leaderboard: sorted by referrals within creator
         leaderboard = await prisma.member.findMany({
-          where: { creatorId },
+          where: {
+            creatorId,
+            creator: {
+              // Exclude test creators (those with _test in their companyId)
+              companyId: {
+                not: {
+                  contains: '_test'
+                }
+              }
+            }
+          },
           orderBy: { totalReferred: 'desc' },
           take: limit,
           select: {
@@ -42,10 +52,33 @@ export async function GET(request: NextRequest) {
         });
       } else {
         // Global leaderboard: sorted by earnings across all creators
+        // Filter out test data by excluding members from test creators
+        const realMembers = await prisma.member.findMany({
+          where: {
+            creator: {
+              companyId: {
+                not: {
+                  contains: '_test'
+                }
+              }
+            }
+          },
+          select: {
+            id: true
+          }
+        });
+
+        const realMemberIds = realMembers.map(m => m.id);
+
         // We need to calculate earnings from Commission records, not cached fields
         const membersWithEarnings = await prisma.commission.groupBy({
           by: ['memberId'],
-          where: { status: 'paid' },
+          where: {
+            status: 'paid',
+            memberId: {
+              in: realMemberIds
+            }
+          },
           _sum: {
             memberShare: true,
           },
@@ -143,10 +176,31 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Get total members count
+      // Get total members count (excluding test data)
       const totalMembers = scope === 'community' && creatorId
-        ? await prisma.member.count({ where: { creatorId } })
-        : await prisma.member.count();
+        ? await prisma.member.count({
+            where: {
+              creatorId,
+              creator: {
+                companyId: {
+                  not: {
+                    contains: '_test'
+                  }
+                }
+              }
+            }
+          })
+        : await prisma.member.count({
+            where: {
+              creator: {
+                companyId: {
+                  not: {
+                    contains: '_test'
+                  }
+                }
+              }
+            }
+          });
 
       return NextResponse.json({
         leaderboard: rankedLeaderboard,

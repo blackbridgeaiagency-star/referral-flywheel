@@ -37,6 +37,9 @@ export function RewardProgress({ currentReferrals, tiers }: RewardProgressProps)
   const currentRank = getCurrentRank();
   const currentRankInfo = RANK_INFO[currentRank as keyof typeof RANK_INFO];
 
+  // Find the next tier to unlock (first tier where current < count)
+  const nextTierIndex = tiers.findIndex(tier => currentReferrals < tier.count);
+
   return (
     <Card className="bg-[#1A1A1A] border-[#2A2A2A]">
       <CardHeader>
@@ -71,7 +74,7 @@ export function RewardProgress({ currentReferrals, tiers }: RewardProgressProps)
               reward={tier.reward}
               current={currentReferrals}
               rankIndex={index + 1}
-              isLast={index === tiers.length - 1}
+              isNext={index === nextTierIndex}
             />
           ))}
         </div>
@@ -80,16 +83,15 @@ export function RewardProgress({ currentReferrals, tiers }: RewardProgressProps)
   );
 }
 
-function RewardTier({ count, reward, current, rankIndex, isLast }: {
+function RewardTier({ count, reward, current, rankIndex, isNext }: {
   count: number;
   reward: string;
   current: number;
   rankIndex: number;
-  isLast: boolean;
+  isNext: boolean;
 }) {
   const progress = Math.min((current / count) * 100, 100);
   const isUnlocked = current >= count;
-  const isNext = current < count && (isLast || current >= (count - 5));
 
   // Calculate potential monthly earnings using centralized constants (no hardcoded values!)
   const potentialMonthlyEarnings = calculatePotentialEarnings(count);
