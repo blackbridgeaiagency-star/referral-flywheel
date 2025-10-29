@@ -21,6 +21,52 @@ export default async function MemberDashboard({
 }) {
   try {
     // ========================================
+    // P0 CRITICAL: Auto-create member if doesn't exist
+    // Whop passes membershipId as experienceId
+    // ========================================
+    let member = await prisma.member.findUnique({
+      where: { membershipId: params.experienceId },
+      select: { id: true }
+    });
+
+    // If member doesn't exist, we need to create them
+    // But we need creator info first - try to find via Whop API or use default
+    if (!member) {
+      console.log(`🚀 Auto-creating member for membership: ${params.experienceId}`);
+
+      // For now, we'll need the creator to be set up first
+      // In production, this would come from Whop webhook or API call
+      const defaultCreator = await prisma.creator.findFirst({
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, companyId: true }
+      });
+
+      if (!defaultCreator) {
+        throw new Error('No creator found. Please set up your creator account first.');
+      }
+
+      // Create member with minimal data
+      // In production, get this from Whop API
+      const { generateReferralCode } = await import('../../../lib/utils/referral-code');
+      const referralCode = generateReferralCode('User'); // Will be updated with real name from webhook
+
+      member = await prisma.member.create({
+        data: {
+          membershipId: params.experienceId,
+          userId: `user_${params.experienceId}`, // Temporary - updated by webhook
+          email: `member@${params.experienceId}.temp`, // Temporary - updated by webhook
+          username: 'New Member', // Temporary - updated by webhook
+          referralCode: referralCode,
+          creatorId: defaultCreator.id,
+          subscriptionPrice: 49.99, // Default - updated by webhook
+        },
+        select: { id: true }
+      });
+
+      console.log(`✅ Member auto-created: ${member.id}`);
+    }
+
+    // ========================================
     // ✅ USING CENTRALIZED QUERY LAYER
     // Single source of truth for ALL data
     // ========================================
