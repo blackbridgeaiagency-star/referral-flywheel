@@ -21,6 +21,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:fast": "tsx prisma/seed-fast.ts",
     "db:seed:accurate": "tsx prisma/seed-accurate.ts",
+    "demo:seed": "tsx scripts/seed-demo-data.ts",
+    "demo:cleanup": "tsx scripts/cleanup-demo-data.ts",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",
