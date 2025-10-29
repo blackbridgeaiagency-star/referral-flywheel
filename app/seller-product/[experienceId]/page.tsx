@@ -19,15 +19,28 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
 
   try {
     // ========================================
+    // P0 CRITICAL: Handle both companyId and productId
+    // Whop Dashboard View passes companyId (biz_*)
+    // Direct access uses productId (prod_*)
+    // ========================================
+    const isCompanyId = experienceId.startsWith('biz_');
+    const isProductId = experienceId.startsWith('prod_');
+
+    if (!isCompanyId && !isProductId) {
+      throw new Error(`Invalid ID format: ${experienceId}. Expected biz_* or prod_*`);
+    }
+
+    // ========================================
     // P0 CRITICAL: Automatic Creator Onboarding
     // Auto-create creator record if it doesn't exist
     // This ensures new app installations work immediately
     // ========================================
     let creator = await prisma.creator.findFirst({
-    where: { productId: experienceId },
+    where: isCompanyId ? { companyId: experienceId } : { productId: experienceId },
     select: {
       id: true,
       companyName: true,
+      productId: true,
       tier1Count: true,
       tier1Reward: true,
       tier2Count: true,
@@ -52,12 +65,12 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
 
   // Auto-create creator if this is their first time accessing the app
   if (!creator) {
-    console.log(`🚀 Auto-creating creator for product: ${experienceId}`);
+    console.log(`🚀 Auto-creating creator for ${isCompanyId ? 'company' : 'product'}: ${experienceId}`);
 
     creator = await prisma.creator.create({
       data: {
-        productId: experienceId,
-        companyId: experienceId, // Use productId as companyId for now
+        productId: isCompanyId ? experienceId : experienceId, // If companyId, use it as productId for now
+        companyId: isCompanyId ? experienceId : experienceId, // If productId, use it as companyId for now
         companyName: 'My Community', // Default name - creator can update in settings
         // Default tier rewards
         tier1Count: 3,
@@ -78,6 +91,7 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
       select: {
         id: true,
         companyName: true,
+        productId: true,
         tier1Count: true,
         tier1Reward: true,
         tier2Count: true,
@@ -105,9 +119,10 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
 
   // ========================================
   // P0 CRITICAL: Performance Optimization
-  // Fetch dashboard data after ensuring creator exists
+  // Fetch dashboard data using productId from creator record
+  // This works for both companyId and productId access
   // ========================================
-  const dashboardData = await getCompleteCreatorDashboardData(experienceId);
+  const dashboardData = await getCompleteCreatorDashboardData(creator.productId);
 
   return (
     <div className="min-h-screen bg-[#0F0F0F]">
@@ -331,7 +346,7 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
               </span>
             </div>
             <div className="text-right">
-              <p className="text-gray-500 text-xs">Product ID</p>
+              <p className="text-gray-500 text-xs">{experienceId.startsWith('biz_') ? 'Company ID' : 'Product ID'}</p>
               <p className="text-purple-400 font-mono text-sm">{experienceId}</p>
             </div>
           </div>
