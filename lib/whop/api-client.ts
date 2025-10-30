@@ -151,16 +151,19 @@ export async function sendDirectMessage(
   try {
     console.log(`📧 Sending DM to user: ${userId}`);
 
-    // Whop messaging endpoint (may need adjustment based on API version)
-    // This is a best-effort implementation - check Whop docs for exact endpoint
+    // Try the chat endpoint for sending messages (requires chat:message:create permission)
+    // Alternative endpoints to try: /chat/messages, /support_chat/messages, /companies/{id}/chat
     const response = await whopApiRequest<{ success: boolean; id?: string }>(
-      `/messages`,
+      `/chat/messages`,
       {
         method: 'POST',
         body: JSON.stringify({
           user_id: userId,
           content: message,
-          company_id: options?.companyId,
+          company_id: options?.companyId || process.env.NEXT_PUBLIC_WHOP_COMPANY_ID,
+          // Try different field names as Whop API might expect different structure
+          message: message,
+          text: message,
           subject: options?.subject,
         }),
       }
@@ -173,6 +176,30 @@ export async function sendDirectMessage(
     };
   } catch (error) {
     console.error(`❌ Failed to send DM:`, error);
+
+    // Try alternative endpoint for support chat
+    try {
+      console.log(`📧 Trying support chat endpoint...`);
+      const supportResponse = await whopApiRequest<{ success: boolean; id?: string }>(
+        `/support_chat/messages`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            user_id: userId,
+            content: message,
+            company_id: options?.companyId || process.env.NEXT_PUBLIC_WHOP_COMPANY_ID,
+          }),
+        }
+      );
+
+      console.log(`✅ Message sent via support chat`);
+      return {
+        success: true,
+        messageId: supportResponse.id,
+      };
+    } catch (supportError) {
+      console.error(`❌ Support chat also failed:`, supportError);
+    }
 
     // Don't throw - return failure status so caller can handle gracefully
     return {

@@ -75,14 +75,28 @@ Ready to start earning? View your dashboard to get started!`;
       console.log(`✅ Welcome message sent via Whop DM to ${member.username}`);
       return { success: true, method: 'whop_dm' };
     } else {
-      // DM failed, try email fallback
-      console.log(`⚠️ Whop DM failed for ${member.username}, attempting email fallback...`);
-      return await sendWelcomeEmail(member, creator);
+      // DM failed - log referral code for manual retrieval
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://referral-flywheel.vercel.app';
+      console.log(`⚠️ Whop DM failed for ${member.username}`);
+      console.log(`📋 REFERRAL CODE: ${member.referralCode}`);
+      console.log(`🔗 REFERRAL LINK: ${appUrl}/r/${member.referralCode}`);
+      console.log(`💡 User can find their code in the dashboard at ${appUrl}/customer/${creator.companyId}`);
+
+      // Don't try email fallback for now (domain not verified)
+      // return await sendWelcomeEmail(member, creator);
+      return { success: false, method: 'logged_to_console' };
     }
   } catch (error) {
     console.error(`❌ Error sending welcome message to ${member.username}:`, error);
-    // Try email as final fallback
-    return await sendWelcomeEmail(member, creator);
+    // Log referral code for manual retrieval
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://referral-flywheel.vercel.app';
+    console.log(`📋 REFERRAL CODE: ${member.referralCode}`);
+    console.log(`🔗 REFERRAL LINK: ${appUrl}/r/${member.referralCode}`);
+    console.log(`💡 User can find their code in the dashboard at ${appUrl}/customer/${creator.companyId}`);
+
+    // Don't try email fallback for now (domain not verified)
+    // return await sendWelcomeEmail(member, creator);
+    return { success: false, method: 'logged_to_console' };
   }
 }
 
