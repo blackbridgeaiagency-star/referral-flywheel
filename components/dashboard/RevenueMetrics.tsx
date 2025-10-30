@@ -68,10 +68,10 @@ export function RevenueMetrics({ revenueBreakdown }: RevenueMetricsProps) {
           borderColor="border-blue-500/20"
         />
 
-        {/* Conversion Rate */}
+        {/* Conversion Quality */}
         <MetricCard
           icon={<Percent className="w-6 h-6" />}
-          title="Conversion Rate"
+          title="Conversion Quality"
           value={`${conversionRate.toFixed(1)}%`}
           subtitle={`${revenueBreakdown.convertedActiveClicks} / ${revenueBreakdown.totalActiveClicks} clicks`}
           iconColor="text-yellow-400"

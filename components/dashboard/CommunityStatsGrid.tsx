@@ -14,9 +14,20 @@ interface CommunityStatsGridProps {
     totalReferrals: number;
     totalRevenue: number;
     monthlyRevenue: number;
-    totalSharesSent?: number; // 🆕 OPTIONAL - total share actions by members
+    totalSharesSent?: number; // Total share actions by members
     topPerformerContribution?: number; // Percentage contribution from top 10 earners
-    topPerformerTotal?: number; // ✅ DOLLAR AMOUNT from top 10
+    topPerformerTotal?: number; // DOLLAR AMOUNT from top 10
+    // 🎮 GAMIFICATION METRICS
+    globalRevenueRank?: number; // Global rank by revenue
+    globalReferralRank?: number; // Global rank by referrals
+    totalCreators?: number; // Total number of creators (for context)
+    referralMomentum?: number; // % of members who have made at least 1 referral
+    membersWithReferrals?: number; // Count of members who have made referrals
+    // ✅ NEW GAMIFICATION METRICS
+    shareToConversionRate?: number; // Quality: % of shares that convert to referrals
+    monthlyGrowthRate?: number; // Growth: % growth this month vs last month
+    thisMonthReferrals?: number; // Context for growth rate
+    lastMonthReferrals?: number; // Context for growth rate
   };
   organicCount: number;
   referredCount: number;
@@ -75,26 +86,43 @@ export function CommunityStatsGrid({ stats, organicCount, referredCount }: Commu
         />
       </div>
 
-      {/* Additional insights row */}
+      {/* 🎮 Gamification insights row - BALANCED MIX */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+        {/* ✅ GROWTH METRIC: Referral Momentum */}
         <InsightCard
-          label="Attribution Clicks"
-          value={`${stats.totalClicks.toLocaleString()} clicks`}
-          description="People clicked referral links"
+          label="🔥 Referral Momentum"
+          value={stats.referralMomentum !== undefined ? `${stats.referralMomentum.toFixed(1)}%` : 'N/A'}
+          description={stats.membersWithReferrals !== undefined
+            ? `${stats.membersWithReferrals} of ${stats.totalMembers} members referring`
+            : 'Members making referrals'}
+          isHighlight={!!(stats.referralMomentum && stats.referralMomentum > 30)}
+          highlightThreshold="Good if >30%"
         />
+
+        {/* ✅ QUALITY METRIC: Share-to-Conversion Rate */}
         <InsightCard
-          label="Conversion Quality"
-          value={stats.totalClicks > 0 ? `${((stats.convertedClicks / stats.totalClicks) * 100).toFixed(1)}%` : '0%'}
-          description="Clicks that converted to sales"
+          label="⚡ Share Effectiveness"
+          value={stats.shareToConversionRate !== undefined ? `${stats.shareToConversionRate.toFixed(1)}%` : 'N/A'}
+          description={stats.totalSharesSent && stats.totalReferrals
+            ? `${stats.totalReferrals} referrals from ${stats.totalSharesSent} shares`
+            : 'How effective are member shares?'}
+          isHighlight={!!(stats.shareToConversionRate && stats.shareToConversionRate > 20)}
+          highlightThreshold="Excellent if >20%"
         />
+
+        {/* ✅ COMPETITIVE METRIC: Monthly Growth Velocity */}
         <InsightCard
-          label="Revenue from Top 10"
-          value={stats.topPerformerTotal !== undefined
-            ? `$${stats.topPerformerTotal.toFixed(2)}`
+          label="📈 Monthly Growth"
+          value={stats.monthlyGrowthRate !== undefined
+            ? `${stats.monthlyGrowthRate > 0 ? '+' : ''}${stats.monthlyGrowthRate.toFixed(1)}%`
             : 'N/A'}
-          description={stats.topPerformerContribution !== undefined
-            ? `${stats.topPerformerContribution.toFixed(1)}% of total revenue`
-            : 'Top performers total earnings'}
+          description={stats.thisMonthReferrals !== undefined && stats.lastMonthReferrals !== undefined
+            ? `${stats.thisMonthReferrals} referrals this month (${stats.lastMonthReferrals} last month)`
+            : 'Growth vs last month'}
+          isHighlight={!!(stats.monthlyGrowthRate && stats.monthlyGrowthRate > 30)}
+          highlightThreshold="Strong if >30%"
+          showTrend={stats.monthlyGrowthRate !== undefined}
+          trendDirection={stats.monthlyGrowthRate && stats.monthlyGrowthRate > 0 ? 'up' : 'down'}
         />
       </div>
     </div>
@@ -143,16 +171,60 @@ function InsightCard({
   label,
   value,
   description,
+  isHighlight = false,
+  highlightThreshold,
+  showTrend = false,
+  trendDirection,
 }: {
   label: string;
   value: string;
   description: string;
+  isHighlight?: boolean;
+  highlightThreshold?: string;
+  showTrend?: boolean;
+  trendDirection?: 'up' | 'down';
 }) {
   return (
-    <div className="bg-[#1A1A1A] border border-gray-800 hover:border-gray-700 rounded-xl p-5 transition-all duration-300 hover:shadow-lg group">
-      <p className="text-xs text-gray-400 uppercase tracking-wider mb-3 font-semibold">{label}</p>
-      <p className="text-2xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">{value}</p>
-      <p className="text-xs text-gray-500 leading-relaxed">{description}</p>
+    <div className={`bg-[#1A1A1A] border rounded-xl p-5 transition-all duration-300 hover:shadow-lg group relative overflow-hidden ${
+      isHighlight
+        ? 'border-yellow-500/50 hover:border-yellow-400 shadow-yellow-500/20 shadow-lg'
+        : 'border-gray-800 hover:border-gray-700'
+    }`}>
+      {/* 🎮 Top Performer Highlight Effect */}
+      {isHighlight && (
+        <>
+          <div className="absolute inset-0 bg-gradient-to-br from-yellow-600/10 via-yellow-900/5 to-transparent" />
+          <div className="absolute top-2 right-2">
+            <span className="text-xs font-bold text-yellow-400 bg-yellow-500/20 px-2 py-1 rounded-full border border-yellow-500/30">
+              🔥 TOP
+            </span>
+          </div>
+        </>
+      )}
+
+      <p className={`text-xs uppercase tracking-wider mb-3 font-semibold relative z-10 ${
+        isHighlight ? 'text-yellow-400' : 'text-gray-400'
+      }`}>
+        {label}
+      </p>
+      <div className="flex items-center gap-2 mb-2 relative z-10">
+        <p className={`text-2xl font-bold transition-colors ${
+          isHighlight
+            ? 'text-yellow-300 group-hover:text-yellow-200'
+            : 'text-white group-hover:text-purple-400'
+        }`}>
+          {value}
+        </p>
+        {showTrend && trendDirection && (
+          <span className={`text-lg ${trendDirection === 'up' ? 'text-green-400' : 'text-red-400'}`}>
+            {trendDirection === 'up' ? '↑' : '↓'}
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-gray-500 leading-relaxed relative z-10 mb-1">{description}</p>
+      {highlightThreshold && (
+        <p className="text-[10px] text-gray-600 relative z-10 italic">{highlightThreshold}</p>
+      )}
     </div>
   );
 }
