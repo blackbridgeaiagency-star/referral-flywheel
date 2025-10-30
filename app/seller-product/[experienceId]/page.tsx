@@ -114,7 +114,7 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
         data: {
           productId: experienceId,
           companyId: experienceId,
-          companyName: 'My Community',
+          companyName: experienceId, // Use experienceId as fallback - will show actual ID instead of generic name
           tier1Count: 3,
           tier1Reward: 'Early Supporter Badge',
           tier2Count: 5,

@@ -28,8 +28,9 @@ export async function fetchCreatorDataFromWhop(params: {
   const { companyId, productId } = params;
 
   // Default fallback data
+  // Note: This should rarely be used - the Whop API should provide company names
   const defaultData: SyncedCreatorData = {
-    companyName: 'My Community',
+    companyName: companyId || productId || 'Community',
     logoUrl: null,
     description: null,
   };
@@ -43,7 +44,7 @@ export async function fetchCreatorDataFromWhop(params: {
       if (company) {
         console.log(`✅ Company data fetched: ${company.name}`);
         return {
-          companyName: company.name || 'My Community',
+          companyName: company.name || companyId,
           logoUrl: company.image_url || null,
           description: company.description || null,
         };
@@ -58,7 +59,7 @@ export async function fetchCreatorDataFromWhop(params: {
       if (product) {
         console.log(`✅ Product data fetched: ${product.name}`);
         return {
-          companyName: product.name || 'My Community',
+          companyName: product.name || productId,
           logoUrl: product.image_url || null,
           description: product.description || null,
         };
