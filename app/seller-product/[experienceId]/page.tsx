@@ -246,8 +246,20 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
                 totalReferrals: dashboardData.revenueStats.referredCount,
                 totalRevenue: dashboardData.revenueStats.totalRevenue,
                 monthlyRevenue: dashboardData.revenueStats.monthlyRevenue,
+                totalSharesSent: dashboardData.revenueStats.totalShares,
                 topPerformerContribution: dashboardData.topPerformerContribution.topPerformerContribution,
-                topPerformerTotal: dashboardData.topPerformerContribution.topEarnersTotal, // ✅ DOLLAR AMOUNT!
+                topPerformerTotal: dashboardData.topPerformerContribution.topEarnersTotal,
+                // 🎮 GAMIFICATION METRICS
+                globalRevenueRank: dashboardData.revenueStats.globalRevenueRank,
+                globalReferralRank: dashboardData.revenueStats.globalReferralRank,
+                totalCreators: dashboardData.revenueStats.totalCreators,
+                referralMomentum: dashboardData.revenueStats.referralMomentum,
+                membersWithReferrals: dashboardData.revenueStats.membersWithReferrals,
+                // ✅ NEW GAMIFICATION METRICS
+                shareToConversionRate: dashboardData.revenueStats.shareToConversionRate,
+                monthlyGrowthRate: dashboardData.revenueStats.monthlyGrowthRate,
+                thisMonthReferrals: dashboardData.revenueStats.thisMonthReferrals,
+                lastMonthReferrals: dashboardData.revenueStats.lastMonthReferrals,
               }}
               organicCount={dashboardData.revenueStats.organicCount}
               referredCount={dashboardData.revenueStats.referredCount}
@@ -258,6 +270,7 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
           <Suspense fallback={<LoadingCard />}>
             <TopPerformersTable
               performers={dashboardData.topReferrers}
+              totalRevenue={dashboardData.revenueStats.totalRevenue}
             />
           </Suspense>
 

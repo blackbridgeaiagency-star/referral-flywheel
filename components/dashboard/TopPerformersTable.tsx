@@ -13,14 +13,16 @@ interface TopPerformer {
   totalReferred: number;
   monthlyReferred: number;
   currentTier: string;
+  revenueGenerated: number; // ✅ Total sales from this member's referrals
   createdAt: Date;
 }
 
 interface TopPerformersTableProps {
   performers: TopPerformer[];
+  totalRevenue?: number; // Total revenue for calculating percentages
 }
 
-export function TopPerformersTable({ performers }: TopPerformersTableProps) {
+export function TopPerformersTable({ performers, totalRevenue = 0 }: TopPerformersTableProps) {
   if (performers.length === 0) {
     return (
       <Card className="bg-[#1A1A1A] border-[#2A2A2A]">
@@ -44,7 +46,14 @@ export function TopPerformersTable({ performers }: TopPerformersTableProps) {
       <CardHeader>
         <CardTitle className="text-white flex items-center gap-2">
           <Users className="w-5 h-5" />
-          Top Referrers
+          <span>
+            Top Referrers
+            {totalRevenue > 0 && (
+              <span className="text-purple-400 font-normal text-[0.7em]">
+                {' '}({((performers.slice(0, 10).reduce((sum, p) => sum + p.revenueGenerated, 0) / totalRevenue) * 100).toFixed(1)}% of total revenue)
+              </span>
+            )}
+          </span>
         </CardTitle>
         <p className="text-gray-400 text-sm">
           Top 10 members ranked by total referrals
@@ -167,10 +176,10 @@ export function TopPerformersTable({ performers }: TopPerformersTableProps) {
                     {performer.currentTier}
                   </Badge>
                 </div>
-                <div className="flex justify-between items-end">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <p className="text-xs text-gray-400 mb-1">Total Referrals</p>
-                    <p className="text-xl font-bold text-white">{performer.totalReferred}</p>
+                    <p className="text-lg font-bold text-white">{performer.totalReferred}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-gray-400 mb-1">This Month</p>

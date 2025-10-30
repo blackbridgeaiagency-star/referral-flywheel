@@ -17,6 +17,7 @@
 
 import { prisma } from '../db/prisma';
 import { startOfMonth, subMonths } from 'date-fns';
+import { calculateMemberTier, type TierThresholds } from '../utils/tier-calculator';
 
 // ========================================
 // MEMBER METRICS
@@ -31,24 +32,28 @@ export async function getMemberStats(memberId: string) {
     const monthStart = startOfMonth(new Date());
     const lastMonthStart = startOfMonth(subMonths(new Date(), 1));
 
-    // Get member data and ALL commissions in parallel
-    const [member, allCommissions, monthlyCommissions, lastMonthCommissions, referralCount] =
-      await Promise.all([
-        // Basic member data
-        prisma.member.findUnique({
-          where: { id: memberId },
-          select: {
-            id: true,
-            membershipId: true,
-            username: true,
-            email: true,
-            referralCode: true,
-            creatorId: true,
-            totalReferred: true, // This is OK - it's a simple count
-            createdAt: true,
-          },
-        }),
+    // Fetch member first to get referralCode
+    const member = await prisma.member.findUnique({
+      where: { id: memberId },
+      select: {
+        id: true,
+        membershipId: true,
+        username: true,
+        email: true,
+        referralCode: true,
+        creatorId: true,
+        totalReferred: true, // This is OK - it's a simple count
+        createdAt: true,
+      },
+    });
 
+    if (!member) {
+      throw new Error('Member not found');
+    }
+
+    // Now fetch commissions and referrals in parallel using the referralCode
+    const [allCommissions, monthlyCommissions, lastMonthCommissions, referralCount] =
+      await Promise.all([
         // All-time commissions (for lifetime earnings)
         prisma.commission.findMany({
           where: {
@@ -89,18 +94,14 @@ export async function getMemberStats(memberId: string) {
           },
         }),
 
-        // Get referrals made this month
+        // Get referrals made this month (using referralCode, not memberId)
         prisma.member.count({
           where: {
-            referredBy: memberId,
+            referredBy: member.referralCode,  // Use referral CODE, not member ID
             createdAt: { gte: monthStart },
           },
         }),
       ]);
-
-    if (!member) {
-      throw new Error('Member not found');
-    }
 
     // ========================================
     // CALCULATE EARNINGS (SINGLE SOURCE)
@@ -408,7 +409,7 @@ export async function getCreatorRevenueStats(creatorId: string) {
     const monthStart = startOfMonth(new Date());
 
     // Get all commissions and member data in parallel
-    const [allCommissions, monthlyCommissions, members, activeClicks] = await Promise.all([
+    const [allCommissions, monthlyCommissions, members, activeClicks, totalShares] = await Promise.all([
       // All-time commissions
       prisma.commission.findMany({
         where: {
@@ -453,6 +454,15 @@ export async function getCreatorRevenueStats(creatorId: string) {
             creatorId,
           },
           expiresAt: { gte: new Date() },
+        },
+      }),
+
+      // Total share events (for "Total Shares Sent" metric)
+      prisma.shareEvent.count({
+        where: {
+          member: {
+            creatorId,
+          },
         },
       }),
     ]);
@@ -507,6 +517,79 @@ export async function getCreatorRevenueStats(creatorId: string) {
       ? (referredCount / activeClicks) * 100
       : 0;
 
+    // ========================================
+    // GAMIFICATION: Global Creator Rankings
+    // ========================================
+
+    // Get global revenue rank (how this creator ranks by revenue)
+    const creatorsWithMoreRevenue = await prisma.creator.count({
+      where: {
+        totalRevenue: { gt: totalRevenue },
+      },
+    });
+    const globalRevenueRank = creatorsWithMoreRevenue + 1;
+
+    // Get global referral rank (how this creator ranks by total referrals)
+    const totalReferralsByCreator = referredCount;
+    const creatorsWithMoreReferrals = await prisma.creator.count({
+      where: {
+        totalReferrals: { gt: totalReferralsByCreator },
+      },
+    });
+    const globalReferralRank = creatorsWithMoreReferrals + 1;
+
+    // Get total creator count for context
+    const totalCreators = await prisma.creator.count();
+
+    // Calculate referral momentum (% of members who have made at least 1 referral)
+    const membersWithReferrals = await prisma.member.count({
+      where: {
+        creatorId,
+        totalReferred: { gt: 0 },
+      },
+    });
+    const referralMomentum = members.length > 0
+      ? (membersWithReferrals / members.length) * 100
+      : 0;
+
+    // ========================================
+    // NEW GAMIFICATION METRICS
+    // ========================================
+
+    // Share-to-Conversion Rate (Quality metric)
+    // Shows how effective shares are at generating referrals
+    const totalReferralsForConversion = referredCount; // Total referred members
+    const shareToConversionRate = totalShares > 0
+      ? (totalReferralsForConversion / totalShares) * 100
+      : 0;
+
+    // Monthly Growth Velocity (Competitive/Growth metric)
+    // Shows % growth in referrals this month vs last month
+    const lastMonthStart = startOfMonth(subMonths(new Date(), 1));
+
+    const thisMonthReferrals = await prisma.member.count({
+      where: {
+        creatorId,
+        memberOrigin: 'referred', // Only count referred members
+        createdAt: { gte: monthStart }
+      }
+    });
+
+    const lastMonthReferrals = await prisma.member.count({
+      where: {
+        creatorId,
+        memberOrigin: 'referred',
+        createdAt: {
+          gte: lastMonthStart,
+          lt: monthStart
+        }
+      }
+    });
+
+    const monthlyGrowthRate = lastMonthReferrals > 0
+      ? ((thisMonthReferrals - lastMonthReferrals) / lastMonthReferrals) * 100
+      : thisMonthReferrals > 0 ? 100 : 0; // 100% if we have growth from 0, otherwise 0
+
     console.log('✅ Creator revenue stats calculated:', {
       creatorId,
       totalRevenue,
@@ -515,6 +598,9 @@ export async function getCreatorRevenueStats(creatorId: string) {
       totalMembers: members.length,
       referredCount,
       organicCount,
+      globalRevenueRank,
+      globalReferralRank,
+      referralMomentum: `${referralMomentum.toFixed(1)}%`,
     });
 
     return {
@@ -540,6 +626,22 @@ export async function getCreatorRevenueStats(creatorId: string) {
       totalCommissions: allCommissions.length,
       monthlyCommissions: monthlyCommissions.length,
 
+      // Share events
+      totalShares, // Total share events across all members
+
+      // Gamification metrics
+      globalRevenueRank,
+      globalReferralRank,
+      totalCreators,
+      referralMomentum,
+      membersWithReferrals,
+
+      // ✅ NEW GAMIFICATION METRICS
+      shareToConversionRate, // Quality metric: % of shares that convert to referrals
+      monthlyGrowthRate, // Growth metric: % growth this month vs last
+      thisMonthReferrals, // Context for growth rate
+      lastMonthReferrals, // Context for growth rate
+
       // Average values
       avgSaleValue: allCommissions.length > 0
         ? totalRevenue / allCommissions.length
@@ -548,6 +650,52 @@ export async function getCreatorRevenueStats(creatorId: string) {
   } catch (error) {
     console.error('❌ Error fetching creator revenue stats:', error);
     throw error;
+  }
+}
+
+/**
+ * Calculate total revenue generated by a member's referrals
+ * Returns the FULL sale amount (not just their 10% commission)
+ *
+ * This shows the true impact of a member's referral activity.
+ * For example:
+ * - Member earns $8,450 (their 10% cut)
+ * - But their referrals generated $120,000 in total sales
+ * - This function returns $120,000
+ */
+export async function getMemberReferralRevenue(
+  referralCode: string
+): Promise<number> {
+  try {
+    // Get all members referred by this member's code
+    const referredMembers = await prisma.member.findMany({
+      where: { referredBy: referralCode },
+      select: { membershipId: true },
+    });
+
+    if (referredMembers.length === 0) {
+      return 0;
+    }
+
+    const membershipIds = referredMembers.map(m => m.membershipId);
+
+    // Get all sales (commissions) from those referred members
+    // These are purchases MADE BY the referred members
+    const commissions = await prisma.commission.findMany({
+      where: {
+        whopMembershipId: { in: membershipIds },
+        status: 'paid',
+      },
+      select: { saleAmount: true },
+    });
+
+    // Sum up all the sales
+    const totalRevenue = commissions.reduce((sum, c) => sum + c.saleAmount, 0);
+
+    return totalRevenue;
+  } catch (error) {
+    console.error('❌ Error calculating member referral revenue:', error);
+    return 0;
   }
 }
 
@@ -561,6 +709,30 @@ export async function getCreatorTopPerformers(
   limit: number = 10
 ) {
   try {
+    // ========================================
+    // Fetch creator tier thresholds for dynamic tier calculation
+    // ========================================
+    const creator = await prisma.creator.findUnique({
+      where: { id: creatorId },
+      select: {
+        tier1Count: true,
+        tier2Count: true,
+        tier3Count: true,
+        tier4Count: true,
+      },
+    });
+
+    if (!creator) {
+      throw new Error('Creator not found');
+    }
+
+    const tierThresholds: TierThresholds = {
+      tier1Count: creator.tier1Count,
+      tier2Count: creator.tier2Count,
+      tier3Count: creator.tier3Count,
+      tier4Count: creator.tier4Count,
+    };
+
     if (sortBy === 'earnings') {
       // Get members with highest lifetime earnings
       const monthStart = startOfMonth(new Date());
@@ -633,6 +805,65 @@ export async function getCreatorTopPerformers(
         ])
       );
 
+      // ========================================
+      // OPTIMIZATION: Batch calculate revenue generated by each performer's referrals
+      // Avoids N+1 queries by doing all calculations in parallel
+      // ========================================
+      // Reuse referralCodes from above (already mapped on line 786)
+
+      // Get all referred members for all top performers (filtered by creator)
+      const allReferredMembers = await prisma.member.findMany({
+        where: {
+          referredBy: { in: referralCodes },
+          creatorId, // ✅ Only count referrals to THIS creator
+        },
+        select: {
+          referredBy: true,
+          membershipId: true,
+        },
+      });
+
+      // Group referred members by referrer code
+      const referredMembersMap = new Map<string, string[]>();
+      allReferredMembers.forEach(member => {
+        if (!member.referredBy) return;
+
+        if (!referredMembersMap.has(member.referredBy)) {
+          referredMembersMap.set(member.referredBy, []);
+        }
+        referredMembersMap.get(member.referredBy)!.push(member.membershipId);
+      });
+
+      // Get all commission sales for referred members (filtered by creator)
+      const allMembershipIds = allReferredMembers.map(m => m.membershipId);
+      const allReferredCommissions = await prisma.commission.findMany({
+        where: {
+          whopMembershipId: { in: allMembershipIds },
+          creatorId, // ✅ Only count commissions for THIS creator
+          status: 'paid',
+        },
+        select: {
+          whopMembershipId: true,
+          saleAmount: true,
+        },
+      });
+
+      // Create map: membershipId → total sales
+      const membershipSalesMap = new Map<string, number>();
+      allReferredCommissions.forEach(comm => {
+        const current = membershipSalesMap.get(comm.whopMembershipId) || 0;
+        membershipSalesMap.set(comm.whopMembershipId, current + comm.saleAmount);
+      });
+
+      // Calculate revenue generated by each referrer
+      const revenueGeneratedMap = new Map<string, number>();
+      referredMembersMap.forEach((membershipIds, referrerCode) => {
+        const totalRevenue = membershipIds.reduce((sum, membershipId) => {
+          return sum + (membershipSalesMap.get(membershipId) || 0);
+        }, 0);
+        revenueGeneratedMap.set(referrerCode, totalRevenue);
+      });
+
       // Combine earnings data with member info and calculate monthly data
       const topPerformers = topByEarnings.map((earning) => {
         const member = members.find(m => m.id === earning.memberId);
@@ -649,6 +880,14 @@ export async function getCreatorTopPerformers(
           .filter(comm => comm.createdAt >= monthStart)
           .reduce((sum, comm) => sum + comm.memberShare, 0);
 
+        // ========================================
+        // Calculate tier dynamically based on current referral count
+        // ========================================
+        const calculatedTier = calculateMemberTier(member.totalReferred, tierThresholds);
+
+        // Get revenue generated by this member's referrals
+        const revenueGenerated = revenueGeneratedMap.get(member.referralCode) || 0;
+
         return {
           id: member.id,
           username: member.username,
@@ -658,7 +897,8 @@ export async function getCreatorTopPerformers(
           monthlyReferred,
           lifetimeEarnings: earning._sum.memberShare || 0,
           monthlyEarnings,
-          currentTier: member.currentTier,
+          currentTier: calculatedTier, // ✅ Dynamic tier calculation!
+          revenueGenerated, // ✅ Total sales generated by referrals!
           createdAt: member.createdAt,
         };
       });
@@ -729,6 +969,65 @@ export async function getCreatorTopPerformers(
         ])
       );
 
+      // ========================================
+      // OPTIMIZATION: Batch calculate revenue generated by each performer's referrals
+      // Same logic as earnings branch to avoid N+1 queries
+      // ========================================
+      // Reuse referralCodes from above (already mapped on line 950)
+
+      // Get all referred members for all top performers (filtered by creator)
+      const allReferredMembers2 = await prisma.member.findMany({
+        where: {
+          referredBy: { in: referralCodes },
+          creatorId, // ✅ Only count referrals to THIS creator
+        },
+        select: {
+          referredBy: true,
+          membershipId: true,
+        },
+      });
+
+      // Group referred members by referrer code
+      const referredMembersMap2 = new Map<string, string[]>();
+      allReferredMembers2.forEach(member => {
+        if (!member.referredBy) return;
+
+        if (!referredMembersMap2.has(member.referredBy)) {
+          referredMembersMap2.set(member.referredBy, []);
+        }
+        referredMembersMap2.get(member.referredBy)!.push(member.membershipId);
+      });
+
+      // Get all commission sales for referred members (filtered by creator)
+      const allMembershipIds2 = allReferredMembers2.map(m => m.membershipId);
+      const allReferredCommissions2 = await prisma.commission.findMany({
+        where: {
+          whopMembershipId: { in: allMembershipIds2 },
+          creatorId, // ✅ Only count commissions for THIS creator
+          status: 'paid',
+        },
+        select: {
+          whopMembershipId: true,
+          saleAmount: true,
+        },
+      });
+
+      // Create map: membershipId → total sales
+      const membershipSalesMap2 = new Map<string, number>();
+      allReferredCommissions2.forEach(comm => {
+        const current = membershipSalesMap2.get(comm.whopMembershipId) || 0;
+        membershipSalesMap2.set(comm.whopMembershipId, current + comm.saleAmount);
+      });
+
+      // Calculate revenue generated by each referrer
+      const revenueGeneratedMap2 = new Map<string, number>();
+      referredMembersMap2.forEach((membershipIds, referrerCode) => {
+        const totalRevenue = membershipIds.reduce((sum, membershipId) => {
+          return sum + (membershipSalesMap2.get(membershipId) || 0);
+        }, 0);
+        revenueGeneratedMap2.set(referrerCode, totalRevenue);
+      });
+
       // Calculate monthly referrals and earnings for each member
       const topWithMonthlyData = topByReferrals.map((member) => {
         // Get monthly referrals from map (O(1) lookup)
@@ -744,6 +1043,14 @@ export async function getCreatorTopPerformers(
           .filter(comm => comm.createdAt >= monthStart)
           .reduce((sum, comm) => sum + comm.memberShare, 0);
 
+        // ========================================
+        // Calculate tier dynamically based on current referral count
+        // ========================================
+        const calculatedTier = calculateMemberTier(member.totalReferred, tierThresholds);
+
+        // Get revenue generated by this member's referrals
+        const revenueGenerated = revenueGeneratedMap2.get(member.referralCode) || 0;
+
         return {
           id: member.id,
           username: member.username,
@@ -753,7 +1060,8 @@ export async function getCreatorTopPerformers(
           monthlyReferred,
           lifetimeEarnings,
           monthlyEarnings,
-          currentTier: member.currentTier,
+          currentTier: calculatedTier, // ✅ Dynamic tier calculation!
+          revenueGenerated, // ✅ Total sales generated by referrals!
           createdAt: member.createdAt,
         };
       });
