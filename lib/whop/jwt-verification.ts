@@ -116,20 +116,12 @@ export async function verifyWhopJWTWithJWKS(token: string): Promise<WhopJWTClaim
     logger.warn('JWKS verification not implemented yet');
     return verifyWhopJWTInsecure(token);
 
-    // Find matching key in JWKS
-    const key = JWKS.keys.find((k: any) => k.kid === decoded.header.kid);
-    if (!key) {
-      logger.error('No matching key found in JWKS');
-      return null;
-    }
-
-    // Convert JWK to PEM format
-    const publicKey = await importSPKI(key, key.alg);
-
-    // Verify with the fetched key
-    const { payload } = await jwtVerify(token, publicKey);
-
-    return payload as WhopJWTClaims;
+    // TODO: Implement JWKS verification when we have proper header support
+    // The code below would be used to verify with JWKS:
+    // const key = JWKS.keys.find((k: any) => k.kid === header.kid);
+    // const publicKey = await importSPKI(key, key.alg);
+    // const { payload } = await jwtVerify(token, publicKey);
+    // return payload as WhopJWTClaims;
   } catch (error) {
     logger.error('JWKS verification failed:', error);
     return null;
