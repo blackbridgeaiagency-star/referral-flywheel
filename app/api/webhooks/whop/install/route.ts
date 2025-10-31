@@ -226,7 +226,7 @@ async function importMembers(members: WhopMember[], creatorId: string): Promise<
         continue;
       }
 
-      // Generate safe username and referral code
+      // Get username for display (but not for the referral code)
       let username = 'member';
       if (whopMember.user.username) {
         username = whopMember.user.username;
@@ -234,7 +234,8 @@ async function importMembers(members: WhopMember[], creatorId: string): Promise<
         username = whopMember.user.email.split('@')[0];
       }
 
-      const referralCode = generateReferralCode(username);
+      // Generate privacy-safe referral code (no PII)
+      const referralCode = generateReferralCode();
       const subscriptionPrice = whopMember.plan.amount / 100; // Convert cents to dollars
 
       // Create member record

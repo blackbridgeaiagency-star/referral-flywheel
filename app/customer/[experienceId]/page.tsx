@@ -48,7 +48,7 @@ export default async function MemberDashboard({
       // Create member with minimal data
       // In production, get this from Whop API
       const { generateReferralCode } = await import('../../../lib/utils/referral-code');
-      const referralCode = generateReferralCode('User'); // Will be updated with real name from webhook
+      const referralCode = generateReferralCode(); // Privacy-safe code with no PII
 
       member = await prisma.member.create({
         data: {

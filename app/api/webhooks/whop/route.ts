@@ -218,15 +218,16 @@ async function handlePaymentSucceeded(data: any, webhookEventId: string, request
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const attribution = await checkAttribution(request);
 
-  // Generate referral code
-  let nameForCode = 'user';
-  if (data.username) {
-    nameForCode = data.username;
-  } else if (data.email) {
-    nameForCode = data.email.split('@')[0];
-  }
+  // Generate privacy-safe referral code (no PII exposure)
+  const referralCode = generateReferralCode();
 
-  const referralCode = generateReferralCode(nameForCode);
+  // Get username for display purposes (but not for the code)
+  let username = 'user';
+  if (data.username) {
+    username = data.username;
+  } else if (data.email) {
+    username = data.email.split('@')[0];
+  }
 
   // Get or create creator
   let creator = await prisma.creator.findUnique({
@@ -253,7 +254,7 @@ async function handlePaymentSucceeded(data: any, webhookEventId: string, request
       userId: data.user_id || `test_${Date.now()}`,
       membershipId: data.membership_id,
       email: data.email || 'test@example.com',
-      username: nameForCode,
+      username: username,
       referralCode,
       referredBy: attribution?.referralCode || null,
       creatorId: creator.id,
