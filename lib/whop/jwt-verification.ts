@@ -3,8 +3,7 @@
  * Uses jose library for secure JWT verification
  */
 
-import { jwtVerify, importSPKI, JWTPayload } from 'jose';
-import * as jwt from 'jsonwebtoken';
+import { jwtVerify, importSPKI, decodeJwt, JWTPayload } from 'jose';
 import logger from '../logger';
 
 
@@ -83,7 +82,7 @@ export async function verifyWhopJWTSecure(token: string): Promise<WhopJWTClaims 
  */
 export function verifyWhopJWTInsecure(token: string): WhopJWTClaims | null {
   try {
-    const decoded = jwt.decode(token, { complete: false }) as WhopJWTClaims;
+    const decoded = decodeJwt(token) as WhopJWTClaims;
 
     if (!decoded || !decoded.user_id) {
       logger.error('Invalid JWT structure');
@@ -113,7 +112,7 @@ export async function verifyWhopJWTWithJWKS(token: string): Promise<WhopJWTClaim
     const JWKS = await fetch(WHOP_JWKS_URI).then(res => res.json());
 
     // Get the key ID from token header
-    const decoded = jwt.decode(token, { complete: true });
+    const decoded = { payload: decodeJwt(token) };
     if (!decoded || !decoded.header.kid) {
       logger.error('JWT missing key ID');
       return null;
@@ -145,7 +144,7 @@ export async function verifyWhopJWTWithJWKS(token: string): Promise<WhopJWTClaim
  */
 export function verifyWhopJWTProduction(token: string): WhopJWTClaims | null {
   try {
-    const decoded = jwt.decode(token, { complete: true }) as any;
+    const decoded = decodeJwt(token) as any;
 
     if (!decoded || !decoded.payload) {
       return null;
