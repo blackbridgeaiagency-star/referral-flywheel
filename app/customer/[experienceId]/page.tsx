@@ -6,9 +6,13 @@ import { StatsGrid } from '../../../components/dashboard/StatsGrid';
 import { RewardProgress } from '../../../components/dashboard/RewardProgress';
 import { EarningsChartWrapper } from '../../../components/dashboard/EarningsChartWrapper';
 import { LeaderboardButton } from '../../../components/dashboard/LeaderboardButton';
+import { MemberOnboardingModal } from '../../../components/dashboard/MemberOnboardingModal';
 import { formatCurrency } from '../../../lib/utils/commission';
 import { getCompleteMemberDashboardData } from '../../../lib/data/centralized-queries';
 import { notFound } from 'next/navigation';
+import { getWhopContext, canAccessMemberDashboard } from '../../../lib/whop/simple-auth';
+import logger from '../../../lib/logger';
+
 
 // Disable caching to always fetch fresh creator settings
 export const dynamic = 'force-dynamic';
@@ -21,9 +25,21 @@ export default async function MemberDashboard({
 }) {
   try {
     // ========================================
+    // SIMPLIFIED AUTHENTICATION
+    // ========================================
+    // Whop handles authentication in their iframe
+    const canAccess = await canAccessMemberDashboard(params.experienceId);
+
+    // Get Whop context for user info (optional)
+    const whopContext = await getWhopContext();
+    const authenticatedUserId = whopContext.userId;
+    // ========================================
     // P0 CRITICAL: Auto-create member if doesn't exist
     // Whop passes membershipId as experienceId
     // ========================================
+
+    // When we have authenticated user, we could enhance lookup to also check whopUserId
+    // This would allow finding member even if accessing with different experience ID
     let member = await prisma.member.findUnique({
       where: { membershipId: params.experienceId },
       select: { id: true }
@@ -32,7 +48,7 @@ export default async function MemberDashboard({
     // If member doesn't exist, we need to create them
     // But we need creator info first - try to find via Whop API or use default
     if (!member) {
-      console.log(`🚀 Auto-creating member for membership: ${params.experienceId}`);
+      logger.info(` Auto-creating member for membership: ${params.experienceId}`);
 
       // For now, we'll need the creator to be set up first
       // In production, this would come from Whop webhook or API call
@@ -63,7 +79,7 @@ export default async function MemberDashboard({
         select: { id: true }
       });
 
-      console.log(`✅ Member auto-created: ${member.id}`);
+      logger.info(`Member auto-created: ${member.id}`);
     }
 
     // ========================================
@@ -146,6 +162,14 @@ export default async function MemberDashboard({
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
+        {/* Member Onboarding Modal - Shows as popup for new members */}
+        <MemberOnboardingModal
+          memberName={data.username}
+          creatorName={creator.companyName}
+          referralLink={referralUrl}
+          memberId={data.memberId}
+        />
+
         {/* Compact Referral Link Card - MOVED TO TOP FOR PROMINENCE */}
         <CompactReferralLinkCard code={data.referralCode} url={referralUrl} memberId={data.memberId} />
 
@@ -241,7 +265,7 @@ export default async function MemberDashboard({
     </div>
   );
   } catch (error) {
-    console.error('❌ Error loading member dashboard:', error);
+    logger.error('❌ Error loading member dashboard:', error);
     notFound();
   }
 }
