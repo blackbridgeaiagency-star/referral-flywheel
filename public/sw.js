@@ -1,5 +1,9 @@
 // public/sw.js
-const CACHE_NAME = 'referral-flywheel-v1';
+// IMPORTANT: Cache version changes with each deployment
+// This ensures users always get fresh content after updates
+// Using timestamp ensures each build has unique cache
+const CACHE_VERSION = 'v' + new Date().getTime();
+const CACHE_NAME = `referral-flywheel-${CACHE_VERSION}`;
 const urlsToCache = [
   '/',
   '/offline',
@@ -12,10 +16,11 @@ const urlsToCache = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Caching app shell');
+      console.log('[SW] Caching app shell with version:', CACHE_VERSION);
       return cache.addAll(urlsToCache);
     })
   );
+  // Force immediate activation
   self.skipWaiting();
 });
 
