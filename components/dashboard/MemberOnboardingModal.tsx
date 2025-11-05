@@ -34,7 +34,14 @@ export function MemberOnboardingModal({
     }
   }, [memberId]);
 
+  const handleSkip = () => {
+    // Just close the modal, don't save to localStorage
+    // This way it will show again next time
+    setIsVisible(false);
+  };
+
   const handleComplete = () => {
+    // Only save to localStorage when they complete the full walkthrough
     setIsVisible(false);
     localStorage.setItem(`member_onboarding_completed_${memberId}`, 'true');
   };
@@ -175,9 +182,9 @@ export function MemberOnboardingModal({
         {/* Header */}
         <div className="relative p-6 pb-0">
           <button
-            onClick={handleComplete}
+            onClick={handleSkip}
             className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
-            aria-label="Skip onboarding"
+            aria-label="Close onboarding"
           >
             <X className="w-6 h-6" />
           </button>
@@ -225,7 +232,7 @@ export function MemberOnboardingModal({
             </button>
           ) : (
             <button
-              onClick={handleComplete}
+              onClick={handleSkip}
               className="text-gray-400 hover:text-white transition-colors text-sm"
             >
               Skip
