@@ -22,21 +22,10 @@ export function CreatorOnboardingBanner({
 
   if (!isVisible) return null;
 
-  const handleComplete = async () => {
-    try {
-      // Only mark as completed when they finish the full wizard
-      await fetch('/api/creator/onboarding', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ creatorId }),
-      });
-
-      // Store in localStorage that onboarding is complete
-      localStorage.setItem(`onboarding_dismissed_${creatorId}`, 'true');
-    } catch (error) {
-      logger.error('Failed to mark onboarding complete:', error);
-    }
-
+  const handleComplete = () => {
+    // Wizard already saved to database via POST /api/creator/onboarding
+    // We just need to save to localStorage and refresh
+    localStorage.setItem(`onboarding_dismissed_${creatorId}`, 'true');
     setShowWizard(false);
     setIsVisible(false);
     // Refresh to show updated settings
