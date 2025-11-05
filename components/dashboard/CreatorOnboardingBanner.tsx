@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { X, Sparkles, Rocket } from 'lucide-react';
 import { OnboardingWizard } from '../onboarding/OnboardingWizard';
+import logger from '../../lib/logger';
+
 
 interface CreatorOnboardingBannerProps {
   showOnboarding: boolean;
@@ -20,29 +22,32 @@ export function CreatorOnboardingBanner({
 
   if (!isVisible) return null;
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
+    try {
+      // Only mark as completed when they finish the full wizard
+      await fetch('/api/creator/onboarding', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ creatorId }),
+      });
+
+      // Store in localStorage that onboarding is complete
+      localStorage.setItem(`onboarding_dismissed_${creatorId}`, 'true');
+    } catch (error) {
+      logger.error('Failed to mark onboarding complete:', error);
+    }
+
     setShowWizard(false);
     setIsVisible(false);
     // Refresh to show updated settings
     window.location.reload();
   };
 
-  const handleSkip = async () => {
-    try {
-      // Mark onboarding as skipped
-      await fetch('/api/creator/onboarding', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ creatorId }),
-      });
-    } catch (error) {
-      console.error('Failed to skip onboarding:', error);
-    }
-
+  const handleSkip = () => {
+    // Just close the modal/wizard, don't save anything
+    // This way it will show again next time
     setIsVisible(false);
     setShowWizard(false);
-    // Store in localStorage that user dismissed this
-    localStorage.setItem(`onboarding_dismissed_${creatorId}`, 'true');
   };
 
   const handleStartWizard = () => {
