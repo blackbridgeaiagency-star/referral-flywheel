@@ -90,11 +90,17 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
     logger.info(`Auto-creating creator for ${isCompanyId ? 'company' : 'product'}: ${experienceId}`);
 
     try {
-      // ✨ NEW: Fetch real company data from Whop API
-      const creatorData = await createCreatorWithWhopData({
+      // Try to fetch real company data from Whop API (with timeout)
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Whop API timeout')), 5000)
+      );
+
+      const whopDataPromise = createCreatorWithWhopData({
         companyId: experienceId,
         productId: experienceId,
       });
+
+      const creatorData = await Promise.race([whopDataPromise, timeoutPromise]) as any;
 
       // Fetch the newly created creator with all fields
       creator = await prisma.creator.findUnique({
@@ -126,16 +132,17 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
         },
       });
 
-      logger.info(`Creator auto-created with Whop data: ${creatorData.companyName} (${creatorData.creatorId})`);
+      logger.info(`✅ Creator auto-created with Whop data: ${creatorData.companyName} (${creatorData.creatorId})`);
     } catch (error) {
-      logger.error('❌ Failed to create creator with Whop data, using fallback:', error);
+      logger.warn(`⚠️ Whop API unavailable, using instant fallback: ${error instanceof Error ? error.message : 'Unknown error'}`);
 
-      // Fallback: Create with defaults if Whop API fails
+      // Fallback: Create immediately with defaults if Whop API fails
+      // This ensures the dashboard loads even if Whop is down
       creator = await prisma.creator.create({
         data: {
           productId: experienceId,
           companyId: experienceId,
-          companyName: experienceId, // Use experienceId as fallback - will show actual ID instead of generic name
+          companyName: 'My Community', // Use friendly name as fallback
           tier1Count: 3,
           tier1Reward: 'Early Supporter Badge',
           tier2Count: 5,
@@ -145,7 +152,7 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
           tier4Count: 25,
           tier4Reward: 'Lifetime Pro Access',
           autoApproveRewards: false,
-          welcomeMessage: 'Welcome to our referral program! Share your unique link to earn rewards.',
+          welcomeMessage: 'Welcome! Share your unique referral link to earn 10% lifetime commission.',
           customRewardEnabled: false,
           customRewardTimeframe: 'monthly',
           customRewardType: 'top_earners',
@@ -177,7 +184,7 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
         },
       });
 
-      logger.info(`Creator auto-created with fallback data: ${creator.id}`);
+      logger.info(`✅ Creator auto-created with fallback (dashboard will load): ${creator.id}`);
     }
   }
 
