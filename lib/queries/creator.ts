@@ -1,6 +1,8 @@
 // lib/queries/creator.ts
 import { prisma } from '../db/prisma';
 import { subDays, startOfMonth, startOfYear, startOfDay } from 'date-fns';
+import logger from '../logger';
+
 
 /**
  * Get revenue metrics for creator dashboard
@@ -73,7 +75,7 @@ export async function getCreatorRevenueMetrics(creatorId: string) {
       monthlyCommissions: monthlyResult._count,
     };
   } catch (error) {
-    console.error('❌ Error fetching creator revenue metrics:', error);
+    logger.error('❌ Error fetching creator revenue metrics:', error);
     // Return zeros on error - graceful degradation
     return {
       totalRevenue: 0,
@@ -128,7 +130,7 @@ export async function getTopPerformers(
 
     return topMembers;
   } catch (error) {
-    console.error(`❌ Error fetching top ${sortBy} performers:`, error);
+    logger.error(`❌ Error fetching top ${sortBy} performers:`, error);
     return [];
   }
 }
@@ -217,7 +219,7 @@ export async function getCommunityStats(creatorId: string) {
       totalSharesSent: shareCount, // 🆕 NEW METRIC
     };
   } catch (error) {
-    console.error('❌ Error fetching community stats:', error);
+    logger.error('❌ Error fetching community stats:', error);
     return {
       totalMembers: 0,
       avgReferralsPerMember: 0,
@@ -354,7 +356,7 @@ export async function getMonthlyRevenueBreakdown(creatorId: string) {
       convertedActiveClicks: actualConversions, // Use actual member count, not attribution click count
     };
   } catch (error) {
-    console.error('❌ Error fetching monthly revenue breakdown:', error);
+    logger.error('❌ Error fetching monthly revenue breakdown:', error);
     return {
       totalRevenue: 0,
       totalMonthlyRevenue: 0,
@@ -381,7 +383,7 @@ export async function getCreatorDashboardData(creatorId: string) {
         getCommunityStats(creatorId),
       ]);
 
-    console.log('✅ Creator dashboard data fetched:', { creatorId });
+    logger.info('Creator dashboard data fetched:', { creatorId });
 
     return {
       revenueBreakdown,
@@ -389,7 +391,7 @@ export async function getCreatorDashboardData(creatorId: string) {
       communityStats,
     };
   } catch (error) {
-    console.error('❌ Error fetching creator dashboard data:', error);
+    logger.error('❌ Error fetching creator dashboard data:', error);
     throw error; // Rethrow to show error page
   }
 }
@@ -443,7 +445,7 @@ export async function getTodayStats(creatorId: string) {
       todayRevenue: todayRevenue._sum.saleAmount || 0,
     };
   } catch (error) {
-    console.error('❌ Error fetching today stats:', error);
+    logger.error('❌ Error fetching today stats:', error);
     return {
       newReferrals: 0,
       todayClicks: 0,

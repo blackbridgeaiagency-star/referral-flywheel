@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
+import logger from '../../../lib/logger';
 import {
   Users,
   DollarSign,
@@ -149,7 +150,7 @@ export default function AdminDashboard() {
   }, []);
 
   const handleCreatorAction = (creatorId: string, action: 'suspend' | 'activate' | 'delete') => {
-    console.log(`Action ${action} for creator ${creatorId}`);
+    logger.debug(`Action ${action} for creator ${creatorId}`);
     // Implement action logic
   };
 

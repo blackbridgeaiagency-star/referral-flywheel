@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import * as fs from 'fs';
+import logger from '../../lib/logger';
+
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -94,10 +96,10 @@ Format your response as JSON:
 
   const analysis: UIAnalysis = JSON.parse(jsonMatch[0].replace(/```json\n?|\n?```/g, ''));
 
-  console.log(`🤖 Claude API analysis complete (iteration ${iteration})`);
-  console.log(`   Priority: ${analysis.priority}`);
-  console.log(`   Impact: ${analysis.estimatedImpact}`);
-  console.log(`   Improvements: ${analysis.improvements.length}`);
+  logger.debug(`🤖 Claude API analysis complete (iteration ${iteration})`);
+  logger.debug(`   Priority: ${analysis.priority}`);
+  logger.debug(`   Impact: ${analysis.estimatedImpact}`);
+  logger.debug(`   Improvements: ${analysis.improvements.length}`);
 
   return analysis;
 }

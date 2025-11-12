@@ -1,17 +1,18 @@
-// middleware.ts - Protects admin and cron routes
+// middleware.ts - Simplified version that protects only admin, cron, and export routes
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import logger from './lib/logger';
 
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // Protect admin routes
+  // Protect admin routes - these contain sensitive data
   if (pathname.startsWith('/api/admin')) {
     const adminToken = request.headers.get('x-admin-token');
 
     // Check for admin token
     if (!adminToken || adminToken !== process.env.ADMIN_API_KEY) {
-      console.log('⚠️ Unauthorized admin access attempt:', pathname);
+      logger.warn('🚫 Unauthorized admin access attempt:', pathname);
       return NextResponse.json(
         { error: 'Unauthorized - Invalid admin credentials' },
         { status: 401 }
@@ -19,7 +20,7 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Protect cron routes (called by Vercel Cron)
+  // Protect cron routes - prevent unauthorized triggers
   if (pathname.startsWith('/api/cron')) {
     const authHeader = request.headers.get('authorization');
     const cronSecret = request.headers.get('x-cron-secret');
@@ -29,7 +30,7 @@ export function middleware(request: NextRequest) {
     const hasValidSecret = cronSecret === process.env.CRON_SECRET;
 
     if (!isVercelCron && !hasValidSecret) {
-      console.log('⚠️ Unauthorized cron access attempt:', pathname);
+      logger.warn('🚫 Unauthorized cron access attempt:', pathname);
       return NextResponse.json(
         { error: 'Unauthorized - Invalid cron credentials' },
         { status: 401 }
@@ -37,12 +38,12 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Protect export routes (sensitive data)
+  // Protect export routes - contain sensitive data
   if (pathname.startsWith('/api/export')) {
     const exportToken = request.headers.get('x-export-token');
 
     if (!exportToken || exportToken !== process.env.EXPORT_API_KEY) {
-      console.log('⚠️ Unauthorized export access attempt:', pathname);
+      logger.warn('🚫 Unauthorized export access attempt:', pathname);
       return NextResponse.json(
         { error: 'Unauthorized - Invalid export credentials' },
         { status: 401 }
@@ -50,14 +51,16 @@ export function middleware(request: NextRequest) {
     }
   }
 
+  // For all other routes (including Whop app pages), allow through
+  // Whop handles authentication in their iframe
   return NextResponse.next();
 }
 
-// Configure which routes to protect
+// Only run middleware on API routes that need protection
 export const config = {
   matcher: [
     '/api/admin/:path*',
     '/api/cron/:path*',
-    '/api/export/:path*'
+    '/api/export/:path*',
   ]
 };

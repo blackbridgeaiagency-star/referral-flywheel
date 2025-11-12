@@ -4,6 +4,8 @@ import { prisma } from '../../../../lib/db/prisma';
 import { withRateLimit } from '../../../../lib/middleware/rate-limit';
 import { stringify } from 'csv-stringify/sync';
 import ExcelJS from 'exceljs';
+import logger from '../../../../lib/logger';
+
 
 /**
  * Creator Data Export API
@@ -70,12 +72,12 @@ export async function GET(request: NextRequest) {
       }
 
       // Log export event
-      console.log(`📊 Data export for creator ${creatorId}: ${format} format, ${dataType} data`);
+      logger.info(' Data export for creator ${creatorId}: ${format} format, ${dataType} data');
 
       return response;
 
     } catch (error) {
-      console.error('Export failed:', error);
+      logger.error('Export failed:', error);
       return NextResponse.json(
         { error: 'Export failed', message: error instanceof Error ? error.message : 'Unknown error' },
         { status: 500 }

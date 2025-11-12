@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
 import { startOfMonth } from 'date-fns';
+import logger from '../../../../lib/logger';
+
 
 // Force dynamic rendering - do not pre-render this route
 export const dynamic = 'force-dynamic';
@@ -23,7 +25,7 @@ export async function GET() {
   const startTime = Date.now();
 
   try {
-    console.log('🔍 Running consistency checks...');
+    logger.info(' Running consistency checks...');
 
     const currentMonthStart = startOfMonth(new Date());
 
@@ -202,22 +204,22 @@ export async function GET() {
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // SUMMARY
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    console.log('═══════════════════════════════════════');
-    console.log('📋 CONSISTENCY CHECK SUMMARY:');
-    console.log('═══════════════════════════════════════');
-    console.log(`Errors: ${errors.length}`);
-    console.log(`Warnings: ${warnings.length}`);
-    console.log(`Execution time: ${executionTime}ms`);
-    console.log('═══════════════════════════════════════');
+    logger.debug('═══════════════════════════════════════');
+    logger.info(' CONSISTENCY CHECK SUMMARY:');
+    logger.debug('═══════════════════════════════════════');
+    logger.debug(`Errors: ${errors.length}`);
+    logger.debug(`Warnings: ${warnings.length}`);
+    logger.debug(`Execution time: ${executionTime}ms`);
+    logger.debug('═══════════════════════════════════════');
 
     if (errors.length > 0) {
-      console.error('❌ ERRORS:');
-      errors.forEach(e => console.error(`  - ${e}`));
+      logger.error('❌ ERRORS:');
+      errors.forEach(e => logger.error(`  - ${e}`));
     }
 
     if (warnings.length > 0) {
-      console.warn('⚠️  WARNINGS:');
-      warnings.forEach(w => console.warn(`  - ${w}`));
+      logger.warn('⚠️  WARNINGS:');
+      warnings.forEach(w => logger.warn(`  - ${w}`));
     }
 
     return NextResponse.json({
@@ -237,7 +239,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('❌ Consistency check failed:', error);
+    logger.error('❌ Consistency check failed:', error);
     return NextResponse.json(
       {
         valid: false,

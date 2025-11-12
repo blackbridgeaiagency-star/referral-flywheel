@@ -1,7 +1,9 @@
 import { prisma } from '../lib/db/prisma';
+import logger from '../lib/logger';
+
 
 async function getTestIds() {
-  console.log('🔍 Finding test IDs for screenshots...\n');
+  logger.info(' Finding test IDs for screenshots...\n');
 
   // Get a sample member with membershipId
   const member = await prisma.member.findFirst({
@@ -18,14 +20,14 @@ async function getTestIds() {
   });
 
   if (member) {
-    console.log('✅ Found member:');
-    console.log(`   Member ID: ${member.id}`);
-    console.log(`   Membership ID: ${member.membershipId}`);
-    console.log(`   Username: ${member.username}`);
-    console.log(`   Email: ${member.email}`);
-    console.log(`   Creator ID: ${member.creatorId}\n`);
+    logger.info('Found member:');
+    logger.debug(`   Member ID: ${member.id}`);
+    logger.debug(`   Membership ID: ${member.membershipId}`);
+    logger.debug(`   Username: ${member.username}`);
+    logger.debug(`   Email: ${member.email}`);
+    logger.debug(`   Creator ID: ${member.creatorId}\n`);
   } else {
-    console.log('❌ No member with membershipId found\n');
+    logger.error('No member with membershipId found\n');
   }
 
   // Get a sample creator with productId
@@ -41,20 +43,20 @@ async function getTestIds() {
   });
 
   if (creator) {
-    console.log('✅ Found creator:');
-    console.log(`   Creator ID: ${creator.id}`);
-    console.log(`   Product ID: ${creator.productId}`);
-    console.log(`   Company Name: ${creator.companyName}\n`);
+    logger.info('Found creator:');
+    logger.debug(`   Creator ID: ${creator.id}`);
+    logger.debug(`   Product ID: ${creator.productId}`);
+    logger.debug(`   Company Name: ${creator.companyName}\n`);
   } else {
-    console.log('❌ No creator with productId found\n');
+    logger.error('No creator with productId found\n');
   }
 
-  console.log('📋 URLs to test:');
+  logger.info(' URLs to test:');
   if (member?.membershipId) {
-    console.log(`   Member Dashboard: http://localhost:3002/customer/${member.membershipId}`);
+    logger.debug(`   Member Dashboard: http://localhost:3002/customer/${member.membershipId}`);
   }
   if (creator?.productId) {
-    console.log(`   Creator Dashboard: http://localhost:3002/seller-product/${creator.productId}`);
+    logger.debug(`   Creator Dashboard: http://localhost:3002/seller-product/${creator.productId}`);
   }
 
   await prisma.$disconnect();

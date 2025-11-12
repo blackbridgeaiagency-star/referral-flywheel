@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
 import { format } from 'date-fns';
+import logger from '../../../../lib/logger';
+
 
 // Force dynamic rendering (don't pre-render at build time)
 export const dynamic = 'force-dynamic';
@@ -70,7 +72,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('❌ Error generating CSV export:', error);
+    logger.error('❌ Error generating CSV export:', error);
 
     return NextResponse.json(
       {

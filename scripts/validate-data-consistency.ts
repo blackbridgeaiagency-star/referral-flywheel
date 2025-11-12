@@ -14,6 +14,8 @@ import { PrismaClient } from '@prisma/client'
 import { parseArgs } from 'util'
 import * as dotenv from 'dotenv'
 import { join } from 'path'
+import logger from '../lib/logger';
+
 
 // Load environment variables from .env.local
 dotenv.config({ path: join(process.cwd(), '.env.local') })
@@ -57,12 +59,12 @@ const stats = {
 }
 
 function log(message: string, color: keyof typeof colors = 'reset') {
-  console.log(`${colors[color]}${message}${colors.reset}`)
+  logger.debug(`${colors[color]}${message}${colors.reset}`)
 }
 
 function logVerbose(message: string) {
   if (isVerbose) {
-    console.log(`${colors.cyan}[VERBOSE] ${message}${colors.reset}`)
+    logger.debug(`${colors.cyan}[VERBOSE] ${message}${colors.reset}`)
   }
 }
 
@@ -148,7 +150,7 @@ async function validateMemberData() {
     if (issues.length > 0) {
       stats.memberDiscrepancies++
       log(`\n❌ Member ${member.username} (${member.referralCode}):`, 'red')
-      issues.forEach(issue => console.log(`  - ${issue}`))
+      issues.forEach(issue => logger.debug(`  - ${issue}`))
 
       if (shouldFix && !isDryRun) {
         try {
@@ -259,7 +261,7 @@ async function validateCreatorData() {
     if (issues.length > 0) {
       stats.creatorDiscrepancies++
       log(`\n❌ Creator ${creator.companyName || creator.id}:`, 'red')
-      issues.forEach(issue => console.log(`  - ${issue}`))
+      issues.forEach(issue => logger.debug(`  - ${issue}`))
 
       if (shouldFix && !isDryRun) {
         try {
@@ -408,7 +410,7 @@ async function generateReport() {
     log('\n📊 Summary:', 'cyan')
   }
 
-  console.log(`
+  logger.debug(`
   Members Checked:        ${stats.totalMembers}
   Members with Issues:    ${stats.memberDiscrepancies} (${(stats.memberDiscrepancies/stats.totalMembers*100).toFixed(1)}%)
   Members Fixed:          ${stats.fixedMembers}
@@ -423,7 +425,7 @@ async function generateReport() {
 
   if (stats.errors.length > 0) {
     log('\n❌ Errors encountered:', 'red')
-    stats.errors.forEach(error => console.log(`  - ${error}`))
+    stats.errors.forEach(error => logger.debug(`  - ${error}`))
   }
 
   if (isDryRun) {
@@ -468,7 +470,7 @@ async function main() {
 
     process.exit(stats.errors.length > 0 ? 1 : 0)
   } catch (error) {
-    console.error('Fatal error:', error)
+    logger.error('Fatal error:', error)
     process.exit(1)
   } finally {
     await prisma.$disconnect()

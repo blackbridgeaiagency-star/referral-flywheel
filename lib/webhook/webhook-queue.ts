@@ -2,6 +2,8 @@
 import { prisma } from '../db/prisma';
 import { withRetry, shouldRetry } from '../utils/webhook-retry';
 import { trackError, trackEvent, ErrorCategory } from '../monitoring/error-tracking';
+import logger from '../logger';
+
 
 /**
  * Advanced Webhook Queue System
@@ -94,7 +96,7 @@ export class WebhookQueue {
     };
 
     // In production, store in webhook_queue table
-    console.log(`📥 Webhook queued: ${type} with priority ${priority}`);
+    logger.webhook(' Webhook queued: ${type} with priority ${priority}');
 
     trackEvent('webhook_enqueued', {
       category: 'webhook',
@@ -113,18 +115,18 @@ export class WebhookQueue {
     processor: (job: WebhookJob) => Promise<void>
   ): Promise<void> {
     if (this.isProcessing) {
-      console.warn('⚠️ Queue is already processing');
+      logger.warn('⚠️ Queue is already processing');
       return;
     }
 
     this.isProcessing = true;
-    console.log(`🔄 Starting webhook queue processor: ${this.queueName}`);
+    logger.info(' Starting webhook queue processor: ${this.queueName}');
 
     while (this.isProcessing) {
       try {
         // Check circuit breaker
         if (this.isCircuitBreakerOpen()) {
-          console.log('🔴 Circuit breaker is open, waiting...');
+          logger.info(' Circuit breaker is open, waiting...');
           await this.sleep(10000); // Wait 10 seconds
           continue;
         }
@@ -147,7 +149,7 @@ export class WebhookQueue {
         this.circuitBreakerFailures = 0;
 
       } catch (error) {
-        console.error('❌ Queue processing error:', error);
+        logger.error('❌ Queue processing error:', error);
         trackError(error as Error, ErrorCategory.WEBHOOK, {
           action: 'queue_processing',
         });
@@ -168,7 +170,7 @@ export class WebhookQueue {
    */
   stopProcessing(): void {
     this.isProcessing = false;
-    console.log(`⏹️ Stopping webhook queue processor: ${this.queueName}`);
+    logger.debug(`⏹️ Stopping webhook queue processor: ${this.queueName}`);
   }
 
   /**
@@ -189,7 +191,7 @@ export class WebhookQueue {
           maxAttempts: job.maxAttempts - job.attempts,
           baseDelay: 1000,
           onRetry: (attempt, error) => {
-            console.log(`⏳ Retry ${attempt} for webhook ${job.id}:`, error.message);
+            logger.debug(`⏳ Retry ${attempt} for webhook ${job.id}:`, error.message);
           },
         }
       );
@@ -226,7 +228,7 @@ export class WebhookQueue {
 
         await this.updateJob(job);
 
-        console.log(`🔄 Webhook ${job.id} scheduled for retry in ${retryDelay}ms`);
+        logger.webhook(' Webhook ${job.id} scheduled for retry in ${retryDelay}ms');
       }
 
       trackError(error as Error, ErrorCategory.WEBHOOK, {
@@ -270,7 +272,7 @@ export class WebhookQueue {
     status: WebhookStatus
   ): Promise<void> {
     // In production, update webhook_queue table
-    console.log(`📝 Webhook ${jobId} status: ${status}`);
+    logger.webhook(' Webhook ${jobId} status: ${status}');
   }
 
   /**
@@ -278,7 +280,7 @@ export class WebhookQueue {
    */
   private async updateJob(job: WebhookJob): Promise<void> {
     // In production, update webhook_queue table
-    console.log(`📝 Webhook ${job.id} updated`);
+    logger.webhook(' Webhook ${job.id} updated');
   }
 
   /**
@@ -293,7 +295,7 @@ export class WebhookQueue {
 
     await this.updateJob(job);
 
-    console.error(`☠️ Webhook ${job.id} moved to dead letter queue: ${reason}`);
+    logger.error(`☠️ Webhook ${job.id} moved to dead letter queue: ${reason}`);
 
     trackEvent('webhook_dead_letter', {
       category: 'webhook',
@@ -306,7 +308,7 @@ export class WebhookQueue {
     // Send alert for critical webhooks
     if (job.priority >= WebhookPriority.HIGH) {
       // Send notification to admin
-      console.error(`🚨 CRITICAL: High-priority webhook failed: ${job.type}`);
+      logger.error(`🚨 CRITICAL: High-priority webhook failed: ${job.type}`);
     }
   }
 
@@ -321,7 +323,7 @@ export class WebhookQueue {
     if (new Date() > this.circuitBreakerOpenUntil) {
       this.circuitBreakerOpenUntil = undefined;
       this.circuitBreakerFailures = 0;
-      console.log('🟢 Circuit breaker closed');
+      logger.info(' Circuit breaker closed');
       return false;
     }
 
@@ -330,7 +332,7 @@ export class WebhookQueue {
 
   private openCircuitBreaker(): void {
     this.circuitBreakerOpenUntil = new Date(Date.now() + 30000); // Open for 30 seconds
-    console.error('🔴 Circuit breaker opened due to failures');
+    logger.error('🔴 Circuit breaker opened due to failures');
   }
 
   /**
@@ -367,7 +369,7 @@ export class WebhookQueue {
     // Fetch dead letter items
     // Reset their status and attempts
     // Return count of reprocessed items
-    console.log(`♻️ Reprocessing ${limit} dead letter items`);
+    logger.debug(`♻️ Reprocessing ${limit} dead letter items`);
     return 0;
   }
 
@@ -379,7 +381,7 @@ export class WebhookQueue {
     cutoff.setDate(cutoff.getDate() - daysOld);
 
     // Delete old completed jobs
-    console.log(`🗑️ Cleaning up completed jobs older than ${daysOld} days`);
+    logger.info('️ Cleaning up completed jobs older than ${daysOld} days');
     return 0;
   }
 }
@@ -397,23 +399,23 @@ export const analyticsQueue = new WebhookQueue('analytics', 50, 10000);
 export function initializeQueues(): void {
   // Start payment queue processor
   paymentQueue.startProcessing(async (job) => {
-    console.log(`Processing payment webhook: ${job.type}`);
+    logger.debug(`Processing payment webhook: ${job.type}`);
     // Process payment webhook
   });
 
   // Start notification queue processor
   notificationQueue.startProcessing(async (job) => {
-    console.log(`Processing notification: ${job.type}`);
+    logger.debug(`Processing notification: ${job.type}`);
     // Send notification
   });
 
   // Start analytics queue processor
   analyticsQueue.startProcessing(async (job) => {
-    console.log(`Processing analytics event: ${job.type}`);
+    logger.debug(`Processing analytics event: ${job.type}`);
     // Track analytics
   });
 
-  console.log('✅ All webhook queues initialized');
+  logger.info('All webhook queues initialized');
 }
 
 /**
@@ -423,5 +425,5 @@ export function shutdownQueues(): void {
   paymentQueue.stopProcessing();
   notificationQueue.stopProcessing();
   analyticsQueue.stopProcessing();
-  console.log('✅ All webhook queues stopped');
+  logger.info('All webhook queues stopped');
 }

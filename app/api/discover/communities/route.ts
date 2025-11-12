@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
+import logger from '../../../../lib/logger';
+
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -62,7 +64,7 @@ export async function GET() {
     return NextResponse.json({ ok: true, communities: response });
 
   } catch (error) {
-    console.error('❌ Discover API error:', error);
+    logger.error('❌ Discover API error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch communities' },
       { status: 500 }

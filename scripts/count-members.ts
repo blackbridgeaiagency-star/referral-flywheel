@@ -1,10 +1,12 @@
 // scripts/count-members.ts
 import { prisma } from '../lib/db/prisma';
+import logger from '../lib/logger';
+
 
 async function countMembers() {
   try {
     const totalMembers = await prisma.member.count();
-    console.log(`\n📊 Total Members: ${totalMembers}`);
+    logger.debug(`\n📊 Total Members: ${totalMembers}`);
 
     // Breakdown by creator
     const creators = await prisma.creator.findMany({
@@ -19,14 +21,14 @@ async function countMembers() {
       },
     });
 
-    console.log('\n📋 Members by Creator:');
+    logger.debug('\n📋 Members by Creator:');
     creators.forEach((creator) => {
-      console.log(`  - ${creator.companyName}: ${creator._count.members} members`);
+      logger.debug(`  - ${creator.companyName}: ${creator._count.members} members`);
     });
 
     await prisma.$disconnect();
   } catch (error) {
-    console.error('❌ Error:', error);
+    logger.error('❌ Error:', error);
     await prisma.$disconnect();
     process.exit(1);
   }

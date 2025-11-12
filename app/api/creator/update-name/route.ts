@@ -1,6 +1,8 @@
 // app/api/creator/update-name/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
+import logger from '../../../../lib/logger';
+
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error updating creator name:', error);
+    logger.error('Error updating creator name:', error);
     return NextResponse.json(
       { error: 'Failed to update name' },
       { status: 500 }

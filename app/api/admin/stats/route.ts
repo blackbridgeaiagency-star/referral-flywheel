@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
 import { withRateLimit } from '../../../../lib/security/rate-limit-utils';
 import { cache } from '../../../../lib/cache/redis';
+import logger from '../../../../lib/logger';
+
 
 export async function GET(request: NextRequest) {
   return withRateLimit(request, async () => {
@@ -145,7 +147,7 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json(stats);
     } catch (error) {
-      console.error('Admin stats error:', error);
+      logger.error('Admin stats error:', error);
       return NextResponse.json(
         { error: 'Failed to fetch admin stats' },
         { status: 500 }
@@ -168,7 +170,7 @@ async function checkSystemHealth(): Promise<'healthy' | 'degraded' | 'down'> {
 
     return 'healthy';
   } catch (error) {
-    console.error('System health check failed:', error);
+    logger.error('System health check failed:', error);
     return 'down';
   }
 }

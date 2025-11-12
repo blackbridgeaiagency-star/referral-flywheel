@@ -8,6 +8,8 @@ import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Switch } from '../ui/switch';
 import { Trophy, Clock, Save } from 'lucide-react';
+import logger from '../../lib/logger';
+
 
 interface CustomRewardsFormProps {
   creatorId: string;
@@ -72,7 +74,7 @@ export function CustomRewardsFormV2({ creatorId, initialData }: CustomRewardsFor
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
-      console.error('Error saving custom rewards:', err);
+      logger.error('Error saving custom rewards:', err);
       setError(err instanceof Error ? err.message : 'Failed to save settings');
     } finally {
       setIsSaving(false);

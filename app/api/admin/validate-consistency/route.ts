@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+import logger from '../../../../lib/logger';
+
 
 const prisma = new PrismaClient()
 
@@ -34,7 +36,7 @@ export async function POST(request: NextRequest) {
         commissions: {
           where: { status: 'paid' }
         },
-        referredMembers: true
+        referrals: true
       }
     })
 
@@ -43,15 +45,15 @@ export async function POST(request: NextRequest) {
     for (const member of members) {
       const issues: any = {
         memberId: member.id,
-        name: member.firstName,
+        name: member.username,
         referralCode: member.referralCode,
         problems: [],
         fixes: {}
       }
 
       // Check lifetime earnings
-      const actualLifetimeEarnings = member.commissions.reduce(
-        (sum, c) => sum + parseFloat(c.memberShare.toString()), 0
+      const actualLifetimeEarnings = (member.commissions as any[]).reduce(
+        (sum: number, c: any) => sum + parseFloat(c.memberShare.toString()), 0
       )
 
       if (Math.abs(actualLifetimeEarnings - parseFloat(member.lifetimeEarnings.toString())) > 0.01) {
@@ -66,11 +68,11 @@ export async function POST(request: NextRequest) {
       // Check monthly earnings
       const now = new Date()
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-      const monthlyCommissions = member.commissions.filter(
-        c => new Date(c.createdAt) >= startOfMonth
+      const monthlyCommissions = (member.commissions as any[]).filter(
+        (c: any) => new Date(c.createdAt) >= startOfMonth
       )
       const actualMonthlyEarnings = monthlyCommissions.reduce(
-        (sum, c) => sum + parseFloat(c.memberShare.toString()), 0
+        (sum: number, c: any) => sum + parseFloat(c.memberShare.toString()), 0
       )
 
       if (Math.abs(actualMonthlyEarnings - parseFloat(member.monthlyEarnings.toString())) > 0.01) {
@@ -83,7 +85,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Check referral counts
-      const actualTotalReferred = member.referredMembers.length
+      const actualTotalReferred = (member.referrals as any[]).length
       if (actualTotalReferred !== member.totalReferred) {
         issues.problems.push({
           field: 'totalReferred',
@@ -114,7 +116,7 @@ export async function POST(request: NextRequest) {
           where: { status: 'paid' }
         },
         members: {
-          include: { referredMembers: true }
+          include: { referrals: true }
         }
       }
     })
@@ -130,8 +132,8 @@ export async function POST(request: NextRequest) {
       }
 
       // Check total revenue
-      const actualTotalRevenue = creator.commissions.reduce(
-        (sum, c) => sum + parseFloat(c.creatorShare.toString()), 0
+      const actualTotalRevenue = (creator.commissions as any[]).reduce(
+        (sum: number, c: any) => sum + parseFloat(c.creatorShare.toString()), 0
       )
 
       if (Math.abs(actualTotalRevenue - parseFloat(creator.totalRevenue.toString())) > 0.01) {
@@ -146,11 +148,11 @@ export async function POST(request: NextRequest) {
       // Check monthly revenue
       const now = new Date()
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-      const monthlyCommissions = creator.commissions.filter(
-        c => new Date(c.createdAt) >= startOfMonth
+      const monthlyCommissions = (creator.commissions as any[]).filter(
+        (c: any) => new Date(c.createdAt) >= startOfMonth
       )
       const actualMonthlyRevenue = monthlyCommissions.reduce(
-        (sum, c) => sum + parseFloat(c.creatorShare.toString()), 0
+        (sum: number, c: any) => sum + parseFloat(c.creatorShare.toString()), 0
       )
 
       if (Math.abs(actualMonthlyRevenue - parseFloat(creator.monthlyRevenue.toString())) > 0.01) {
@@ -163,8 +165,8 @@ export async function POST(request: NextRequest) {
       }
 
       // Check total referrals
-      const actualTotalReferrals = creator.members.reduce(
-        (sum, m) => sum + m.referredMembers.length, 0
+      const actualTotalReferrals = (creator.members as any[]).reduce(
+        (sum: number, m: any) => sum + (m.referrals?.length || 0), 0
       )
 
       if (actualTotalReferrals !== creator.totalReferrals) {
@@ -202,7 +204,7 @@ export async function POST(request: NextRequest) {
       const creatorShare = parseFloat(commission.creatorShare.toString())
       const platformShare = parseFloat(commission.platformShare.toString())
       const total = memberShare + creatorShare + platformShare
-      const amount = parseFloat(commission.amount.toString())
+      const amount = parseFloat(commission.saleAmount.toString())
 
       // Check if shares add up correctly
       if (Math.abs(total - amount) > 0.01) {
@@ -264,7 +266,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Data consistency validation error:', error)
+    logger.error('Data consistency validation error:', error)
     return NextResponse.json(
       {
         success: false,

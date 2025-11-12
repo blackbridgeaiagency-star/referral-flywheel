@@ -11,6 +11,8 @@
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db/prisma';
 import { headers } from 'next/headers';
+import logger from '../lib/logger';
+
 
 async function getUserContext() {
   // Check for Whop context in headers
@@ -114,7 +116,7 @@ export default async function HomePage({
   try {
     // Check if this is the creator/owner
     if (urlIsOwner && companyId) {
-      console.log('👑 Owner detected, checking creator status...');
+      logger.info(' Owner detected, checking creator status...');
 
       // Check if creator exists
       const creator = await prisma.creator.findUnique({
@@ -122,7 +124,7 @@ export default async function HomePage({
       });
 
       if (!creator) {
-        console.log('🆕 New creator, creating account...');
+        logger.info(' New creator, creating account...');
         // First time setup - create creator and redirect to onboarding
         const newCreator = await prisma.creator.create({
           data: {
@@ -140,25 +142,25 @@ export default async function HomePage({
 
       // Check if onboarding is complete
       if (!creator.onboardingCompleted) {
-        console.log('📝 Onboarding incomplete, redirecting...');
+        logger.info(' Onboarding incomplete, redirecting...');
         redirect(`/seller-product/${companyId}/onboarding`);
       }
 
-      console.log('✅ Creator verified, redirecting to dashboard...');
+      logger.info('Creator verified, redirecting to dashboard...');
       // Redirect to creator dashboard
       redirect(`/seller-product/${companyId}`);
     }
 
     // Check if this is a member by membership ID
     if (membershipId) {
-      console.log('🔍 Checking membership:', membershipId);
+      logger.info(' Checking membership:', membershipId);
       const member = await prisma.member.findUnique({
         where: { membershipId },
         include: { creator: true }
       });
 
       if (member) {
-        console.log('✅ Member found, redirecting to dashboard...');
+        logger.info('Member found, redirecting to dashboard...');
         // Redirect to member dashboard
         redirect(`/customer/${member.creator.companyId}`);
       }
@@ -166,7 +168,7 @@ export default async function HomePage({
 
     // Try to find member by userId
     if (userId && companyId) {
-      console.log('🔍 Checking user:', userId);
+      logger.info(' Checking user:', userId);
       const member = await prisma.member.findFirst({
         where: {
           userId,
@@ -176,7 +178,7 @@ export default async function HomePage({
       });
 
       if (member) {
-        console.log('✅ Member found by user ID, redirecting...');
+        logger.info('Member found by user ID, redirecting...');
         redirect(`/customer/${member.creator.companyId}`);
       }
 
@@ -187,7 +189,7 @@ export default async function HomePage({
       });
 
       if (!creator) {
-        console.log('❌ No creator found for company:', companyId);
+        logger.error('No creator found for company:', companyId);
         // Show error - app not installed properly
         return (
           <div className="min-h-screen bg-black text-white flex items-center justify-center">
@@ -206,7 +208,7 @@ export default async function HomePage({
 
       // Creator exists but no member - redirect to customer page
       // The page will handle member creation if needed
-      console.log('📋 No member record, redirecting to customer page for creation...');
+      logger.info(' No member record, redirecting to customer page for creation...');
       redirect(`/customer/${companyId}?user_id=${userId}`);
     }
 
@@ -228,7 +230,7 @@ export default async function HomePage({
     );
 
   } catch (error) {
-    console.error('❌ Error routing user:', error);
+    logger.error('❌ Error routing user:', error);
 
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">

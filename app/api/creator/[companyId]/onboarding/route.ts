@@ -1,4 +1,4 @@
-// app/api/creator/[experienceId]/onboarding/route.ts
+// app/api/creator/[companyId]/onboarding/route.ts
 /**
  * API endpoint for creator onboarding
  * Saves onboarding data and marks creator as onboarded
@@ -6,18 +6,20 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
+import logger from '../../../../../lib/logger';
+
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { experienceId: string } }
+  { params }: { params: { companyId: string } }
 ) {
   try {
     const data = await request.json();
-    const { experienceId } = params;
+    const { companyId } = params;
 
     // Update creator with onboarding data
     const creator = await prisma.creator.update({
-      where: { companyId: experienceId },
+      where: { companyId: companyId },
       data: {
         companyName: data.companyName,
         welcomeMessage: data.welcomeMessage,
@@ -34,7 +36,7 @@ export async function POST(
       }
     });
 
-    console.log(`✅ Creator onboarding completed: ${creator.companyName}`);
+    logger.info('Creator onboarding completed: ${creator.companyName}');
 
     return NextResponse.json({
       success: true,
@@ -46,7 +48,7 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('❌ Onboarding error:', error);
+    logger.error('❌ Onboarding error:', error);
     return NextResponse.json(
       {
         error: 'Failed to save onboarding data',

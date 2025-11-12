@@ -1,3 +1,5 @@
+import logger from '../logger';
+
 /**
  * Billing Period Utilities
  * Handles monthly value calculations for different subscription types
@@ -42,7 +44,7 @@ export function calculateMonthlyValue(
       return null;
 
     default:
-      console.warn(`Unknown billing period: ${billingPeriod}`);
+      logger.warn(`Unknown billing period: ${billingPeriod}`);
       return null;
   }
 }

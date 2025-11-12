@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
 import { withRateLimit } from '../../../../lib/middleware/rate-limit';
 import { subHours, subDays, startOfHour, format } from 'date-fns';
+import logger from '../../../../lib/logger';
+
 
 /**
  * Webhook Statistics API
@@ -140,7 +142,7 @@ export async function GET(request: NextRequest) {
       });
 
     } catch (error) {
-      console.error('Failed to fetch webhook stats:', error);
+      logger.error('Failed to fetch webhook stats:', error);
 
       return NextResponse.json(
         {
@@ -243,7 +245,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Webhook health check failed:', error);
+    logger.error('Webhook health check failed:', error);
 
     return NextResponse.json(
       {

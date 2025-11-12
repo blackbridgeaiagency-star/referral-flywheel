@@ -3,6 +3,8 @@ import { Server as HTTPServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { prisma } from '../db/prisma';
 import { cache } from '../cache/redis';
+import logger from '../logger';
+
 
 /**
  * Notification types
@@ -92,7 +94,7 @@ export class WebSocketServer {
     this.setupEventHandlers();
     this.startHeartbeat();
 
-    console.log('✅ WebSocket server initialized');
+    logger.info('WebSocket server initialized');
   }
 
   /**
@@ -102,7 +104,7 @@ export class WebSocketServer {
     if (!this.io) return;
 
     this.io.on('connection', (socket) => {
-      console.log(`👤 User connected: ${socket.id}`);
+      logger.info(' User connected: ${socket.id}');
 
       // Send connection confirmation
       socket.emit(SocketEvent.CONNECTION_STATUS, {
@@ -139,7 +141,7 @@ export class WebSocketServer {
         // Send any pending notifications
         await this.sendPendingNotifications(userId, socket.id);
 
-        console.log(`✅ User ${userId} joined room`);
+        logger.info('User ${userId} joined room');
       });
 
       // Leave room
@@ -147,7 +149,7 @@ export class WebSocketServer {
         const { userId } = data;
         socket.leave(`user:${userId}`);
         this.connectedUsers.get(userId)?.delete(socket.id);
-        console.log(`👋 User ${userId} left room`);
+        logger.info(' User ${userId} left room');
       });
 
       // Mark notification as read
@@ -181,7 +183,7 @@ export class WebSocketServer {
           }
           this.socketToUser.delete(socket.id);
         }
-        console.log(`👋 User disconnected: ${socket.id}`);
+        logger.info(' User disconnected: ${socket.id}');
       });
     });
   }
@@ -379,7 +381,7 @@ export class WebSocketServer {
    */
   private async markNotificationRead(notificationId: string) {
     // In production, update in database
-    console.log(`Marked notification ${notificationId} as read`);
+    logger.debug(`Marked notification ${notificationId} as read`);
   }
 
   /**
@@ -466,7 +468,7 @@ export class WebSocketServer {
           }),
         });
       } catch (error) {
-        console.error('Failed to send push notification:', error);
+        logger.error('Failed to send push notification:', error);
       }
     }
   }

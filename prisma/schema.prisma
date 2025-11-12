@@ -20,9 +20,9 @@ model Creator {
   productId       String                   // Whop product ID
   
   // COMMISSION RATES (LOCKED - NEVER ALLOW CHANGES)
-  memberRate      Float     @default(10)   // 10% to members
-  creatorRate     Float     @default(70)   // 70% to creator
-  platformRate    Float     @default(20)   // 20% to platform
+  memberRate      Float     @default(10)   // 10% suggested member reward (creator decides)
+  creatorRate     Float     @default(80)   // 80% to creator (after 10% platform + 10% suggested member)
+  platformRate    Float     @default(10)   // 10% platform fee (V1 launch pricing)
   
   // REWARD TIERS (Customizable by creator)
   tier1Count      Int       @default(5)
@@ -63,11 +63,20 @@ model Creator {
   totalRevenue    Float     @default(0)
   monthlyRevenue  Float     @default(0)
   lastMonthReset  DateTime?               // Track when monthly stats were last reset
-  
+
+  // INVOICE SYSTEM (Revenue Share Integration)
+  stripeCustomerId      String?  @unique
+  invoicingEnabled      Boolean  @default(true)
+  firstInvoiceDate      DateTime?
+  lifetimeInvoiced      Decimal   @default(0) // Total invoiced all time
+  lifetimeReferred      Decimal   @default(0) // Total referred revenue generated
+  pendingRefundCredit   Decimal   @default(0) // Credits from refunded invoiced sales
+
   // RELATIONS
   members         Member[]
   commissions     Commission[]
   monthlySnapshots MonthlySnapshot[]
+  invoices        Invoice[]
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -220,6 +229,10 @@ model Commission {
   paidAt          DateTime?
   failureReason   String?
 
+  // INVOICE TRACKING (Revenue Share System)
+  platformFeeInvoiced   Boolean  @default(false)  // Has this sale been invoiced?
+  invoiceId             String?                   // Which invoice includes this sale
+
   // RELATIONS
   memberId        String
   member          Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
@@ -229,6 +242,7 @@ model Commission {
 
   attributionClick AttributionClick?
   refunds         Refund[]  // Track all refunds for this commission
+  invoice         Invoice?  @relation(fields: [invoiceId], references: [id])
 
   createdAt       DateTime  @default(now())
 
@@ -438,4 +452,46 @@ model PaymentFailure {
   @@index([memberId])
   @@index([resolved])
   @@index([failedAt])
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// INVOICE MODEL (Revenue Share System)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+model Invoice {
+  id                    String   @id @default(cuid())
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Invoice basics
+  creatorId             String
+  periodStart           DateTime
+  periodEnd             DateTime
+  status                String   @default("pending") // "pending" | "sent" | "paid" | "overdue" | "cancelled"
+
+  // Financial details
+  totalAmount           Decimal  // 20% of referred sales
+  salesCount            Int      // Number of referred sales
+  referredSalesTotal    Decimal  // Total referred sales amount
+  organicSalesTotal     Decimal  // Total organic sales (for comparison)
+
+  // Value proposition metrics (what creator gained)
+  creatorGainFromReferrals  Decimal  // 70% of referred sales (what they kept)
+  totalRevenueWithApp       Decimal  // Organic + 70% referred
+  totalRevenueWithoutApp    Decimal  // Just organic (baseline)
+  additionalRevenue         Decimal  // Gain from our partnership
+  percentageGrowth          Decimal  // % increase
+
+  // Stripe details
+  stripeInvoiceId       String?  @unique
+  stripeInvoiceUrl      String?
+  dueDate               DateTime?
+  paidAt                DateTime?
+
+  // Relations
+  creator               Creator  @relation(fields: [creatorId], references: [id])
+  commissions           Commission[]   // Sales included in this invoice
+
+  @@index([creatorId])
+  @@index([status])
+  @@index([periodStart, periodEnd])
 }

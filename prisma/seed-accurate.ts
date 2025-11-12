@@ -3,6 +3,8 @@ import { PrismaClient } from '@prisma/client';
 import { generateReferralCode } from '../lib/utils/referral-code';
 import { calculateCommission } from '../lib/utils/commission';
 import { subDays, subMonths } from 'date-fns';
+import logger from '../lib/logger';
+
 
 const prisma = new PrismaClient();
 
@@ -19,12 +21,12 @@ const LAST_NAMES = [
 const SALE_AMOUNTS = [9.99, 19.99, 29.99, 49.99, 99.99];
 
 async function cleanDatabase() {
-  console.log('🧹 Cleaning existing test data...');
+  logger.debug('🧹 Cleaning existing test data...');
   await prisma.commission.deleteMany();
   await prisma.attributionClick.deleteMany();
   await prisma.member.deleteMany();
   await prisma.creator.deleteMany();
-  console.log('✅ Database cleaned');
+  logger.info('Database cleaned');
 }
 
 function getRandomName() {
@@ -42,12 +44,12 @@ function generateCommissionDate(daysBack: number): Date {
 }
 
 async function seedAccurate() {
-  console.log('🌱 Starting ACCURATE database seeding...\n');
+  logger.info(' Starting ACCURATE database seeding...\n');
 
   await cleanDatabase();
 
   // Create 3 communities
-  console.log('📦 Creating 3 test communities...');
+  logger.webhook(' Creating 3 test communities...');
 
   const creators = await Promise.all([
     prisma.creator.create({
@@ -104,10 +106,10 @@ async function seedAccurate() {
     })
   ]);
 
-  console.log('✅ Created 3 communities\n');
+  logger.info('Created 3 communities\n');
 
   // Create members
-  console.log('👥 Creating 180 members across communities...');
+  logger.info(' Creating 180 members across communities...');
 
   const communities = [
     { creator: creators[0], memberCount: 100, name: 'TechWhop' },
@@ -118,7 +120,7 @@ async function seedAccurate() {
   const allMembers: any[] = [];
 
   for (const community of communities) {
-    console.log(`Creating ${community.memberCount} members for ${community.name}...`);
+    logger.debug(`Creating ${community.memberCount} members for ${community.name}...`);
 
     for (let i = 0; i < community.memberCount; i++) {
       const { firstName, lastName, fullName } = getRandomName();
@@ -173,10 +175,10 @@ async function seedAccurate() {
     }
   }
 
-  console.log('✅ Created 180 members\n');
+  logger.info('Created 180 members\n');
 
   // Create commissions with accurate math
-  console.log('💰 Creating commission records with accurate math...');
+  logger.info(' Creating commission records with accurate math...');
 
   const now = new Date();
   const thirtyDaysAgo = subDays(now, 30);
@@ -260,10 +262,10 @@ async function seedAccurate() {
     }
   }
 
-  console.log(`✅ Created ${totalCommissions} commission records with accurate math\n`);
+  logger.info('Created ${totalCommissions} commission records with accurate math\n');
 
   // Update rankings
-  console.log('🏆 Calculating accurate rankings...');
+  logger.info(' Calculating accurate rankings...');
 
   const updatedMembers = await prisma.member.findMany();
 
@@ -300,10 +302,10 @@ async function seedAccurate() {
     }
   }
 
-  console.log('✅ Rankings calculated accurately\n');
+  logger.info('Rankings calculated accurately\n');
 
   // Set custom rewards eligibility based on actual earnings
-  console.log('🏆 Setting custom rewards eligibility...');
+  logger.info(' Setting custom rewards eligibility...');
 
   for (const community of communities) {
     const creator = community.creator;
@@ -391,10 +393,10 @@ async function seedAccurate() {
     }
   }
 
-  console.log('✅ Custom rewards eligibility set\n');
+  logger.info('Custom rewards eligibility set\n');
 
   // Update creator revenue stats
-  console.log('📊 Updating creator revenue statistics...');
+  logger.info(' Updating creator revenue statistics...');
 
   for (const community of communities) {
     const stats = await prisma.commission.aggregate({
@@ -427,37 +429,37 @@ async function seedAccurate() {
     });
   }
 
-  console.log('✅ Creator statistics updated\n');
+  logger.info('Creator statistics updated\n');
 
   // Summary
-  console.log('📊 SEEDING COMPLETE - SUMMARY:');
-  console.log('================================');
-  console.log('✅ 3 Communities created');
-  console.log('✅ 180 Members created');
-  console.log(`✅ ${totalCommissions} Commission records (with accurate math!)`);
-  console.log('✅ Rankings calculated accurately');
-  console.log('✅ Custom rewards eligibility set');
-  console.log('✅ All earnings match commission records');
-  console.log('\n🎉 Database seeding completed successfully with ACCURATE MATH!');
+  logger.info(' SEEDING COMPLETE - SUMMARY:');
+  logger.debug('================================');
+  logger.info('3 Communities created');
+  logger.info('180 Members created');
+  logger.info('${totalCommissions} Commission records (with accurate math!)');
+  logger.info('Rankings calculated accurately');
+  logger.info('Custom rewards eligibility set');
+  logger.info('All earnings match commission records');
+  logger.debug('\n🎉 Database seeding completed successfully with ACCURATE MATH!');
 
   // Display sample URLs
-  console.log('\n🔗 SAMPLE TEST URLS:');
-  console.log('================================');
-  console.log('\n📱 Member Dashboards:');
+  logger.debug('\n🔗 SAMPLE TEST URLS:');
+  logger.debug('================================');
+  logger.debug('\n📱 Member Dashboards:');
   const sampleMembers = await prisma.member.findMany({ take: 5, orderBy: { lifetimeEarnings: 'desc' } });
   for (const member of sampleMembers) {
-    console.log(`http://localhost:3003/customer/${member.membershipId} (${member.username} - $${member.lifetimeEarnings})`);
+    logger.debug(`http://localhost:3003/customer/${member.membershipId} (${member.username} - $${member.lifetimeEarnings})`);
   }
 
-  console.log('\n🏢 Creator Dashboards:');
+  logger.debug('\n🏢 Creator Dashboards:');
   for (const community of communities) {
-    console.log(`http://localhost:3003/seller-product/${community.creator.productId} (${community.name})`);
+    logger.debug(`http://localhost:3003/seller-product/${community.creator.productId} (${community.name})`);
   }
 }
 
 seedAccurate()
   .catch((error) => {
-    console.error('❌ Seeding error:', error);
+    logger.error('❌ Seeding error:', error);
     process.exit(1);
   })
   .finally(async () => {

@@ -68,7 +68,7 @@ export function CreatorOnboardingBanner({
               🎉 Welcome to Referral Flywheel!
             </h3>
             <p className="text-gray-300 text-sm sm:text-base mb-4 leading-relaxed">
-              You're 5 minutes away from turning <span className="text-purple-400 font-semibold">{currentName}</span> into
+              You're 2 minutes away from turning <span className="text-purple-400 font-semibold">{currentName}</span> into
               a viral growth engine. Let's set up your referral program!
             </p>
 
@@ -98,7 +98,7 @@ export function CreatorOnboardingBanner({
                 className="flex-1 sm:flex-initial px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-semibold transition-all shadow-lg shadow-purple-600/30 hover:shadow-purple-600/50 flex items-center justify-center gap-2"
               >
                 <Sparkles className="w-4 h-4" />
-                Start Setup (5 min)
+                Start Setup (&lt;2 min)
               </button>
               <button
                 onClick={handleSkip}
@@ -109,7 +109,7 @@ export function CreatorOnboardingBanner({
             </div>
 
             <p className="mt-3 text-xs text-gray-500">
-              💡 You can always change these settings later. Takes less than 5 minutes!
+              💡 You can always change these settings later. Takes less than 2 minutes!
             </p>
           </div>
         </div>

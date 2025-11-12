@@ -8,6 +8,8 @@ import { TopPerformersTable } from '../../../components/dashboard/TopPerformersT
 import { CommunityStatsGrid } from '../../../components/dashboard/CommunityStatsGrid';
 import { RewardManagementForm } from '../../../components/dashboard/RewardManagementForm';
 import { CreatorOnboardingBanner } from '../../../components/dashboard/CreatorOnboardingBanner';
+import { PartnershipImpactCard } from '../../../components/creator/PartnershipImpactCard';
+import { InvoiceHistory } from '../../../components/creator/InvoiceHistory';
 import { formatCurrency } from '../../../lib/utils/commission';
 import { getWhopContext, canAccessCreatorDashboard } from '../../../lib/whop/simple-auth';
 import logger from '../../../lib/logger';
@@ -152,6 +154,7 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
           id: true,
           companyName: true,
           productId: true,
+          onboardingCompleted: true,
           tier1Count: true,
           tier1Reward: true,
           tier2Count: true,
@@ -230,6 +233,11 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
             currentName={creator.companyName}
           />
 
+          {/* Partnership Impact Card - NEW! Shows value proposition */}
+          <Suspense fallback={<LoadingCard />}>
+            <PartnershipImpactCard creatorId={creator.id} />
+          </Suspense>
+
           {/* Revenue Metrics - ✅ USING CENTRALIZED DATA */}
           <Suspense fallback={<LoadingCard />}>
             <RevenueMetrics
@@ -290,6 +298,7 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
             <TopPerformersTable
               performers={dashboardData.topReferrers}
               totalRevenue={dashboardData.revenueStats.totalRevenue}
+              creatorId={creator.id}
             />
           </Suspense>
 
@@ -319,6 +328,11 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
               />
             </Suspense>
           </div>
+
+          {/* Invoice History - Shows past invoices (moved to bottom) */}
+          <Suspense fallback={<LoadingCard />}>
+            <InvoiceHistory companyId={experienceId} />
+          </Suspense>
 
         </div>
       </main>

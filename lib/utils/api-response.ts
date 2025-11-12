@@ -4,6 +4,8 @@
  */
 
 import { NextResponse } from 'next/server';
+import logger from '../logger';
+
 
 export interface ApiError {
   error: string;
@@ -102,7 +104,7 @@ export function internalError(error: unknown): NextResponse<ApiError> {
   const message = error instanceof Error ? error.message : 'Internal server error';
   const details = process.env.NODE_ENV === 'development' ? String(error) : undefined;
 
-  console.error('Internal API error:', error);
+  logger.error('Internal API error:', error);
 
   return errorResponse('Internal server error', 'INTERNAL_ERROR', 500, details);
 }
@@ -116,7 +118,7 @@ export function databaseError(error: unknown): NextResponse<ApiError> {
     ? error.message
     : undefined;
 
-  console.error('Database error:', error);
+  logger.error('Database error:', error);
 
   return errorResponse(message, 'DATABASE_ERROR', 500, details);
 }

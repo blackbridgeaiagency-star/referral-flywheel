@@ -1,3 +1,5 @@
+import logger from '../logger';
+
 /**
  * Email Client for Referral Flywheel
  *
@@ -56,7 +58,7 @@ class EmailClient {
           return await this.sendViaConsole({ to, subject, html, text });
       }
     } catch (error) {
-      console.error('❌ Email send error:', error);
+      logger.error('❌ Email send error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -71,7 +73,7 @@ class EmailClient {
     const apiKey = process.env.RESEND_API_KEY;
 
     if (!apiKey) {
-      console.error('❌ RESEND_API_KEY not configured');
+      logger.error('❌ RESEND_API_KEY not configured');
       return { success: false, error: 'Resend API key not configured' };
     }
 
@@ -93,19 +95,19 @@ class EmailClient {
 
       if (!response.ok) {
         const error = await response.json();
-        console.error('❌ Resend error:', error);
+        logger.error('❌ Resend error:', error);
         return { success: false, error: error.message || 'Resend API error' };
       }
 
       const data = await response.json();
-      console.log(`✅ Email sent via Resend to ${to}`);
+      logger.info('Email sent via Resend to ${to}');
 
       return {
         success: true,
         messageId: data.id
       };
     } catch (error) {
-      console.error('❌ Resend send error:', error);
+      logger.error('❌ Resend send error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to send via Resend'
@@ -120,7 +122,7 @@ class EmailClient {
     const apiKey = process.env.SENDGRID_API_KEY;
 
     if (!apiKey) {
-      console.error('❌ SENDGRID_API_KEY not configured');
+      logger.error('❌ SENDGRID_API_KEY not configured');
       return { success: false, error: 'SendGrid API key not configured' };
     }
 
@@ -144,19 +146,19 @@ class EmailClient {
 
       if (!response.ok) {
         const error = await response.text();
-        console.error('❌ SendGrid error:', error);
+        logger.error('❌ SendGrid error:', error);
         return { success: false, error: 'SendGrid API error' };
       }
 
       const messageId = response.headers.get('x-message-id');
-      console.log(`✅ Email sent via SendGrid to ${to}`);
+      logger.info('Email sent via SendGrid to ${to}');
 
       return {
         success: true,
         messageId: messageId || undefined
       };
     } catch (error) {
-      console.error('❌ SendGrid send error:', error);
+      logger.error('❌ SendGrid send error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to send via SendGrid'
@@ -171,7 +173,7 @@ class EmailClient {
     const apiKey = process.env.POSTMARK_API_KEY;
 
     if (!apiKey) {
-      console.error('❌ POSTMARK_API_KEY not configured');
+      logger.error('❌ POSTMARK_API_KEY not configured');
       return { success: false, error: 'Postmark API key not configured' };
     }
 
@@ -193,19 +195,19 @@ class EmailClient {
 
       if (!response.ok) {
         const error = await response.json();
-        console.error('❌ Postmark error:', error);
+        logger.error('❌ Postmark error:', error);
         return { success: false, error: error.Message || 'Postmark API error' };
       }
 
       const data = await response.json();
-      console.log(`✅ Email sent via Postmark to ${to}`);
+      logger.info('Email sent via Postmark to ${to}');
 
       return {
         success: true,
         messageId: data.MessageID
       };
     } catch (error) {
-      console.error('❌ Postmark send error:', error);
+      logger.error('❌ Postmark send error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to send via Postmark'
@@ -217,12 +219,12 @@ class EmailClient {
    * Console logging for development (no actual email sent)
    */
   private async sendViaConsole({ to, subject, html, text }: EmailOptions): Promise<EmailResult> {
-    console.log('📧 [DEV MODE] Email would be sent:');
-    console.log(`   To: ${to}`);
-    console.log(`   Subject: ${subject}`);
-    console.log(`   HTML length: ${html.length} chars`);
-    if (text) console.log(`   Text length: ${text.length} chars`);
-    console.log('   ---');
+    logger.info(' [DEV MODE] Email would be sent:');
+    logger.debug(`   To: ${to}`);
+    logger.debug(`   Subject: ${subject}`);
+    logger.debug(`   HTML length: ${html.length} chars`);
+    if (text) logger.debug(`   Text length: ${text.length} chars`);
+    logger.debug('   ---');
 
     return {
       success: true,

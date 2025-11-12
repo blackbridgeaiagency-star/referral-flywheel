@@ -1,6 +1,8 @@
 // app/api/referrals/stats/route.ts
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
+import logger from '../../../../lib/logger';
+
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -48,7 +50,7 @@ export async function GET(request: Request) {
     
     return NextResponse.json(member);
   } catch (error) {
-    console.error('❌ Stats error:', error);
+    logger.error('❌ Stats error:', error);
     return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 });
   }
 }

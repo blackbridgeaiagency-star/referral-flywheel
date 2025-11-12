@@ -12,6 +12,8 @@
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
+import logger from '../../../lib/logger';
+
 
 export const dynamic = 'force-dynamic';
 
@@ -57,7 +59,7 @@ export async function GET() {
     } catch (error) {
       dbHealthy = false;
       dbError = error instanceof Error ? error.message : 'Unknown database error';
-      console.error('Database health check failed:', error);
+      logger.error('Database health check failed:', error);
     }
 
     // Check required environment variables
@@ -128,7 +130,7 @@ export async function GET() {
       }
     );
   } catch (error) {
-    console.error('Health check failed:', error);
+    logger.error('Health check failed:', error);
 
     return NextResponse.json(
       {
@@ -150,7 +152,7 @@ export async function GET() {
     try {
       await prisma.$disconnect();
     } catch (disconnectError) {
-      console.error('Error disconnecting from database:', disconnectError);
+      logger.error('Error disconnecting from database:', disconnectError);
     }
   }
 }

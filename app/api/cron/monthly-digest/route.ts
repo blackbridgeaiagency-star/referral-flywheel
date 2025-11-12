@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
 import { sendEmail } from '../../../../lib/email/client';
 import { generateMonthlyEarningsSummaryEmail } from '../../../../lib/email/templates/monthly-earnings-summary';
+import logger from '../../../../lib/logger';
+
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -33,11 +35,11 @@ export async function POST(request: Request) {
     const cronSecret = process.env.CRON_SECRET;
 
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      console.error('❌ Unauthorized cron request');
+      logger.error('❌ Unauthorized cron request');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('🔄 Starting monthly digest cron job...');
+    logger.info(' Starting monthly digest cron job...');
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // 2. GET DATE RANGE FOR PREVIOUS MONTH
@@ -49,7 +51,7 @@ export async function POST(request: Request) {
     const monthName = lastMonth.toLocaleString('default', { month: 'long' });
     const year = lastMonth.getFullYear();
 
-    console.log(`📅 Generating reports for: ${monthName} ${year}`);
+    logger.info(` Generating reports for: ${monthName} ${year}`);
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // 3. FETCH ALL ACTIVE MEMBERS
@@ -66,7 +68,7 @@ export async function POST(request: Request) {
       }
     });
 
-    console.log(`📊 Found ${members.length} active members`);
+    logger.info(` Found ${members.length} active members`);
 
     let sentCount = 0;
     let failedCount = 0;
@@ -155,10 +157,10 @@ export async function POST(request: Request) {
 
         if (result.success) {
           sentCount++;
-          console.log(`✅ Sent digest to ${member.username} (${member.email})`);
+          logger.info(`Sent digest to ${member.username} (${member.email})`);
         } else {
           failedCount++;
-          console.error(`❌ Failed to send to ${member.username}:`, result.error);
+          logger.error(`❌ Failed to send to ${member.username}:`, result.error);
         }
 
         // Rate limiting: wait 100ms between emails to avoid spam filters
@@ -166,7 +168,7 @@ export async function POST(request: Request) {
 
       } catch (memberError) {
         failedCount++;
-        console.error(`❌ Error processing member ${member.id}:`, memberError);
+        logger.error(`❌ Error processing member ${member.id}:`, memberError);
         continue;
       }
     }
@@ -183,11 +185,11 @@ export async function POST(request: Request) {
       timestamp: new Date().toISOString()
     };
 
-    console.log('✅ Monthly digest complete:', summary);
+    logger.info('Monthly digest complete:', summary);
     return NextResponse.json(summary);
 
   } catch (error) {
-    console.error('❌ Monthly digest cron error:', error);
+    logger.error('❌ Monthly digest cron error:', error);
     return NextResponse.json(
       {
         error: 'Cron job failed',

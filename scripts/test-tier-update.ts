@@ -1,8 +1,10 @@
 // scripts/test-tier-update.ts
 import { prisma } from '../lib/db/prisma';
+import logger from '../lib/logger';
+
 
 async function testTierUpdate() {
-  console.log('\n🧪 Testing Tier Update Flow\n');
+  logger.debug('\n🧪 Testing Tier Update Flow\n');
 
   try {
     // Get FitnessHub creator
@@ -23,15 +25,15 @@ async function testTierUpdate() {
     });
 
     if (!creator) {
-      console.log('❌ Creator not found');
+      logger.error('Creator not found');
       return;
     }
 
-    console.log(`📋 Current FitnessHub Tiers:`);
-    console.log(`  Bronze (${creator.tier1Count} refs): ${creator.tier1Reward}`);
-    console.log(`  Silver (${creator.tier2Count} refs): ${creator.tier2Reward}`);
-    console.log(`  Gold (${creator.tier3Count} refs): ${creator.tier3Reward}`);
-    console.log(`  Platinum (${creator.tier4Count} refs): ${creator.tier4Reward}`);
+    logger.info(' Current FitnessHub Tiers:');
+    logger.debug(`  Bronze (${creator.tier1Count} refs): ${creator.tier1Reward}`);
+    logger.debug(`  Silver (${creator.tier2Count} refs): ${creator.tier2Reward}`);
+    logger.debug(`  Gold (${creator.tier3Count} refs): ${creator.tier3Reward}`);
+    logger.debug(`  Platinum (${creator.tier4Count} refs): ${creator.tier4Reward}`);
 
     // Get a member from this creator
     const member = await prisma.member.findFirst({
@@ -45,9 +47,9 @@ async function testTierUpdate() {
     });
 
     if (member) {
-      console.log(`\n👤 Sample Member: ${member.username}`);
-      console.log(`   Total Referrals: ${member.totalReferred}`);
-      console.log(`   Dashboard URL: http://localhost:3000/customer/${member.membershipId}`);
+      logger.debug(`\n👤 Sample Member: ${member.username}`);
+      logger.debug(`   Total Referrals: ${member.totalReferred}`);
+      logger.debug(`   Dashboard URL: http://localhost:3000/customer/${member.membershipId}`);
 
       // Determine rank
       let rank = 'Unranked';
@@ -56,20 +58,20 @@ async function testTierUpdate() {
       else if (member.totalReferred >= creator.tier2Count) rank = 'Silver';
       else if (member.totalReferred >= creator.tier1Count) rank = 'Bronze';
 
-      console.log(`   Current Rank: ${rank}`);
+      logger.debug(`   Current Rank: ${rank}`);
     }
 
-    console.log(`\n📝 To Update Tiers:`);
-    console.log(`  1. Go to: http://localhost:3000/seller-product/prod_fitnesshub_test`);
-    console.log(`  2. Modify tier counts or rewards`);
-    console.log(`  3. Click "Save Changes"`);
-    console.log(`  4. Refresh member dashboard to see changes`);
+    logger.debug(`\n📝 To Update Tiers:`);
+    logger.debug(`  1. Go to: http://localhost:3000/seller-product/prod_fitnesshub_test`);
+    logger.debug(`  2. Modify tier counts or rewards`);
+    logger.debug(`  3. Click "Save Changes"`);
+    logger.debug(`  4. Refresh member dashboard to see changes`);
 
-    console.log(`\n✅ Current tier data is correctly stored in database`);
-    console.log(`✅ Member dashboard fetches this data on every page load`);
+    logger.debug(`\n✅ Current tier data is correctly stored in database`);
+    logger.info('Member dashboard fetches this data on every page load');
 
   } catch (error) {
-    console.error('❌ Error:', error);
+    logger.error('❌ Error:', error);
   } finally {
     await prisma.$disconnect();
   }

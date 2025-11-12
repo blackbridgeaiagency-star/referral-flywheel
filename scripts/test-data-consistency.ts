@@ -1,8 +1,10 @@
 // scripts/test-data-consistency.ts
 import { prisma } from '../lib/db/prisma';
+import logger from '../lib/logger';
+
 
 async function testDataConsistency() {
-  console.log('\n🔍 Testing Data Consistency Between Creator & Member Dashboards\n');
+  logger.debug('\n🔍 Testing Data Consistency Between Creator & Member Dashboards\n');
 
   try {
     // Get a creator
@@ -28,25 +30,25 @@ async function testDataConsistency() {
     });
 
     if (!creator) {
-      console.log('❌ No creator found');
+      logger.error('No creator found');
       return;
     }
 
-    console.log(`📋 Creator: ${creator.companyName}`);
-    console.log('\n🎁 Reward Tiers:');
-    console.log(`  Bronze (Tier 1): ${creator.tier1Count} refs → ${creator.tier1Reward}`);
-    console.log(`  Silver (Tier 2): ${creator.tier2Count} refs → ${creator.tier2Reward}`);
-    console.log(`  Gold (Tier 3): ${creator.tier3Count} refs → ${creator.tier3Reward}`);
-    console.log(`  Platinum (Tier 4): ${creator.tier4Count} refs → ${creator.tier4Reward}`);
+    logger.info(' Creator: ${creator.companyName}');
+    logger.debug('\n🎁 Reward Tiers:');
+    logger.debug(`  Bronze (Tier 1): ${creator.tier1Count} refs → ${creator.tier1Reward}`);
+    logger.debug(`  Silver (Tier 2): ${creator.tier2Count} refs → ${creator.tier2Reward}`);
+    logger.debug(`  Gold (Tier 3): ${creator.tier3Count} refs → ${creator.tier3Reward}`);
+    logger.debug(`  Platinum (Tier 4): ${creator.tier4Count} refs → ${creator.tier4Reward}`);
 
-    console.log('\n🏆 Custom Competition:');
-    console.log(`  Enabled: ${creator.customRewardEnabled ? 'Yes' : 'No'}`);
+    logger.debug('\n🏆 Custom Competition:');
+    logger.debug(`  Enabled: ${creator.customRewardEnabled ? 'Yes' : 'No'}`);
     if (creator.customRewardEnabled) {
-      console.log(`  Timeframe: ${creator.customRewardTimeframe}`);
-      console.log(`  Type: ${creator.customRewardType}`);
-      console.log(`  1st Place: ${creator.customReward1st}`);
-      console.log(`  2nd Place: ${creator.customReward2nd}`);
-      console.log(`  3rd Place: ${creator.customReward3rd}`);
+      logger.debug(`  Timeframe: ${creator.customRewardTimeframe}`);
+      logger.debug(`  Type: ${creator.customRewardType}`);
+      logger.debug(`  1st Place: ${creator.customReward1st}`);
+      logger.debug(`  2nd Place: ${creator.customReward2nd}`);
+      logger.debug(`  3rd Place: ${creator.customReward3rd}`);
     }
 
     // Get a member from this creator
@@ -61,18 +63,18 @@ async function testDataConsistency() {
     });
 
     if (member) {
-      console.log(`\n👤 Sample Member: ${member.username}`);
-      console.log(`   Membership ID: ${member.membershipId}`);
-      console.log(`   Total Referrals: ${member.totalReferred}`);
-      console.log(`\n✅ Member dashboard will fetch the same tier data from Creator table`);
-      console.log(`   URL: http://localhost:3000/customer/${member.membershipId}`);
+      logger.debug(`\n👤 Sample Member: ${member.username}`);
+      logger.debug(`   Membership ID: ${member.membershipId}`);
+      logger.debug(`   Total Referrals: ${member.totalReferred}`);
+      logger.debug(`\n✅ Member dashboard will fetch the same tier data from Creator table`);
+      logger.debug(`   URL: http://localhost:3000/customer/${member.membershipId}`);
     }
 
-    console.log('\n✅ Data consistency test complete!');
-    console.log('💡 Member dashboards fetch fresh data on every page load (no caching)');
+    logger.debug('\n✅ Data consistency test complete!');
+    logger.info(' Member dashboards fetch fresh data on every page load (no caching)');
 
   } catch (error) {
-    console.error('❌ Error:', error);
+    logger.error('❌ Error:', error);
   } finally {
     await prisma.$disconnect();
   }

@@ -18,6 +18,8 @@
 import { prisma } from '../db/prisma';
 import { startOfMonth, subMonths } from 'date-fns';
 import { calculateMemberTier, type TierThresholds } from '../utils/tier-calculator';
+import logger from '../logger';
+
 
 // ========================================
 // MEMBER METRICS
@@ -176,7 +178,7 @@ export async function getMemberStats(memberId: string) {
       })),
     };
   } catch (error) {
-    console.error('❌ Error fetching member stats:', error);
+    logger.error('❌ Error fetching member stats:', error);
     throw error;
   }
 }
@@ -280,7 +282,7 @@ export async function getMemberRankings(memberId: string, creatorId: string) {
       communityRank,
     };
   } catch (error) {
-    console.error('❌ Error fetching member rankings:', error);
+    logger.error('❌ Error fetching member rankings:', error);
     return {
       globalEarningsRank: null,
       globalReferralsRank: null,
@@ -333,7 +335,7 @@ export async function getMemberEarningsHistory(memberId: string, days: number = 
 
     return data;
   } catch (error) {
-    console.error('❌ Error fetching earnings history:', error);
+    logger.error('❌ Error fetching earnings history:', error);
     return [];
   }
 }
@@ -391,7 +393,7 @@ export async function getMemberReferrals(memberId: string, limit: number = 10) {
 
     return referralsWithEarnings;
   } catch (error) {
-    console.error('❌ Error fetching member referrals:', error);
+    logger.error('❌ Error fetching member referrals:', error);
     return [];
   }
 }
@@ -648,7 +650,7 @@ export async function getCreatorRevenueStats(creatorId: string) {
         : 0,
     };
   } catch (error) {
-    console.error('❌ Error fetching creator revenue stats:', error);
+    logger.error('❌ Error fetching creator revenue stats:', error);
     throw error;
   }
 }
@@ -694,7 +696,7 @@ export async function getMemberReferralRevenue(
 
     return totalRevenue;
   } catch (error) {
-    console.error('❌ Error calculating member referral revenue:', error);
+    logger.error('❌ Error calculating member referral revenue:', error);
     return 0;
   }
 }
@@ -1074,7 +1076,7 @@ export async function getCreatorTopPerformers(
       return topWithMonthlyData;
     }
   } catch (error) {
-    console.error('❌ Error fetching top performers:', error);
+    logger.error('❌ Error fetching top performers:', error);
     return [];
   }
 }
@@ -1115,7 +1117,7 @@ export async function getCreatorTopPerformerContribution(creatorId: string) {
       totalRevenue,
     };
   } catch (error) {
-    console.error('❌ Error calculating top performer contribution:', error);
+    logger.error('❌ Error calculating top performer contribution:', error);
     return {
       topPerformerContribution: 0,
       topEarnersTotal: 0,
@@ -1167,7 +1169,7 @@ export async function getCompleteMemberDashboardData(membershipId: string) {
       referrals,
     };
   } catch (error) {
-    console.error('❌ Error fetching complete member dashboard data:', error);
+    logger.error('❌ Error fetching complete member dashboard data:', error);
     throw error;
   }
 }
@@ -1209,7 +1211,7 @@ export async function getCompleteCreatorDashboardData(productId: string) {
       topPerformerContribution,
     };
   } catch (error) {
-    console.error('❌ Error fetching complete creator dashboard data:', error);
+    logger.error('❌ Error fetching complete creator dashboard data:', error);
     throw error;
   }
 }

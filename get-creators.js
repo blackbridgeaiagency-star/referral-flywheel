@@ -1,3 +1,5 @@
+import logger from './lib/logger';
+
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
@@ -10,9 +12,9 @@ const prisma = new PrismaClient();
     }
   });
 
-  console.log('Available Creators:');
+  logger.debug('Available Creators:');
   creators.forEach(c => {
-    console.log(`- ${c.companyName}: productId=${c.productId}`);
+    logger.debug(`- ${c.companyName}: productId=${c.productId}`);
   });
 
   await prisma.$disconnect();

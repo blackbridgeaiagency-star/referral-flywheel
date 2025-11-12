@@ -15,6 +15,7 @@
 import { useState } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
+import logger from '../../lib/logger';
 import {
   Twitter,
   Facebook,
@@ -66,7 +67,7 @@ export function ShareKit({
 
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error('Failed to copy:', error);
+      logger.error('Failed to copy:', error);
     }
   };
 

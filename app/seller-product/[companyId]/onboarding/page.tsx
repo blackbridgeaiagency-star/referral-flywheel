@@ -15,6 +15,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Check, ArrowRight, Trophy, DollarSign, MessageSquare, Rocket } from 'lucide-react';
+import logger from '../../../../lib/logger';
+
 
 interface OnboardingData {
   companyName: string;
@@ -42,13 +44,13 @@ export default function CreatorOnboardingPage({
     companyName: '',
     welcomeMessage: `Welcome to {creatorName}!
 
-You now have a unique referral link that pays you 10% LIFETIME commission on every person you refer!
+You now have a unique referral link to help us grow! Every person you refer gets tracked, and top referrers earn rewards.
 
 Your link: {referralLink}
 
-Share your link with friends and followers. Every time they pay, you earn 10% - forever!
+Share your link with friends and followers. The more people you bring in, the higher you rank, and the better your rewards!
 
-Start sharing and earning today!`,
+Start sharing today and climb the leaderboard!`,
     tier1Count: 5,
     tier1Reward: 'Bronze Badge + Shoutout',
     tier2Count: 10,
@@ -80,7 +82,7 @@ Start sharing and earning today!`,
         alert('Failed to save settings. Please try again.');
       }
     } catch (error) {
-      console.error('Onboarding error:', error);
+      logger.error('Onboarding error:', error);
       alert('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
@@ -115,7 +117,7 @@ Start sharing and earning today!`,
               </div>
               <CardTitle className="text-3xl text-white">Turn Your Community Into a Growth Engine</CardTitle>
               <CardDescription className="text-gray-400 text-lg mt-4">
-                Every member becomes an automatic affiliate earning 10% lifetime commissions.
+                Track every referral, see who's driving growth, and reward your top performers.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -124,38 +126,46 @@ Start sharing and earning today!`,
                 <ul className="space-y-3 text-gray-300">
                   <li className="flex items-start gap-3">
                     <Check className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span>Every member gets a unique referral code automatically</span>
+                    <span>Every member gets a unique referral link automatically</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <Check className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span>They earn 10% on every payment from their referrals - forever</span>
+                    <span>We track every referral, click, and conversion in real-time</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <Check className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span>You keep 70% of all revenue (20% goes to platform)</span>
+                    <span>See who's driving growth with detailed analytics</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <Check className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span>Track everything with real-time dashboards</span>
+                    <span>Export reports and reward your top performers as you see fit</span>
                   </li>
                 </ul>
               </div>
 
               <div className="bg-pink-900/20 p-6 rounded-xl">
-                <h3 className="text-xl font-bold text-white mb-4">Revenue Split:</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-gray-300">
-                    <span>Member Commission:</span>
-                    <span className="font-bold text-green-400">10%</span>
+                <h3 className="text-xl font-bold text-white mb-4">Simple, Transparent Pricing:</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center text-gray-300">
+                    <div>
+                      <p className="font-medium text-white">Platform Fee (What We Charge)</p>
+                      <p className="text-sm text-gray-400">Only on referred sales</p>
+                    </div>
+                    <span className="font-bold text-purple-400 text-2xl">10%</span>
                   </div>
-                  <div className="flex justify-between text-gray-300">
-                    <span>Your Revenue:</span>
-                    <span className="font-bold text-purple-400">70%</span>
+                  <div className="h-px bg-gray-700"></div>
+                  <div className="flex justify-between items-center text-gray-300">
+                    <div>
+                      <p className="font-medium text-white">You Keep</p>
+                      <p className="text-sm text-gray-400">90% minus whatever you reward members</p>
+                    </div>
+                    <span className="font-bold text-green-400 text-2xl">90%</span>
                   </div>
-                  <div className="flex justify-between text-gray-300">
-                    <span>Platform Fee:</span>
-                    <span className="font-bold text-gray-400">20%</span>
-                  </div>
+                </div>
+                <div className="mt-4 bg-blue-900/20 border border-blue-500/30 rounded-lg p-3">
+                  <p className="text-blue-300 text-sm">
+                    💡 <span className="font-semibold">You decide member rewards.</span> We suggest ~10% to keep them motivated, but it's entirely up to you. Export reports monthly and pay via Venmo, PayPal, etc.
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -349,7 +359,7 @@ Start sharing and earning today!`,
                 <Textarea
                   id="welcomeMessage"
                   value={data.welcomeMessage}
-                  onChange={(e) => updateData('welcomeMessage', e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => updateData('welcomeMessage', e.target.value)}
                   rows={10}
                   className="bg-gray-900 border-gray-700 text-white font-mono"
                 />

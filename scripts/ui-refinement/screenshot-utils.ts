@@ -1,6 +1,8 @@
 import { Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
+import logger from '../../lib/logger';
+
 
 const SCREENSHOT_DIR = './screenshots';
 
@@ -24,7 +26,7 @@ export async function captureScreenshot(
     fullPage: true,
   });
 
-  console.log(`📸 Screenshot saved: ${filepath}`);
+  logger.info(' Screenshot saved: ${filepath}');
   return filepath;
 }
 
@@ -45,7 +47,7 @@ export async function captureComponentScreenshot(
   const element = await page.locator(selector);
   await element.screenshot({ path: filepath });
 
-  console.log(`📸 Component screenshot saved: ${filepath}`);
+  logger.info(' Component screenshot saved: ${filepath}');
   return filepath;
 }
 
@@ -62,5 +64,5 @@ export function cleanupOldScreenshots() {
     fs.unlinkSync(path.join(SCREENSHOT_DIR, file));
   });
 
-  console.log('🧹 Cleaned up old screenshots');
+  logger.debug('🧹 Cleaned up old screenshots');
 }

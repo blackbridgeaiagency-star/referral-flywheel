@@ -15,6 +15,8 @@
 import { getMemberStats, getCreatorAnalytics, getGlobalLeaderboard, getCreatorLeaderboard, getAllCreatorAnalytics } from '../lib/db/queries-optimized';
 import { setCache, CACHE_CONFIG } from '../lib/cache';
 import { PrismaClient } from '@prisma/client';
+import logger from '../lib/logger';
+
 
 const prisma = new PrismaClient();
 
@@ -27,7 +29,7 @@ interface WarmStats {
 }
 
 async function warmMemberCaches(limit: number = 100): Promise<number> {
-  console.log(`🔥 Warming top ${limit} member caches...`);
+  logger.info(' Warming top ${limit} member caches...');
 
   try {
     // Get top members by earnings
@@ -46,20 +48,20 @@ async function warmMemberCaches(limit: number = 100): Promise<number> {
           warmed++;
         }
       } catch (error) {
-        console.error(`  ❌ Failed to warm member ${member.userId}:`, error);
+        logger.error(`  ❌ Failed to warm member ${member.userId}:`, error);
       }
     }
 
-    console.log(`  ✅ Warmed ${warmed}/${topMembers.length} member caches`);
+    logger.debug(`  ✅ Warmed ${warmed}/${topMembers.length} member caches`);
     return warmed;
   } catch (error) {
-    console.error('❌ Failed to warm member caches:', error);
+    logger.error('❌ Failed to warm member caches:', error);
     return 0;
   }
 }
 
 async function warmCreatorCaches(): Promise<number> {
-  console.log('🔥 Warming creator analytics caches...');
+  logger.info(' Warming creator analytics caches...');
 
   try {
     const creators = await prisma.creator.findMany({
@@ -76,26 +78,26 @@ async function warmCreatorCaches(): Promise<number> {
           warmed++;
         }
       } catch (error) {
-        console.error(`  ❌ Failed to warm creator ${creator.companyId}:`, error);
+        logger.error(`  ❌ Failed to warm creator ${creator.companyId}:`, error);
       }
     }
 
-    console.log(`  ✅ Warmed ${warmed}/${creators.length} creator caches`);
+    logger.debug(`  ✅ Warmed ${warmed}/${creators.length} creator caches`);
     return warmed;
   } catch (error) {
-    console.error('❌ Failed to warm creator caches:', error);
+    logger.error('❌ Failed to warm creator caches:', error);
     return 0;
   }
 }
 
 async function warmLeaderboardCaches(): Promise<number> {
-  console.log('🔥 Warming leaderboard caches...');
+  logger.info(' Warming leaderboard caches...');
 
   let warmed = 0;
 
   try {
     // Warm global leaderboards
-    console.log('  🌍 Global leaderboards...');
+    logger.debug('  🌍 Global leaderboards...');
     const globalEarnings = await getGlobalLeaderboard('earnings', 100);
     await setCache('leaderboard:global:earnings:100', globalEarnings, CACHE_CONFIG.MEDIUM);
     warmed++;
@@ -105,7 +107,7 @@ async function warmLeaderboardCaches(): Promise<number> {
     warmed++;
 
     // Warm community leaderboards
-    console.log('  🏘️  Community leaderboards...');
+    logger.debug('  🏘️  Community leaderboards...');
     const creators = await prisma.creator.findMany({
       where: { isActive: true },
       select: { id: true },
@@ -121,14 +123,14 @@ async function warmLeaderboardCaches(): Promise<number> {
           warmed++;
         }
       } catch (error) {
-        console.error(`  ❌ Failed to warm leaderboard for creator ${creator.id}:`, error);
+        logger.error(`  ❌ Failed to warm leaderboard for creator ${creator.id}:`, error);
       }
     }
 
-    console.log(`  ✅ Warmed ${warmed} leaderboard caches`);
+    logger.debug(`  ✅ Warmed ${warmed} leaderboard caches`);
     return warmed;
   } catch (error) {
-    console.error('❌ Failed to warm leaderboard caches:', error);
+    logger.error('❌ Failed to warm leaderboard caches:', error);
     return warmed;
   }
 }
@@ -136,16 +138,16 @@ async function warmLeaderboardCaches(): Promise<number> {
 async function warmAllCaches(): Promise<WarmStats> {
   const startTime = Date.now();
 
-  console.log('🚀 Starting cache warming process...\n');
+  logger.info(' Starting cache warming process...\n');
 
   const membersWarmed = await warmMemberCaches(100);
-  console.log('');
+  logger.debug('');
 
   const creatorsWarmed = await warmCreatorCaches();
-  console.log('');
+  logger.debug('');
 
   const leaderboardsWarmed = await warmLeaderboardCaches();
-  console.log('');
+  logger.debug('');
 
   const duration = Date.now() - startTime;
 
@@ -157,14 +159,14 @@ async function warmAllCaches(): Promise<WarmStats> {
     duration,
   };
 
-  console.log('═══════════════════════════════════════');
-  console.log('🎉 Cache Warming Complete!');
-  console.log('═══════════════════════════════════════');
-  console.log(`Members warmed:      ${stats.membersWarmed}`);
-  console.log(`Creators warmed:     ${stats.creatorsWarmed}`);
-  console.log(`Leaderboards warmed: ${stats.leaderboardsWarmed}`);
-  console.log(`Total duration:      ${(stats.duration / 1000).toFixed(2)}s`);
-  console.log('═══════════════════════════════════════\n');
+  logger.debug('═══════════════════════════════════════');
+  logger.info(' Cache Warming Complete!');
+  logger.debug('═══════════════════════════════════════');
+  logger.debug(`Members warmed:      ${stats.membersWarmed}`);
+  logger.debug(`Creators warmed:     ${stats.creatorsWarmed}`);
+  logger.debug(`Leaderboards warmed: ${stats.leaderboardsWarmed}`);
+  logger.debug(`Total duration:      ${(stats.duration / 1000).toFixed(2)}s`);
+  logger.debug('═══════════════════════════════════════\n');
 
   return stats;
 }
@@ -198,7 +200,7 @@ async function main() {
         break;
 
       default:
-        console.log(`
+        logger.debug(`
 Usage: npm run cache:warm [command] [options]
 
 Commands:
@@ -215,7 +217,7 @@ Examples:
         process.exit(1);
     }
   } catch (error) {
-    console.error('\n❌ Cache warming failed:', error);
+    logger.error('\n❌ Cache warming failed:', error);
     process.exit(1);
   } finally {
     await prisma.$disconnect();

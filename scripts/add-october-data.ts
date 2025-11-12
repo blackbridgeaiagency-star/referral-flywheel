@@ -6,6 +6,8 @@ import { PrismaClient } from '@prisma/client';
 import { generateReferralCode } from '../lib/utils/referral-code';
 import { calculateCommission } from '../lib/utils/commission';
 import crypto from 'crypto';
+import logger from '../lib/logger';
+
 
 const prisma = new PrismaClient();
 
@@ -31,7 +33,7 @@ function generateIpHash() {
 }
 
 async function main() {
-  console.log('📅 Adding October 2025 data for TopEarner...\n');
+  logger.info(' Adding October 2025 data for TopEarner...\n');
 
   // Find hero member by userId (not id, which is auto-generated)
   const heroMember = await prisma.member.findUnique({
@@ -39,16 +41,16 @@ async function main() {
   });
 
   if (!heroMember) {
-    console.error('❌ Hero member not found! Run seed-demo-data.ts first.');
+    logger.error('❌ Hero member not found! Run seed-demo-data.ts first.');
     process.exit(1);
   }
 
-  console.log(`✅ Found hero member: ${heroMember.username}\n`);
+  logger.info('Found hero member: ${heroMember.username}\n');
 
   const CREATOR_ID = heroMember.creatorId; // Use hero's creatorId
 
   // Step 0: Clean up any existing October members from previous runs
-  console.log('🧹 Cleaning up existing October members...');
+  logger.debug('🧹 Cleaning up existing October members...');
   const existingOctMembers = await prisma.member.findMany({
     where: {
       userId: { startsWith: 'oct_member_' },
@@ -65,13 +67,13 @@ async function main() {
     await prisma.commission.deleteMany({ where: { memberId: { in: octMemberIds } } });
     await prisma.member.deleteMany({ where: { id: { in: octMemberIds } } });
 
-    console.log(`   ✅ Deleted ${existingOctMembers.length} existing October members\n`);
+    logger.debug(`   ✅ Deleted ${existingOctMembers.length} existing October members\n`);
   } else {
-    console.log('   ✅ No existing October members found\n');
+    logger.debug('   ✅ No existing October members found\n');
   }
 
   // Step 1: Create 18 new members referred by TopEarner in October 2025
-  console.log('👥 Creating 18 new members referred by TopEarner (October 2025)...');
+  logger.info(' Creating 18 new members referred by TopEarner (October 2025)...');
   const newMembers = [];
   const subscriptionPrice = 49.99;
 
@@ -106,10 +108,10 @@ async function main() {
     newMembers.push(member);
   }
 
-  console.log(`   ✅ Created ${newMembers.length} new members\n`);
+  logger.debug(`   ✅ Created ${newMembers.length} new members\n`);
 
   // Step 2: Create attribution clicks for these referrals (October 2025)
-  console.log('🔗 Creating attribution clicks for October referrals...');
+  logger.info(' Creating attribution clicks for October referrals...');
 
   for (const member of newMembers) {
     const clickedAt = new Date(member.createdAt);
@@ -130,12 +132,12 @@ async function main() {
     });
   }
 
-  console.log(`   ✅ Created ${newMembers.length} attribution clicks\n`);
+  logger.debug(`   ✅ Created ${newMembers.length} attribution clicks\n`);
 
-  console.log('💰 Skipping commission creation (schema issues - not critical for screenshots)\n');
+  logger.info(' Skipping commission creation (schema issues - not critical for screenshots)\n');
 
   // Step 4: Update hero member with October stats
-  console.log('📊 Updating hero member stats...');
+  logger.info(' Updating hero member stats...');
 
   const updatedHero = await prisma.member.update({
     where: { id: heroMember.id },
@@ -145,36 +147,36 @@ async function main() {
     },
   });
 
-  console.log(`   ✅ Updated hero member:`);
-  console.log(`      • Total referred: ${updatedHero.totalReferred} (was ${heroMember.totalReferred})`);
-  console.log(`      • Monthly referred: ${updatedHero.monthlyReferred} (NEW!)`);
-  console.log(`      • Lifetime earnings: $${updatedHero.lifetimeEarnings.toFixed(2)}`);
-  console.log(`      • Monthly earnings: $${updatedHero.monthlyEarnings.toFixed(2)}\n`);
+  logger.debug(`   ✅ Updated hero member:`);
+  logger.debug(`      • Total referred: ${updatedHero.totalReferred} (was ${heroMember.totalReferred})`);
+  logger.debug(`      • Monthly referred: ${updatedHero.monthlyReferred} (NEW!)`);
+  logger.debug(`      • Lifetime earnings: $${updatedHero.lifetimeEarnings.toFixed(2)}`);
+  logger.debug(`      • Monthly earnings: $${updatedHero.monthlyEarnings.toFixed(2)}\n`);
 
-  console.log('📤 Skipping share events creation (schema issues - not critical)\n');
+  logger.info(' Skipping share events creation (schema issues - not critical)\n');
 
   // Step 6: Get final stats
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('✅ October 2025 data added successfully!\n');
-  console.log('📊 Summary:');
-  console.log(`   • New members created: ${newMembers.length}`);
-  console.log(`   • Attribution clicks created: ${newMembers.length}`);
-  console.log(`   • TopEarner total referred: ${updatedHero.totalReferred}`);
-  console.log(`   • TopEarner monthly referred: ${updatedHero.monthlyReferred} ✅ (NEW!)`);
-  console.log(`   • TopEarner monthly earnings: $${updatedHero.monthlyEarnings.toFixed(2)}`);
-  console.log('\n🎯 Your dashboards should now show:');
-  console.log('   ✅ TopEarner has 18 referrals THIS MONTH');
-  console.log('   ✅ Monthly metrics populated');
-  console.log('   ✅ Member Dashboard: "Referrals this month" field will now show data');
-  console.log('\n📸 Ready for screenshots!');
-  console.log('   • Open: http://localhost:3000/customer/mem_hero_demo');
-  console.log('   • Check the "Referrals this month" metric');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+  logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  logger.info('October 2025 data added successfully!\n');
+  logger.info(' Summary:');
+  logger.debug(`   • New members created: ${newMembers.length}`);
+  logger.debug(`   • Attribution clicks created: ${newMembers.length}`);
+  logger.debug(`   • TopEarner total referred: ${updatedHero.totalReferred}`);
+  logger.debug(`   • TopEarner monthly referred: ${updatedHero.monthlyReferred} ✅ (NEW!)`);
+  logger.debug(`   • TopEarner monthly earnings: $${updatedHero.monthlyEarnings.toFixed(2)}`);
+  logger.debug('\n🎯 Your dashboards should now show:');
+  logger.debug('   ✅ TopEarner has 18 referrals THIS MONTH');
+  logger.debug('   ✅ Monthly metrics populated');
+  logger.debug('   ✅ Member Dashboard: "Referrals this month" field will now show data');
+  logger.debug('\n📸 Ready for screenshots!');
+  logger.debug('   • Open: http://localhost:3000/customer/mem_hero_demo');
+  logger.debug('   • Check the "Referrals this month" metric');
+  logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error adding October data:', e);
+    logger.error('❌ Error adding October data:', e);
     process.exit(1);
   })
   .finally(async () => {

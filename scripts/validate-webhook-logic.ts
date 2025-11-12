@@ -2,20 +2,22 @@ import { prisma } from '@/lib/db/prisma';
 import { generateReferralCode } from '@/lib/utils/referral-code';
 import { calculateCommission } from '@/lib/utils/commission';
 import { startOfMonth } from 'date-fns';
+import logger from '../lib/logger';
+
 
 async function testWebhookLogic() {
-  console.log('🧪 TESTING WEBHOOK LOGIC\n');
-  console.log('This script validates the webhook processing logic with simulated scenarios.\n');
+  logger.debug('🧪 TESTING WEBHOOK LOGIC\n');
+  logger.debug('This script validates the webhook processing logic with simulated scenarios.\n');
 
   let allTestsPassed = true;
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // SCENARIO 1: New referral (initial payment)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('═══════════════════════════════════════');
-  console.log('TEST 1: New Referral (Initial Payment)');
-  console.log('Expected: totalReferred++, monthlyReferred++, earnings++');
-  console.log('═══════════════════════════════════════\n');
+  logger.debug('═══════════════════════════════════════');
+  logger.debug('TEST 1: New Referral (Initial Payment)');
+  logger.debug('Expected: totalReferred++, monthlyReferred++, earnings++');
+  logger.debug('═══════════════════════════════════════\n');
 
   try {
     // Get a referrer from the database
@@ -27,7 +29,7 @@ async function testWebhookLogic() {
     });
 
     if (!referrer) {
-      console.log('⏭️  SKIP: No members in database');
+      logger.debug('⏭️  SKIP: No members in database');
     } else {
       const before = {
         totalReferred: referrer.totalReferred,
@@ -87,8 +89,8 @@ async function testWebhookLogic() {
         where: { id: referrer.id },
       });
 
-      console.log('Before:', before);
-      console.log('After:', {
+      logger.debug('Before:', before);
+      logger.debug('After:', {
         totalReferred: after!.totalReferred,
         monthlyReferred: after!.monthlyReferred,
         lifetimeEarnings: after!.lifetimeEarnings,
@@ -101,7 +103,7 @@ async function testWebhookLogic() {
         after!.lifetimeEarnings > before.lifetimeEarnings &&
         after!.monthlyEarnings > before.monthlyEarnings;
 
-      console.log(`\nResult: ${test1Pass ? '✅ PASS' : '❌ FAIL'}\n`);
+      logger.debug(`\nResult: ${test1Pass ? '✅ PASS' : '❌ FAIL'}\n`);
       if (!test1Pass) allTestsPassed = false;
 
       // Cleanup
@@ -117,17 +119,17 @@ async function testWebhookLogic() {
       });
     }
   } catch (error) {
-    console.log('❌ FAIL:', error);
+    logger.error('FAIL:', error);
     allTestsPassed = false;
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // SCENARIO 2: Recurring payment
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('═══════════════════════════════════════');
-  console.log('TEST 2: Recurring Payment');
-  console.log('Expected: totalReferred unchanged, monthlyReferred unchanged, earnings++');
-  console.log('═══════════════════════════════════════\n');
+  logger.debug('═══════════════════════════════════════');
+  logger.debug('TEST 2: Recurring Payment');
+  logger.debug('Expected: totalReferred unchanged, monthlyReferred unchanged, earnings++');
+  logger.debug('═══════════════════════════════════════\n');
 
   try {
     const referrer = await prisma.member.findFirst({
@@ -138,7 +140,7 @@ async function testWebhookLogic() {
     });
 
     if (!referrer) {
-      console.log('⏭️  SKIP: No referrers in database');
+      logger.debug('⏭️  SKIP: No referrers in database');
     } else {
       const before = {
         totalReferred: referrer.totalReferred,
@@ -180,8 +182,8 @@ async function testWebhookLogic() {
         where: { id: referrer.id },
       });
 
-      console.log('Before:', before);
-      console.log('After:', {
+      logger.debug('Before:', before);
+      logger.debug('After:', {
         totalReferred: after!.totalReferred,
         monthlyReferred: after!.monthlyReferred,
         lifetimeEarnings: after!.lifetimeEarnings,
@@ -194,7 +196,7 @@ async function testWebhookLogic() {
         after!.lifetimeEarnings > before.lifetimeEarnings && // Increased
         after!.monthlyEarnings > before.monthlyEarnings; // Increased
 
-      console.log(`\nResult: ${test2Pass ? '✅ PASS' : '❌ FAIL'}\n`);
+      logger.debug(`\nResult: ${test2Pass ? '✅ PASS' : '❌ FAIL'}\n`);
       if (!test2Pass) allTestsPassed = false;
 
       // Cleanup
@@ -207,23 +209,23 @@ async function testWebhookLogic() {
       });
     }
   } catch (error) {
-    console.log('❌ FAIL:', error);
+    logger.error('FAIL:', error);
     allTestsPassed = false;
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // SCENARIO 3: Organic member payment
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('═══════════════════════════════════════');
-  console.log('TEST 3: Organic Member Payment');
-  console.log('Expected: No changes to any referrer stats');
-  console.log('═══════════════════════════════════════\n');
+  logger.debug('═══════════════════════════════════════');
+  logger.debug('TEST 3: Organic Member Payment');
+  logger.debug('Expected: No changes to any referrer stats');
+  logger.debug('═══════════════════════════════════════\n');
 
   try {
     const creator = await prisma.creator.findFirst();
 
     if (!creator) {
-      console.log('⏭️  SKIP: No creators in database');
+      logger.debug('⏭️  SKIP: No creators in database');
     } else {
       // Create organic member
       const organicMember = await prisma.member.create({
@@ -283,27 +285,27 @@ async function testWebhookLogic() {
 
       const test3Pass = !referralCountsChanged;
 
-      console.log(`Organic member created: ${organicMember.username}`);
-      console.log(`Referral counts changed for any member: ${referralCountsChanged ? 'YES ❌' : 'NO ✅'}`);
-      console.log(`\nResult: ${test3Pass ? '✅ PASS' : '❌ FAIL'}\n`);
+      logger.debug(`Organic member created: ${organicMember.username}`);
+      logger.debug(`Referral counts changed for any member: ${referralCountsChanged ? 'YES ❌' : 'NO ✅'}`);
+      logger.debug(`\nResult: ${test3Pass ? '✅ PASS' : '❌ FAIL'}\n`);
       if (!test3Pass) allTestsPassed = false;
 
       // Cleanup
       await prisma.member.delete({ where: { id: organicMember.id } });
     }
   } catch (error) {
-    console.log('❌ FAIL:', error);
+    logger.error('FAIL:', error);
     allTestsPassed = false;
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // FINAL VERDICT
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('═══════════════════════════════════════');
-  console.log('📋 WEBHOOK LOGIC VALIDATION SUMMARY:');
-  console.log('═══════════════════════════════════════');
-  console.log(allTestsPassed ? '✅ ALL TESTS PASSED' : '❌ SOME TESTS FAILED');
-  console.log('═══════════════════════════════════════\n');
+  logger.debug('═══════════════════════════════════════');
+  logger.info(' WEBHOOK LOGIC VALIDATION SUMMARY:');
+  logger.debug('═══════════════════════════════════════');
+  logger.debug(allTestsPassed ? '✅ ALL TESTS PASSED' : '❌ SOME TESTS FAILED');
+  logger.debug('═══════════════════════════════════════\n');
 
   await prisma.$disconnect();
   process.exit(allTestsPassed ? 0 : 1);

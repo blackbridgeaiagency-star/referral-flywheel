@@ -1,3 +1,5 @@
+import logger from './lib/logger';
+
 // Quick script to check database data
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
@@ -10,11 +12,11 @@ async function checkData() {
     const clickCount = await prisma.attributionClick.count();
     const creatorCount = await prisma.creator.count();
 
-    console.log('Database Summary:');
-    console.log('- Creators: ' + creatorCount);
-    console.log('- Members: ' + memberCount);
-    console.log('- Commissions: ' + commissionCount);
-    console.log('- Attribution Clicks: ' + clickCount);
+    logger.debug('Database Summary:');
+    logger.debug('- Creators: ' + creatorCount);
+    logger.debug('- Members: ' + memberCount);
+    logger.debug('- Commissions: ' + commissionCount);
+    logger.debug('- Attribution Clicks: ' + clickCount);
 
     // Check recent commissions
     const recentCommissions = await prisma.commission.findMany({
@@ -23,9 +25,9 @@ async function checkData() {
       include: { member: true }
     });
 
-    console.log('\nRecent Commissions:');
+    logger.debug('\nRecent Commissions:');
     recentCommissions.forEach(c => {
-      console.log('- ' + c.member.username + ': $' + c.memberShare);
+      logger.debug('- ' + c.member.username + ': $' + c.memberShare);
     });
 
     // Check top earners
@@ -35,27 +37,27 @@ async function checkData() {
       select: { username: true, lifetimeEarnings: true, monthlyEarnings: true }
     });
 
-    console.log('\nTop Earners:');
+    logger.debug('\nTop Earners:');
     topEarners.forEach(m => {
-      console.log('- ' + m.username + ': $' + m.lifetimeEarnings + ' lifetime, $' + m.monthlyEarnings + ' monthly');
+      logger.debug('- ' + m.username + ': $' + m.lifetimeEarnings + ' lifetime, $' + m.monthlyEarnings + ' monthly');
     });
 
     // Get URLs for dashboards
     const creators = await prisma.creator.findMany();
     const sampleMembers = await prisma.member.findMany({ take: 5 });
 
-    console.log('\n🎨 CREATOR DASHBOARDS:');
+    logger.debug('\n🎨 CREATOR DASHBOARDS:');
     creators.forEach(c => {
-      console.log('- http://localhost:3004/seller-product/' + c.productId + ' (' + c.communityName + ')');
+      logger.debug('- http://localhost:3004/seller-product/' + c.productId + ' (' + c.communityName + ')');
     });
 
-    console.log('\n👤 MEMBER DASHBOARDS (Sample):');
+    logger.debug('\n👤 MEMBER DASHBOARDS (Sample):');
     sampleMembers.forEach(m => {
-      console.log('- http://localhost:3004/customer/' + m.membershipId + ' (' + m.name + ')');
+      logger.debug('- http://localhost:3004/customer/' + m.membershipId + ' (' + m.name + ')');
     });
 
   } catch (error) {
-    console.error('Error:', error);
+    logger.error('Error:', error);
   } finally {
     await prisma.$disconnect();
   }

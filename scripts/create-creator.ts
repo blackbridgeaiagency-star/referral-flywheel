@@ -1,5 +1,7 @@
 import { config } from 'dotenv';
 import { prisma } from '../lib/db/prisma';
+import logger from '../lib/logger';
+
 
 // Load environment variables
 config({ path: '.env.local' });
@@ -15,10 +17,10 @@ async function createCreator() {
   const COMPANY_NAME = 'My Community'; // Your company/community name
   const COMPANY_ID = 'biz_kkGoY7OvzWXRdK'; // Your Whop company ID
 
-  console.log('🚀 Creating creator record...');
-  console.log(`Product ID: ${PRODUCT_ID}`);
-  console.log(`Company Name: ${COMPANY_NAME}`);
-  console.log(`Company ID: ${COMPANY_ID}`);
+  logger.info(' Creating creator record...');
+  logger.debug(`Product ID: ${PRODUCT_ID}`);
+  logger.debug(`Company Name: ${COMPANY_NAME}`);
+  logger.debug(`Company ID: ${COMPANY_ID}`);
 
   try {
     // Check if creator already exists
@@ -27,8 +29,8 @@ async function createCreator() {
     });
 
     if (existing) {
-      console.log('⚠️  Creator already exists!');
-      console.log('Existing record:', existing);
+      logger.warn('  Creator already exists!');
+      logger.debug('Existing record:', existing);
       return;
     }
 
@@ -62,17 +64,17 @@ async function createCreator() {
       },
     });
 
-    console.log('✅ Creator record created successfully!');
-    console.log(creator);
-    console.log('\n🎉 Your creator dashboard should now be accessible at:');
-    console.log(`https://referral-flywheel.vercel.app/seller-product/${PRODUCT_ID}`);
-    console.log('\n📝 Next steps:');
-    console.log('1. Access your creator dashboard from your Whop account');
-    console.log('2. Customize your reward tiers');
-    console.log('3. Set up custom competitions (optional)');
-    console.log('4. Share your product link - members will automatically get referral codes!');
+    logger.info('Creator record created successfully!');
+    logger.debug(creator);
+    logger.debug('\n🎉 Your creator dashboard should now be accessible at:');
+    logger.debug(`https://referral-flywheel.vercel.app/seller-product/${PRODUCT_ID}`);
+    logger.debug('\n📝 Next steps:');
+    logger.debug('1. Access your creator dashboard from your Whop account');
+    logger.debug('2. Customize your reward tiers');
+    logger.debug('3. Set up custom competitions (optional)');
+    logger.debug('4. Share your product link - members will automatically get referral codes!');
   } catch (error) {
-    console.error('❌ Error creating creator:', error);
+    logger.error('❌ Error creating creator:', error);
     throw error;
   } finally {
     await prisma.$disconnect();

@@ -1,3 +1,5 @@
+import logger from '../lib/logger';
+
 // scripts/fix-commission-linkage.js
 // Fixes the commission linkage issue by creating commissions for actual referred members
 
@@ -18,9 +20,9 @@ async function fixCommissionLinkage() {
   try {
     const productId = 'prod_ImvAT3IIRbPBT';
 
-    console.log('\n========================================');
-    console.log('FIXING COMMISSION LINKAGE');
-    console.log('========================================\n');
+    logger.debug('\n========================================');
+    logger.debug('FIXING COMMISSION LINKAGE');
+    logger.debug('========================================\n');
 
     // Get the creator
     const creator = await prisma.creator.findFirst({
@@ -29,15 +31,15 @@ async function fixCommissionLinkage() {
     });
 
     if (!creator) {
-      console.log('❌ Creator not found');
+      logger.error('Creator not found');
       return;
     }
 
-    console.log(`✅ Creator: ${creator.companyName}`);
-    console.log(`   ID: ${creator.id}\n`);
+    logger.info('Creator: ${creator.companyName}');
+    logger.debug(`   ID: ${creator.id}\n`);
 
     // Get all members for this creator
-    console.log('📊 Fetching all members...');
+    logger.info(' Fetching all members...');
     const allMembers = await prisma.member.findMany({
       where: { creatorId: creator.id },
       select: {
@@ -50,14 +52,14 @@ async function fixCommissionLinkage() {
       }
     });
 
-    console.log(`   Found ${allMembers.length} members\n`);
+    logger.debug(`   Found ${allMembers.length} members\n`);
 
     // Get ALL referrers (anyone with referrals)
     const referrers = allMembers
       .filter(m => m.totalReferred > 0)
       .sort((a, b) => b.totalReferred - a.totalReferred);
 
-    console.log(`🎯 Processing ${referrers.length} referrers...\n`);
+    logger.info(' Processing ${referrers.length} referrers...\n');
 
     let totalCommissionsCreated = 0;
     let totalFixedReferrals = 0;
@@ -68,8 +70,8 @@ async function fixCommissionLinkage() {
       const showDetails = processed <= 10 || processed % 50 === 0;
 
       if (showDetails) {
-        console.log(`${referrer.username} (${referrer.referralCode})`);
-        console.log(`   Claimed referrals: ${referrer.totalReferred}`);
+        logger.debug(`${referrer.username} (${referrer.referralCode})`);
+        logger.debug(`   Claimed referrals: ${referrer.totalReferred}`);
       }
 
       // Find actual referred members
@@ -86,7 +88,7 @@ async function fixCommissionLinkage() {
       });
 
       if (showDetails) {
-        console.log(`   Actual referred members: ${referredMembers.length}`);
+        logger.debug(`   Actual referred members: ${referredMembers.length}`);
       }
 
       // Update totalReferred to match reality
@@ -96,7 +98,7 @@ async function fixCommissionLinkage() {
           data: { totalReferred: referredMembers.length }
         });
         if (showDetails) {
-          console.log(`   ✅ Updated totalReferred: ${referrer.totalReferred} → ${referredMembers.length}`);
+          logger.debug(`   ✅ Updated totalReferred: ${referrer.totalReferred} → ${referredMembers.length}`);
         }
         totalFixedReferrals++;
       }
@@ -150,20 +152,20 @@ async function fixCommissionLinkage() {
       }
 
       if (showDetails) {
-        console.log(`   ✅ Created ${membersToCreateCommissionsFor.length * 3} commissions (avg)\n`);
+        logger.debug(`   ✅ Created ${membersToCreateCommissionsFor.length * 3} commissions (avg)\n`);
       }
     }
 
-    console.log('\n========================================');
-    console.log('SUMMARY');
-    console.log('========================================');
-    console.log(`Total commissions created: ${totalCommissionsCreated}`);
-    console.log(`Total referrals fixed: ${totalFixedReferrals}`);
-    console.log('\n✅ Commission linkage fixed!');
-    console.log('The percentage should now calculate correctly.\n');
+    logger.debug('\n========================================');
+    logger.debug('SUMMARY');
+    logger.debug('========================================');
+    logger.debug(`Total commissions created: ${totalCommissionsCreated}`);
+    logger.debug(`Total referrals fixed: ${totalFixedReferrals}`);
+    logger.debug('\n✅ Commission linkage fixed!');
+    logger.debug('The percentage should now calculate correctly.\n');
 
   } catch (error) {
-    console.error('Error:', error);
+    logger.error('Error:', error);
   } finally {
     await prisma.$disconnect();
   }

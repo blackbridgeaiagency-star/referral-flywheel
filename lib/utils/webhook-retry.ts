@@ -1,3 +1,5 @@
+import logger from '../logger';
+
 /**
  * Webhook Retry Logic with Exponential Backoff
  * Handles webhook processing failures with automatic retries
@@ -15,7 +17,7 @@ const DEFAULT_OPTIONS: Required<RetryOptions> = {
   baseDelay: 1000, // 1 second
   maxDelay: 8000, // 8 seconds
   onRetry: (attempt, error) => {
-    console.log(`⏳ Retry attempt ${attempt}:`, error.message);
+    logger.debug(`⏳ Retry attempt ${attempt}:`, error.message);
   }
 };
 
@@ -37,7 +39,7 @@ export async function withRetry<T>(
 
       // If this was the last attempt, throw the error
       if (attempt === opts.maxAttempts) {
-        console.error(`❌ All ${opts.maxAttempts} retry attempts failed`);
+        logger.error(`❌ All ${opts.maxAttempts} retry attempts failed`);
         throw lastError;
       }
 

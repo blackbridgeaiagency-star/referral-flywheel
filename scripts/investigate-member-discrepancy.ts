@@ -1,11 +1,13 @@
 import { prisma } from '../lib/db/prisma';
+import logger from '../lib/logger';
+
 
 async function investigateMemberDiscrepancy() {
   const membershipId = 'mem_techwhop_80';
 
-  console.log('🔍 INVESTIGATING MEMBER DATA DISCREPANCY');
-  console.log(`Member: ${membershipId}\n`);
-  console.log('='.repeat(60));
+  logger.info(' INVESTIGATING MEMBER DATA DISCREPANCY');
+  logger.debug(`Member: ${membershipId}\n`);
+  logger.debug('='.repeat(60));
 
   // 1. Get member details
   const member = await prisma.member.findFirst({
@@ -21,18 +23,18 @@ async function investigateMemberDiscrepancy() {
   });
 
   if (!member) {
-    console.log('❌ Member not found!');
+    logger.error('Member not found!');
     return;
   }
 
-  console.log('\n📊 MEMBER PROFILE:');
-  console.log(`   ID: ${member.id}`);
-  console.log(`   Username: ${member.username}`);
-  console.log(`   Email: ${member.email}`);
-  console.log(`   Referral Code: ${member.referralCode}`);
-  console.log(`   Creator: ${member.creator.companyName}`);
-  console.log(`   Total Referred (DB field): ${member.totalReferred}`);
-  console.log(`   Lifetime Earnings (DB field): $${member.lifetimeEarnings}`);
+  logger.debug('\n📊 MEMBER PROFILE:');
+  logger.debug(`   ID: ${member.id}`);
+  logger.debug(`   Username: ${member.username}`);
+  logger.debug(`   Email: ${member.email}`);
+  logger.debug(`   Referral Code: ${member.referralCode}`);
+  logger.debug(`   Creator: ${member.creator.companyName}`);
+  logger.debug(`   Total Referred (DB field): ${member.totalReferred}`);
+  logger.debug(`   Lifetime Earnings (DB field): $${member.lifetimeEarnings}`);
 
   // 2. Count actual referrals (people this member referred)
   const actualReferrals = await prisma.member.findMany({
@@ -47,14 +49,14 @@ async function investigateMemberDiscrepancy() {
     }
   });
 
-  console.log(`\n👥 ACTUAL REFERRALS (People referred BY this member):`);
-  console.log(`   Count: ${actualReferrals.length}`);
+  logger.debug(`\n👥 ACTUAL REFERRALS (People referred BY this member):`);
+  logger.debug(`   Count: ${actualReferrals.length}`);
   if (actualReferrals.length > 0) {
     actualReferrals.forEach((ref, i) => {
-      console.log(`   ${i + 1}. ${ref.username} (${ref.email}) - ${ref.createdAt}`);
+      logger.debug(`   ${i + 1}. ${ref.username} (${ref.email}) - ${ref.createdAt}`);
     });
   } else {
-    console.log(`   ⚠️  NO REFERRALS FOUND!`);
+    logger.debug(`   ⚠️  NO REFERRALS FOUND!`);
   }
 
   // 3. Check commissions earned BY this member
@@ -75,20 +77,20 @@ async function investigateMemberDiscrepancy() {
     }
   });
 
-  console.log(`\n💰 COMMISSIONS EARNED BY THIS MEMBER:`);
-  console.log(`   Total Commission Records: ${commissionsEarned.length}`);
+  logger.debug(`\n💰 COMMISSIONS EARNED BY THIS MEMBER:`);
+  logger.debug(`   Total Commission Records: ${commissionsEarned.length}`);
 
   const totalEarned = commissionsEarned
     .filter(c => c.status === 'paid')
     .reduce((sum, c) => sum + c.memberShare, 0);
 
-  console.log(`   Total Paid: $${totalEarned.toFixed(2)}`);
+  logger.debug(`   Total Paid: $${totalEarned.toFixed(2)}`);
 
   if (commissionsEarned.length > 0) {
-    console.log(`\n   Commission Details:`);
+    logger.debug(`\n   Commission Details:`);
     commissionsEarned.forEach((comm, i) => {
-      console.log(`   ${i + 1}. Sale: $${comm.saleAmount}, Member Share: $${comm.memberShare}, Status: ${comm.status}`);
-      console.log(`      Membership: ${comm.whopMembershipId}, Date: ${comm.createdAt}`);
+      logger.debug(`   ${i + 1}. Sale: $${comm.saleAmount}, Member Share: $${comm.memberShare}, Status: ${comm.status}`);
+      logger.debug(`      Membership: ${comm.whopMembershipId}, Date: ${comm.createdAt}`);
     });
   }
 
@@ -105,12 +107,12 @@ async function investigateMemberDiscrepancy() {
     }
   });
 
-  console.log(`\n🔗 WHO REFERRED THIS MEMBER?`);
+  logger.debug(`\n🔗 WHO REFERRED THIS MEMBER?`);
   if (referrer) {
-    console.log(`   ✅ Referred by: ${referrer.username} (${referrer.email})`);
-    console.log(`   Referrer Code: ${referrer.referralCode}`);
+    logger.debug(`   ✅ Referred by: ${referrer.username} (${referrer.email})`);
+    logger.debug(`   Referrer Code: ${referrer.referralCode}`);
   } else {
-    console.log(`   ⚠️  This member was NOT referred by anyone (organic signup)`);
+    logger.debug(`   ⚠️  This member was NOT referred by anyone (organic signup)`);
   }
 
   // 5. Check commissions paid TO someone else for referring this member
@@ -134,45 +136,45 @@ async function investigateMemberDiscrepancy() {
     }
   });
 
-  console.log(`\n💸 COMMISSIONS PAID FOR THIS MEMBER'S PURCHASES:`);
-  console.log(`   Total Records: ${commissionsForReferringThisMember.length}`);
+  logger.debug(`\n💸 COMMISSIONS PAID FOR THIS MEMBER'S PURCHASES:`);
+  logger.debug(`   Total Records: ${commissionsForReferringThisMember.length}`);
 
   if (commissionsForReferringThisMember.length > 0) {
-    console.log(`\n   Details:`);
+    logger.debug(`\n   Details:`);
     commissionsForReferringThisMember.forEach((comm, i) => {
-      console.log(`   ${i + 1}. Paid to: ${comm.member.username} (${comm.member.referralCode})`);
-      console.log(`      Amount: $${comm.memberShare}, Sale: $${comm.saleAmount}, Status: ${comm.status}`);
+      logger.debug(`   ${i + 1}. Paid to: ${comm.member.username} (${comm.member.referralCode})`);
+      logger.debug(`      Amount: $${comm.memberShare}, Sale: $${comm.saleAmount}, Status: ${comm.status}`);
     });
   }
 
   // 6. DIAGNOSIS
-  console.log('\n' + '='.repeat(60));
-  console.log('🔬 DIAGNOSIS:\n');
+  logger.debug('\n' + '='.repeat(60));
+  logger.info(' DIAGNOSIS:\n');
 
   if (totalEarned > 0 && actualReferrals.length === 0) {
-    console.log('❌ CRITICAL DATA INTEGRITY ISSUE FOUND!');
-    console.log(`   Member has $${totalEarned.toFixed(2)} in earnings`);
-    console.log(`   But has referred ${actualReferrals.length} people`);
-    console.log(`\n   POSSIBLE CAUSES:`);
-    console.log(`   1. Test data was seeded incorrectly`);
-    console.log(`   2. Commissions are being attributed to wrong member`);
-    console.log(`   3. referredBy field not being set correctly on new members`);
-    console.log(`   4. Member field in Commission table pointing to wrong member`);
+    logger.error('CRITICAL DATA INTEGRITY ISSUE FOUND!');
+    logger.debug(`   Member has $${totalEarned.toFixed(2)} in earnings`);
+    logger.debug(`   But has referred ${actualReferrals.length} people`);
+    logger.debug(`\n   POSSIBLE CAUSES:`);
+    logger.debug(`   1. Test data was seeded incorrectly`);
+    logger.debug(`   2. Commissions are being attributed to wrong member`);
+    logger.debug(`   3. referredBy field not being set correctly on new members`);
+    logger.debug(`   4. Member field in Commission table pointing to wrong member`);
   } else if (totalEarned === 0 && actualReferrals.length > 0) {
-    console.log('⚠️  POTENTIAL ISSUE:');
-    console.log(`   Member referred ${actualReferrals.length} people`);
-    console.log(`   But has $0 in commissions`);
-    console.log(`   This could be normal if referred members haven't purchased yet`);
+    logger.warn('  POTENTIAL ISSUE:');
+    logger.debug(`   Member referred ${actualReferrals.length} people`);
+    logger.debug(`   But has $0 in commissions`);
+    logger.debug(`   This could be normal if referred members haven't purchased yet`);
   } else if (totalEarned > 0 && actualReferrals.length > 0) {
-    console.log('✅ DATA LOOKS CONSISTENT');
-    console.log(`   Member referred ${actualReferrals.length} people`);
-    console.log(`   Has $${totalEarned.toFixed(2)} in earnings`);
+    logger.info('DATA LOOKS CONSISTENT');
+    logger.debug(`   Member referred ${actualReferrals.length} people`);
+    logger.debug(`   Has $${totalEarned.toFixed(2)} in earnings`);
   } else {
-    console.log('✅ CLEAN STATE');
-    console.log(`   Member has no referrals and no earnings`);
+    logger.info('CLEAN STATE');
+    logger.debug(`   Member has no referrals and no earnings`);
   }
 
-  console.log('\n' + '='.repeat(60));
+  logger.debug('\n' + '='.repeat(60));
 
   await prisma.$disconnect();
 }

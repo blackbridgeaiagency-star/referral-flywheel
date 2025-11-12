@@ -3,6 +3,8 @@ import { sendDirectMessage } from './api-client';
 import { sendEmail } from '../email/resend-client';
 import { render } from '@react-email/render';
 import WelcomeMemberEmail from '../../emails/welcome-member';
+import logger from '../logger';
+
 
 /**
  * Send welcome message with referral link via Whop DM
@@ -38,28 +40,28 @@ export async function sendWelcomeMessage(
         .replace(/{referralLink}/g, referralLink)
     : `🎉 Welcome to ${creator.companyName}!
 
-💰 EARN MONEY BY SHARING
-You have a unique referral link that pays you 10% LIFETIME commission on every person you refer.
+💰 START EARNING REWARDS
+You have a unique referral link! Every person you bring in gets tracked, and top referrers earn real rewards.
 
 Your link: ${referralLink}
 
 How it works:
 → Share your link with friends
-→ They join and pay monthly
-→ You earn 10% of their payment EVERY month they stay
-→ Refer 100 people = $499/month passive income
+→ We track every referral in real-time
+→ Top performers get rewarded with cash, free months, and exclusive perks
+→ The more you refer, the higher you rank, the better your rewards!
 
-🏆 LEADERBOARD REWARDS
-Compete with other members and unlock exclusive rewards:
+🏆 MILESTONE REWARDS
+Unlock exclusive rewards as you grow:
 - ${creator.tier1Count} referrals: ${creator.tier1Reward}
 - ${creator.tier2Count} referrals: ${creator.tier2Reward}
 - ${creator.tier3Count} referrals: ${creator.tier3Reward}
 - ${creator.tier4Count} referrals: ${creator.tier4Reward}
 
-Ready to start earning? View your dashboard to get started!`;
+Ready to start? View your dashboard to see your referral link and track your progress!`;
 
   try {
-    console.log(`📧 Sending welcome message to ${member.username} (${member.userId})`);
+    logger.info(` Sending welcome message to ${member.username} (${member.userId})`);
 
     // Attempt to send via Whop DM
     const result = await sendDirectMessage(
@@ -72,27 +74,27 @@ Ready to start earning? View your dashboard to get started!`;
     );
 
     if (result.success) {
-      console.log(`✅ Welcome message sent via Whop DM to ${member.username}`);
+      logger.info(`Welcome message sent via Whop DM to ${member.username}`);
       return { success: true, method: 'whop_dm' };
     } else {
       // DM failed - log referral code for manual retrieval
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://referral-flywheel.vercel.app';
-      console.log(`⚠️ Whop DM failed for ${member.username}`);
-      console.log(`📋 REFERRAL CODE: ${member.referralCode}`);
-      console.log(`🔗 REFERRAL LINK: ${appUrl}/r/${member.referralCode}`);
-      console.log(`💡 User can find their code in the dashboard at ${appUrl}/customer/${creator.companyId}`);
+      logger.warn(` Whop DM failed for ${member.username}`);
+      logger.info(` REFERRAL CODE: ${member.referralCode}`);
+      logger.info(` REFERRAL LINK: ${appUrl}/r/${member.referralCode}`);
+      logger.info(` User can find their code in the dashboard at ${appUrl}/customer/${creator.companyId}`);
 
       // Don't try email fallback for now (domain not verified)
       // return await sendWelcomeEmail(member, creator);
       return { success: false, method: 'logged_to_console' };
     }
   } catch (error) {
-    console.error(`❌ Error sending welcome message to ${member.username}:`, error);
+    logger.error(`❌ Error sending welcome message to ${member.username}:`, error);
     // Log referral code for manual retrieval
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://referral-flywheel.vercel.app';
-    console.log(`📋 REFERRAL CODE: ${member.referralCode}`);
-    console.log(`🔗 REFERRAL LINK: ${appUrl}/r/${member.referralCode}`);
-    console.log(`💡 User can find their code in the dashboard at ${appUrl}/customer/${creator.companyId}`);
+    logger.info(` REFERRAL CODE: ${member.referralCode}`);
+    logger.info(` REFERRAL LINK: ${appUrl}/r/${member.referralCode}`);
+    logger.info(` User can find their code in the dashboard at ${appUrl}/customer/${creator.companyId}`);
 
     // Don't try email fallback for now (domain not verified)
     // return await sendWelcomeEmail(member, creator);
@@ -123,7 +125,7 @@ async function sendWelcomeEmail(
   }
 ): Promise<{ success: boolean; method: string }> {
   if (!member.email) {
-    console.error(`❌ Cannot send email - no email address for ${member.username}`);
+    logger.error(`❌ Cannot send email - no email address for ${member.username}`);
     return { success: false, method: 'no_email' };
   }
 
@@ -149,19 +151,19 @@ async function sendWelcomeEmail(
 
     const result = await sendEmail({
       to: member.email,
-      subject: `Welcome to ${creator.companyName}! Start earning 10% commissions`,
+      subject: `Welcome to ${creator.companyName}! Start earning rewards`,
       html: emailHtml,
     });
 
     if (result.success) {
-      console.log(`✅ Welcome email sent to ${member.email}`);
+      logger.info(`Welcome email sent to ${member.email}`);
       return { success: true, method: 'email' };
     } else {
-      console.error(`❌ Failed to send welcome email to ${member.email}`);
+      logger.error(`❌ Failed to send welcome email to ${member.email}`);
       return { success: false, method: 'email_failed' };
     }
   } catch (error) {
-    console.error(`❌ Error sending welcome email:`, error);
+    logger.error(`❌ Error sending welcome email:`, error);
     return { success: false, method: 'email_error' };
   }
 }

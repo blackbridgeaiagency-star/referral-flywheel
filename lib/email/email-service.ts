@@ -2,6 +2,8 @@
 import nodemailer from 'nodemailer';
 import { render } from '@react-email/render';
 import { prisma } from '../db/prisma';
+import logger from '../logger';
+
 
 /**
  * Email Notification Service
@@ -56,14 +58,14 @@ export async function sendEmail(emailData: EmailData): Promise<boolean> {
   try {
     // Check if email is enabled
     if (!process.env.SMTP_USER || process.env.DISABLE_EMAILS === 'true') {
-      console.log('📧 Email disabled or not configured:', emailData.subject);
+      logger.info(' Email disabled or not configured:', emailData.subject);
       return true; // Return success to not break the flow
     }
 
     // Check for unsubscribe
     const isUnsubscribed = await checkUnsubscribe(emailData.to);
     if (isUnsubscribed) {
-      console.log(`📧 User unsubscribed: ${emailData.to}`);
+      logger.info(' User unsubscribed: ${emailData.to}');
       return true;
     }
 
@@ -91,11 +93,11 @@ export async function sendEmail(emailData: EmailData): Promise<boolean> {
       success: true,
     });
 
-    console.log(`✅ Email sent: ${emailData.subject} to ${emailData.to}`);
+    logger.info('Email sent: ${emailData.subject} to ${emailData.to}');
     return true;
 
   } catch (error) {
-    console.error('❌ Email send failed:', error);
+    logger.error('❌ Email send failed:', error);
 
     // Log failure
     await logEmailSent({
@@ -417,7 +419,7 @@ async function logEmailSent(data: {
   error?: string;
 }): Promise<void> {
   // In production, log to database for tracking
-  console.log('📧 Email log:', data);
+  logger.info(' Email log:', data);
 }
 
 /**

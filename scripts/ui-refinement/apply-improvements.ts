@@ -1,5 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import logger from '../../lib/logger';
+
 
 interface Improvement {
   description: string;
@@ -11,8 +13,8 @@ export async function orchestrateUIImprovement(
   improvements: string[],
   iteration: number
 ): Promise<void> {
-  console.log(`\n🎭 Orchestrating improvements (Iteration ${iteration})...`);
-  console.log(`   Using Conductor pattern for token efficiency`);
+  logger.debug(`\n🎭 Orchestrating improvements (Iteration ${iteration})...`);
+  logger.debug(`   Using Conductor pattern for token efficiency`);
 
   // Create improvement prompt for Conductor
   const improvementList = improvements.map((imp, i) => `${i + 1}. ${imp}`).join('\n');
@@ -48,18 +50,18 @@ Execute with token-efficient orchestration.
   const promptPath = path.join('./scripts/ui-refinement', `iteration-${iteration}-prompt.md`);
   fs.writeFileSync(promptPath, conductorPrompt);
 
-  console.log(`✅ Orchestration prompt created: ${promptPath}`);
-  console.log(`⏸️  PAUSE: Manual execution required`);
-  console.log(`   Run this in Claude Code or Claude.ai:`);
-  console.log(`   1. Copy contents of ${promptPath}`);
-  console.log(`   2. Execute with Conductor agent`);
-  console.log(`   3. Verify changes applied`);
-  console.log(`   4. Press Enter to continue automation...`);
+  logger.info('Orchestration prompt created: ${promptPath}');
+  logger.debug(`⏸️  PAUSE: Manual execution required`);
+  logger.debug(`   Run this in Claude Code or Claude.ai:`);
+  logger.debug(`   1. Copy contents of ${promptPath}`);
+  logger.debug(`   2. Execute with Conductor agent`);
+  logger.debug(`   3. Verify changes applied`);
+  logger.debug(`   4. Press Enter to continue automation...`);
 
   // Wait for user confirmation
   await waitForUserInput();
 
-  console.log(`✅ Improvements applied (Iteration ${iteration})`);
+  logger.info('Improvements applied (Iteration ${iteration})');
 }
 
 async function waitForUserInput(): Promise<void> {
@@ -74,5 +76,5 @@ export function logTokenUsage(iteration: number, tokensUsed: number) {
   const logPath = './scripts/ui-refinement/token-usage.log';
   const logEntry = `Iteration ${iteration}: ${tokensUsed} tokens\n`;
   fs.appendFileSync(logPath, logEntry);
-  console.log(`📊 Token usage logged: ${tokensUsed} tokens`);
+  logger.info(' Token usage logged: ${tokensUsed} tokens');
 }

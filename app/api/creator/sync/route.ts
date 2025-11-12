@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { syncCreatorWithWhop } from '../../../../lib/whop/sync-creator';
+import logger from '../../../../lib/logger';
+
 
 /**
  * POST /api/creator/sync
@@ -19,7 +21,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`📡 Manual sync requested for creator: ${creatorId}`);
+    logger.info(' Manual sync requested for creator: ${creatorId}');
 
     // Sync with Whop
     const result = await syncCreatorWithWhop(creatorId);
@@ -43,7 +45,7 @@ export async function POST(request: NextRequest) {
         : 'Creator data is already up to date',
     });
   } catch (error) {
-    console.error('❌ Error syncing creator:', error);
+    logger.error('❌ Error syncing creator:', error);
     return NextResponse.json(
       {
         error: 'Internal server error',

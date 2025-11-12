@@ -2,6 +2,8 @@ import { prisma } from '@/lib/db/prisma';
 import { generateReferralCode } from '@/lib/utils/referral-code';
 import { calculateCommission } from '@/lib/utils/commission';
 import { startOfMonth } from 'date-fns';
+import logger from '../lib/logger';
+
 
 /**
  * Comprehensive Data Randomization Script
@@ -18,8 +20,8 @@ import { startOfMonth } from 'date-fns';
  */
 
 async function randomizeTestData() {
-  console.log('🎲 COMPREHENSIVE DATA RANDOMIZATION TEST\n');
-  console.log('This will randomize all data to test calculation accuracy.\n');
+  logger.info(' COMPREHENSIVE DATA RANDOMIZATION TEST\n');
+  logger.debug('This will randomize all data to test calculation accuracy.\n');
 
   const octoberStart = new Date('2025-10-01T00:00:00Z');
   const now = new Date();
@@ -27,7 +29,7 @@ async function randomizeTestData() {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // STEP 1: Clear existing October referrals and their commissions
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('🧹 Cleaning up old test data...');
+  logger.debug('🧹 Cleaning up old test data...');
 
   // Delete October referrals (will cascade delete commissions)
   const deletedReferrals = await prisma.member.deleteMany({
@@ -37,12 +39,12 @@ async function randomizeTestData() {
     },
   });
 
-  console.log(`  Deleted ${deletedReferrals.count} October referrals\n`);
+  logger.debug(`  Deleted ${deletedReferrals.count} October referrals\n`);
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // STEP 2: Randomize existing member names
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('👤 Randomizing member names...');
+  logger.info(' Randomizing member names...');
 
   const firstNames = [
     'Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley', 'Avery', 'Quinn',
@@ -60,7 +62,7 @@ async function randomizeTestData() {
     select: { id: true, referralCode: true },
   });
 
-  console.log(`  Found ${allMembers.length} members to randomize`);
+  logger.debug(`  Found ${allMembers.length} members to randomize`);
 
   for (const member of allMembers) {
     const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
@@ -76,12 +78,12 @@ async function randomizeTestData() {
     });
   }
 
-  console.log('  ✅ Randomized all member names\n');
+  logger.debug('  ✅ Randomized all member names\n');
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // STEP 3: Reset all monthly stats to 0
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('🔄 Resetting all monthly stats to 0...');
+  logger.info(' Resetting all monthly stats to 0...');
 
   await prisma.member.updateMany({
     data: {
@@ -90,12 +92,12 @@ async function randomizeTestData() {
     },
   });
 
-  console.log('  ✅ All monthly stats reset\n');
+  logger.debug('  ✅ All monthly stats reset\n');
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // STEP 4: Select random top referrers and create October referrals
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('🎯 Creating randomized October referrals...\n');
+  logger.info(' Creating randomized October referrals...\n');
 
   // Get members with at least some referrals (to make them referrers)
   const potentialReferrers = await prisma.member.findMany({
@@ -111,7 +113,7 @@ async function randomizeTestData() {
     .sort(() => Math.random() - 0.5)
     .slice(0, numReferrers);
 
-  console.log(`  Selected ${selectedReferrers.length} random members as referrers\n`);
+  logger.debug(`  Selected ${selectedReferrers.length} random members as referrers\n`);
 
   let totalOctoberReferrals = 0;
   const referrerStats: Array<{ username: string; referrals: number }> = [];
@@ -121,11 +123,11 @@ async function randomizeTestData() {
     const octoberReferralCount = Math.floor(Math.random() * 9);
 
     if (octoberReferralCount === 0) {
-      console.log(`  ${referrer.username}: 0 referrals (skipped)`);
+      logger.debug(`  ${referrer.username}: 0 referrals (skipped)`);
       continue;
     }
 
-    console.log(`  ${referrer.username}: Creating ${octoberReferralCount} referrals...`);
+    logger.debug(`  ${referrer.username}: Creating ${octoberReferralCount} referrals...`);
 
     const beforeMonthly = referrer.monthlyReferred;
     const beforeTotal = referrer.totalReferred;
@@ -200,9 +202,9 @@ async function randomizeTestData() {
       where: { id: referrer.id },
     });
 
-    console.log(`    Before: total=${beforeTotal}, monthly=${beforeMonthly}`);
-    console.log(`    After:  total=${afterUpdate!.totalReferred}, monthly=${afterUpdate!.monthlyReferred}`);
-    console.log(`    ✅ Created ${octoberReferralCount} referrals\n`);
+    logger.debug(`    Before: total=${beforeTotal}, monthly=${beforeMonthly}`);
+    logger.debug(`    After:  total=${afterUpdate!.totalReferred}, monthly=${afterUpdate!.monthlyReferred}`);
+    logger.debug(`    ✅ Created ${octoberReferralCount} referrals\n`);
 
     referrerStats.push({
       username: referrer.username,
@@ -213,9 +215,9 @@ async function randomizeTestData() {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // STEP 5: Verify data accuracy
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('═══════════════════════════════════════');
-  console.log('🔍 VERIFICATION:');
-  console.log('═══════════════════════════════════════\n');
+  logger.debug('═══════════════════════════════════════');
+  logger.info(' VERIFICATION:');
+  logger.debug('═══════════════════════════════════════\n');
 
   const sumMonthlyReferred = await prisma.member.aggregate({
     _sum: { monthlyReferred: true },
@@ -228,10 +230,10 @@ async function randomizeTestData() {
     },
   });
 
-  console.log(`Created October referrals: ${totalOctoberReferrals}`);
-  console.log(`Sum of monthlyReferred: ${sumMonthlyReferred._sum.monthlyReferred}`);
-  console.log(`Actual October referrals in DB: ${actualOctoberReferrals}`);
-  console.log(`Match: ${sumMonthlyReferred._sum.monthlyReferred === actualOctoberReferrals ? '✅' : '❌'}\n`);
+  logger.debug(`Created October referrals: ${totalOctoberReferrals}`);
+  logger.debug(`Sum of monthlyReferred: ${sumMonthlyReferred._sum.monthlyReferred}`);
+  logger.debug(`Actual October referrals in DB: ${actualOctoberReferrals}`);
+  logger.debug(`Match: ${sumMonthlyReferred._sum.monthlyReferred === actualOctoberReferrals ? '✅' : '❌'}\n`);
 
   // Get top 10 for display
   const top10 = await prisma.member.findMany({
@@ -245,10 +247,10 @@ async function randomizeTestData() {
     },
   });
 
-  console.log('📊 Top 10 Members by October Referrals:');
-  console.log('─'.repeat(70));
+  logger.info(' Top 10 Members by October Referrals:');
+  logger.debug('─'.repeat(70));
   top10.forEach((m, i) => {
-    console.log(
+    logger.debug(
       `${(i + 1).toString().padStart(2)}. ${m.username.padEnd(20)} | ` +
       `Total: ${m.totalReferred.toString().padEnd(3)} | ` +
       `October: ${m.monthlyReferred.toString().padEnd(2)} | ` +
@@ -256,19 +258,19 @@ async function randomizeTestData() {
     );
   });
 
-  console.log('\n═══════════════════════════════════════');
-  console.log('✅ RANDOMIZATION COMPLETE');
-  console.log('═══════════════════════════════════════');
-  console.log(`Total members: ${allMembers.length}`);
-  console.log(`Members with October referrals: ${referrerStats.length}`);
-  console.log(`Total October referrals created: ${totalOctoberReferrals}`);
-  console.log(`Data accuracy: ${sumMonthlyReferred._sum.monthlyReferred === actualOctoberReferrals ? '✅ PERFECT' : '❌ MISMATCH'}`);
-  console.log('═══════════════════════════════════════\n');
+  logger.debug('\n═══════════════════════════════════════');
+  logger.info('RANDOMIZATION COMPLETE');
+  logger.debug('═══════════════════════════════════════');
+  logger.debug(`Total members: ${allMembers.length}`);
+  logger.debug(`Members with October referrals: ${referrerStats.length}`);
+  logger.debug(`Total October referrals created: ${totalOctoberReferrals}`);
+  logger.debug(`Data accuracy: ${sumMonthlyReferred._sum.monthlyReferred === actualOctoberReferrals ? '✅ PERFECT' : '❌ MISMATCH'}`);
+  logger.debug('═══════════════════════════════════════\n');
 
-  console.log('🎯 Next Steps:');
-  console.log('1. Check the Top Referrers table in the creator dashboard');
-  console.log('2. Run: npx tsx scripts/diagnose-october-data.ts');
-  console.log('3. Run: curl http://localhost:3000/api/admin/check-consistency\n');
+  logger.info(' Next Steps:');
+  logger.debug('1. Check the Top Referrers table in the creator dashboard');
+  logger.debug('2. Run: npx tsx scripts/diagnose-october-data.ts');
+  logger.debug('3. Run: curl http://localhost:3000/api/admin/check-consistency\n');
 
   await prisma.$disconnect();
 }

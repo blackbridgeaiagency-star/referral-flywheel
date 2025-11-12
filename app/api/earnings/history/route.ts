@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getMemberEarningsByRange } from '../../../../lib/queries/earnings';
+import logger from '../../../../lib/logger';
+
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -30,7 +32,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(earnings);
   } catch (error) {
-    console.error('❌ Earnings history error:', error);
+    logger.error('❌ Earnings history error:', error);
     return NextResponse.json({ error: 'Failed to fetch earnings history' }, { status: 500 });
   }
 }

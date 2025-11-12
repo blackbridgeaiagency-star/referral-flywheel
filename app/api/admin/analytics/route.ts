@@ -1,6 +1,8 @@
 // app/api/admin/analytics/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
+import logger from '../../../../lib/logger';
+
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -274,7 +276,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(analytics);
   } catch (error: any) {
-    console.error('❌ Analytics API error:', error);
+    logger.error('❌ Analytics API error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch analytics', message: error.message },
       { status: 500 }

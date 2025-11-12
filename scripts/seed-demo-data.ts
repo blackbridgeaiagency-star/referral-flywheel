@@ -3,6 +3,8 @@
 // Creates comprehensive, natural-looking data with referral tracking and activity
 
 import { PrismaClient } from '@prisma/client';
+import logger from '../lib/logger';
+
 
 const prisma = new PrismaClient();
 
@@ -64,12 +66,12 @@ function generateIpHash() {
 }
 
 async function main() {
-  console.log('🎬 Starting ENHANCED demo data seed...\n');
+  logger.info(' Starting ENHANCED demo data seed...\n');
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 1. Get or create the creator
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('📊 Setting up creator with impressive metrics...');
+  logger.info(' Setting up creator with impressive metrics...');
   const totalRevenue = DEMO_CONFIG.totalMembers * DEMO_CONFIG.avgMonthlyPrice * 0.7; // 70% creator share
 
   const creator = await prisma.creator.upsert({
@@ -106,12 +108,12 @@ async function main() {
       customReward6to10: '$200 Cash',
     },
   });
-  console.log(`✅ Creator updated: $${totalRevenue.toFixed(2)} total revenue\n`);
+  logger.info('Creator updated: $${totalRevenue.toFixed(2)} total revenue\n');
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 2. Create the HERO member (for member dashboard screenshot)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('⭐ Creating HERO member with impressive stats...');
+  logger.debug('⭐ Creating HERO member with impressive stats...');
   const heroMember = await prisma.member.upsert({
     where: { userId: 'hero_user_demo' },
     update: {
@@ -153,12 +155,12 @@ async function main() {
       createdAt: randomDate(DEMO_CONFIG.daysOfHistory),
     },
   });
-  console.log(`✅ Hero member: ${heroMember.username} (#${heroMember.globalEarningsRank} globally, $${heroMember.lifetimeEarnings})\n`);
+  logger.info('Hero member: ${heroMember.username} (#${heroMember.globalEarningsRank} globally, $${heroMember.lifetimeEarnings})\n');
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 3. Create TOP 50 earners (for competitive leaderboards)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('👥 Creating top 50 earners with realistic distribution...');
+  logger.info(' Creating top 50 earners with realistic distribution...');
   const allMembers: any[] = [];
 
   for (let i = 1; i <= DEMO_CONFIG.topEarnersCount; i++) {
@@ -220,12 +222,12 @@ async function main() {
     });
     allMembers.push(member);
   }
-  console.log(`✅ Created ${DEMO_CONFIG.topEarnersCount} top earners\n`);
+  logger.info('Created ${DEMO_CONFIG.topEarnersCount} top earners\n');
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 4. Create mid-tier members (ranks 51-200)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('💼 Creating mid-tier members (ranks 51-200)...');
+  logger.info(' Creating mid-tier members (ranks 51-200)...');
 
   for (let i = 51; i <= 200; i++) {
     const earnings = Math.max(500 - ((i - 50) * 2) + (Math.random() * 100 - 50), 50);
@@ -267,15 +269,15 @@ async function main() {
     allMembers.push(member);
 
     if (i % 30 === 0) {
-      console.log(`   Created ${i}/200 mid-tier members...`);
+      logger.debug(`   Created ${i}/200 mid-tier members...`);
     }
   }
-  console.log(`✅ Created 150 mid-tier members\n`);
+  logger.info('Created 150 mid-tier members\n');
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 5. Create lower-tier members (ranks 201-750)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('👤 Creating lower-tier members (ranks 201-750)...');
+  logger.info(' Creating lower-tier members (ranks 201-750)...');
 
   for (let i = 201; i <= DEMO_CONFIG.totalMembers; i++) {
     const earnings = Math.random() * 100; // $0-100
@@ -317,16 +319,16 @@ async function main() {
     allMembers.push(member);
 
     if (i % 100 === 0) {
-      console.log(`   Created ${i}/${DEMO_CONFIG.totalMembers} members...`);
+      logger.debug(`   Created ${i}/${DEMO_CONFIG.totalMembers} members...`);
     }
   }
-  console.log(`✅ Created ${DEMO_CONFIG.totalMembers - 200} lower-tier members\n`);
+  logger.info('Created ${DEMO_CONFIG.totalMembers - 200} lower-tier members\n');
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 6. Create attribution clicks (referral tracking)
   // LOGIC: Calculate clicks based on actual referral counts to ensure consistency
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('🔗 Creating attribution clicks (referral tracking)...');
+  logger.info(' Creating attribution clicks (referral tracking)...');
 
   // Calculate total referrals across all members
   const totalReferrals = allMembers.reduce((sum, m) => sum + m.totalReferred, 0);
@@ -334,7 +336,7 @@ async function main() {
   const totalClicks = Math.min(idealClicks, DEMO_CONFIG.maxAttributionClicks); // Cap for faster seeding
   const targetConversions = Math.floor(totalClicks * DEMO_CONFIG.conversionRate);
 
-  console.log(`   Total referrals: ${totalReferrals}, generating ${totalClicks} clicks (targeting ${(DEMO_CONFIG.conversionRate * 100).toFixed(0)}% conversion)`);
+  logger.debug(`   Total referrals: ${totalReferrals}, generating ${totalClicks} clicks (targeting ${(DEMO_CONFIG.conversionRate * 100).toFixed(0)}% conversion)`);
 
   let conversionsCreated = 0;
 
@@ -371,15 +373,15 @@ async function main() {
     });
 
     if ((i + 1) % 200 === 0) {
-      console.log(`   Created ${i + 1}/${totalClicks} clicks (${conversionsCreated} conversions so far)...`);
+      logger.debug(`   Created ${i + 1}/${totalClicks} clicks (${conversionsCreated} conversions so far)...`);
     }
   }
-  console.log(`✅ Created ${totalClicks} attribution clicks (${conversionsCreated} conversions, ${((conversionsCreated / totalClicks) * 100).toFixed(1)}% rate)\n`);
+  logger.info('Created ${totalClicks} attribution clicks (${conversionsCreated} conversions, ${((conversionsCreated / totalClicks) * 100).toFixed(1)}% rate)\n');
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 7. Create commission history (last 90 days)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('📈 Creating commission history for charts...');
+  logger.info(' Creating commission history for charts...');
   const commissionsCreated = [];
 
   // Create commissions for hero member
@@ -447,12 +449,12 @@ async function main() {
       commissionsCreated.push(commission);
     }
   }
-  console.log(`✅ Created ${commissionsCreated.length} commission records\n`);
+  logger.info('Created ${commissionsCreated.length} commission records\n');
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 8. Create share events for multiple members
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('📤 Creating share events across members...');
+  logger.info(' Creating share events across members...');
   const platforms = ['twitter', 'facebook', 'whatsapp', 'telegram', 'reddit', 'email', 'clipboard'];
   let totalShares = 0;
 
@@ -490,7 +492,7 @@ async function main() {
       totalShares++;
     }
   }
-  console.log(`✅ Created ${totalShares} share events\n`);
+  logger.info('Created ${totalShares} share events\n');
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // Summary
@@ -500,43 +502,43 @@ async function main() {
   const actualConversions = conversionsCreated;
   const actualConversionRate = ((actualConversions / attributionClickCount) * 100).toFixed(1);
 
-  console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('🎉 ENHANCED DEMO DATA SEED COMPLETE!\n');
-  console.log('📊 Creator Stats:');
-  console.log(`   • Community: ${creator.companyName}`);
-  console.log(`   • Total Members: ${DEMO_CONFIG.totalMembers}`);
-  console.log(`   • Total Revenue: $${creator.totalRevenue.toFixed(2)}`);
-  console.log(`   • Monthly Revenue: $${creator.monthlyRevenue.toFixed(2)}`);
-  console.log(`\n⭐ Hero Member (Screenshot Ready):`);
-  console.log(`   • Username: ${heroMember.username}`);
-  console.log(`   • User ID: ${heroMember.userId}`);
-  console.log(`   • Lifetime Earnings: $${heroMember.lifetimeEarnings.toFixed(2)}`);
-  console.log(`   • Monthly Earnings: $${heroMember.monthlyEarnings.toFixed(2)}`);
-  console.log(`   • Global Rank: #${heroMember.globalEarningsRank} (TOP 10!)`);
-  console.log(`   • Total Referred: ${heroMember.totalReferred} members`);
-  console.log(`   • Competition Status: ${heroMember.customRewardMessage}`);
-  console.log(`\n📊 Database Summary:`);
-  console.log(`   • Members: ${DEMO_CONFIG.totalMembers}`);
-  console.log(`   • Attribution Clicks: ${attributionClickCount}`);
-  console.log(`   • Conversions: ${actualConversions} (${actualConversionRate}% conversion rate) ✅`);
-  console.log(`   • Commissions: ${commissionsCreated.length}`);
-  console.log(`   • Share Events: ${totalShares}`);
-  console.log(`\n✅ Data Consistency Check:`);
-  console.log(`   • Total referrals: ${totalReferrals}`);
-  console.log(`   • Attribution conversions: ${actualConversions}`);
-  console.log(`   • Match: ${actualConversions <= totalReferrals ? '✅ Consistent!' : '❌ Mismatch!'}`);
-  console.log(`\n📸 Screenshot URLs (Localhost):`);
-  console.log(`   • Creator Dashboard: http://localhost:3000/seller-product/${DEMO_CONFIG.creatorCompanyId}`);
-  console.log(`   • Member Dashboard: http://localhost:3000/customer/mem_hero_demo`);
-  console.log(`   • Global Leaderboard: http://localhost:3000/leaderboard`);
-  console.log(`\n⚠️  After screenshots, run cleanup:`);
-  console.log(`   DATABASE_URL="your_db_url" npm run demo:cleanup`);
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+  logger.debug('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  logger.info(' ENHANCED DEMO DATA SEED COMPLETE!\n');
+  logger.info(' Creator Stats:');
+  logger.debug(`   • Community: ${creator.companyName}`);
+  logger.debug(`   • Total Members: ${DEMO_CONFIG.totalMembers}`);
+  logger.debug(`   • Total Revenue: $${creator.totalRevenue.toFixed(2)}`);
+  logger.debug(`   • Monthly Revenue: $${creator.monthlyRevenue.toFixed(2)}`);
+  logger.debug(`\n⭐ Hero Member (Screenshot Ready):`);
+  logger.debug(`   • Username: ${heroMember.username}`);
+  logger.debug(`   • User ID: ${heroMember.userId}`);
+  logger.debug(`   • Lifetime Earnings: $${heroMember.lifetimeEarnings.toFixed(2)}`);
+  logger.debug(`   • Monthly Earnings: $${heroMember.monthlyEarnings.toFixed(2)}`);
+  logger.debug(`   • Global Rank: #${heroMember.globalEarningsRank} (TOP 10!)`);
+  logger.debug(`   • Total Referred: ${heroMember.totalReferred} members`);
+  logger.debug(`   • Competition Status: ${heroMember.customRewardMessage}`);
+  logger.debug(`\n📊 Database Summary:`);
+  logger.debug(`   • Members: ${DEMO_CONFIG.totalMembers}`);
+  logger.debug(`   • Attribution Clicks: ${attributionClickCount}`);
+  logger.debug(`   • Conversions: ${actualConversions} (${actualConversionRate}% conversion rate) ✅`);
+  logger.debug(`   • Commissions: ${commissionsCreated.length}`);
+  logger.debug(`   • Share Events: ${totalShares}`);
+  logger.debug(`\n✅ Data Consistency Check:`);
+  logger.debug(`   • Total referrals: ${totalReferrals}`);
+  logger.debug(`   • Attribution conversions: ${actualConversions}`);
+  logger.debug(`   • Match: ${actualConversions <= totalReferrals ? '✅ Consistent!' : '❌ Mismatch!'}`);
+  logger.debug(`\n📸 Screenshot URLs (Localhost):`);
+  logger.debug(`   • Creator Dashboard: http://localhost:3000/seller-product/${DEMO_CONFIG.creatorCompanyId}`);
+  logger.debug(`   • Member Dashboard: http://localhost:3000/customer/mem_hero_demo`);
+  logger.debug(`   • Global Leaderboard: http://localhost:3000/leaderboard`);
+  logger.debug(`\n⚠️  After screenshots, run cleanup:`);
+  logger.debug(`   DATABASE_URL="your_db_url" npm run demo:cleanup`);
+  logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error seeding demo data:', e);
+    logger.error('❌ Error seeding demo data:', e);
     process.exit(1);
   })
   .finally(async () => {

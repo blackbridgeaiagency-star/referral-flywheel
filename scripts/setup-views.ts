@@ -12,11 +12,13 @@
 import { PrismaClient } from '@prisma/client';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import logger from '../lib/logger';
+
 
 const prisma = new PrismaClient();
 
 async function setupViews() {
-  console.log('🔧 Setting up materialized views...\n');
+  logger.info(' Setting up materialized views...\n');
 
   try {
     // Read SQL files
@@ -30,65 +32,65 @@ async function setupViews() {
     );
 
     // Create member stats view
-    console.log('📊 Creating member_stats_mv...');
+    logger.info(' Creating member_stats_mv...');
     await prisma.$executeRawUnsafe(memberStatsSQL);
-    console.log('✅ member_stats_mv created successfully\n');
+    logger.info('member_stats_mv created successfully\n');
 
     // Create creator analytics view
-    console.log('📈 Creating creator_analytics_mv...');
+    logger.info(' Creating creator_analytics_mv...');
     await prisma.$executeRawUnsafe(creatorAnalyticsSQL);
-    console.log('✅ creator_analytics_mv created successfully\n');
+    logger.info('creator_analytics_mv created successfully\n');
 
-    console.log('🎉 All materialized views created!');
+    logger.info(' All materialized views created!');
   } catch (error) {
-    console.error('❌ Error setting up views:', error);
+    logger.error('❌ Error setting up views:', error);
     throw error;
   }
 }
 
 async function refreshViews() {
-  console.log('🔄 Refreshing materialized views...\n');
+  logger.info(' Refreshing materialized views...\n');
 
   try {
     const startTime = Date.now();
 
     // Refresh member stats view
-    console.log('📊 Refreshing member_stats_mv...');
+    logger.info(' Refreshing member_stats_mv...');
     await prisma.$executeRaw`REFRESH MATERIALIZED VIEW CONCURRENTLY member_stats_mv`;
-    console.log('✅ member_stats_mv refreshed\n');
+    logger.info('member_stats_mv refreshed\n');
 
     // Refresh creator analytics view
-    console.log('📈 Refreshing creator_analytics_mv...');
+    logger.info(' Refreshing creator_analytics_mv...');
     await prisma.$executeRaw`REFRESH MATERIALIZED VIEW CONCURRENTLY creator_analytics_mv`;
-    console.log('✅ creator_analytics_mv refreshed\n');
+    logger.info('creator_analytics_mv refreshed\n');
 
     const duration = Date.now() - startTime;
-    console.log(`🎉 All views refreshed in ${duration}ms`);
+    logger.info(' All views refreshed in ${duration}ms');
   } catch (error) {
-    console.error('❌ Error refreshing views:', error);
+    logger.error('❌ Error refreshing views:', error);
     throw error;
   }
 }
 
 async function dropViews() {
-  console.log('🗑️  Dropping materialized views...\n');
+  logger.info('️  Dropping materialized views...\n');
 
   try {
     await prisma.$executeRaw`DROP MATERIALIZED VIEW IF EXISTS member_stats_mv CASCADE`;
-    console.log('✅ member_stats_mv dropped\n');
+    logger.info('member_stats_mv dropped\n');
 
     await prisma.$executeRaw`DROP MATERIALIZED VIEW IF EXISTS creator_analytics_mv CASCADE`;
-    console.log('✅ creator_analytics_mv dropped\n');
+    logger.info('creator_analytics_mv dropped\n');
 
-    console.log('🎉 All views dropped successfully');
+    logger.info(' All views dropped successfully');
   } catch (error) {
-    console.error('❌ Error dropping views:', error);
+    logger.error('❌ Error dropping views:', error);
     throw error;
   }
 }
 
 async function getViewStats() {
-  console.log('📊 Materialized view statistics:\n');
+  logger.info(' Materialized view statistics:\n');
 
   try {
     // Get view sizes and row counts
@@ -109,7 +111,7 @@ async function getViewStats() {
     `;
 
     if (stats.length === 0) {
-      console.log('⚠️  No materialized views found. Run with --setup first.');
+      logger.warn('  No materialized views found. Run with --setup first.');
       return;
     }
 
@@ -129,11 +131,11 @@ async function getViewStats() {
       GROUP BY matviewname;
     `;
 
-    console.log('\nLast refresh times:');
+    logger.debug('\nLast refresh times:');
     console.table(lastRefresh);
 
   } catch (error) {
-    console.error('❌ Error getting view stats:', error);
+    logger.error('❌ Error getting view stats:', error);
   }
 }
 
@@ -166,16 +168,16 @@ async function main() {
 
       case 'reset':
       case '--reset':
-        console.log('🔄 Resetting views (drop + setup)...\n');
+        logger.info(' Resetting views (drop + setup)...\n');
         await dropViews();
-        console.log('\n');
+        logger.debug('\n');
         await setupViews();
-        console.log('\n');
+        logger.debug('\n');
         await refreshViews();
         break;
 
       default:
-        console.log(`
+        logger.debug(`
 Usage: npm run db:views [command]
 
 Commands:
@@ -193,7 +195,7 @@ Examples:
         process.exit(1);
     }
   } catch (error) {
-    console.error('\n❌ Command failed:', error);
+    logger.error('\n❌ Command failed:', error);
     process.exit(1);
   } finally {
     await prisma.$disconnect();

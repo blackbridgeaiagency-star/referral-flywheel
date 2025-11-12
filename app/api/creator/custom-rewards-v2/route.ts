@@ -1,6 +1,8 @@
 // app/api/creator/custom-rewards-v2/route.ts
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
+import logger from '../../../../lib/logger';
+
 
 export async function POST(request: Request) {
   try {
@@ -173,7 +175,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error updating custom rewards:', error);
+    logger.error('Error updating custom rewards:', error);
     return NextResponse.json(
       { error: 'Failed to update custom rewards' },
       { status: 500 }

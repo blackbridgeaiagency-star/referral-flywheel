@@ -1,3 +1,5 @@
+import logger from '../lib/logger';
+
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
@@ -15,17 +17,17 @@ async function checkHeroRank() {
     });
 
     if (!hero) {
-      console.log('Hero not found');
+      logger.debug('Hero not found');
       return;
     }
 
-    console.log('\n========================================');
-    console.log('HERO MEMBER RANK CHECK');
-    console.log('========================================\n');
-    console.log(`Hero: ${hero.username}`);
-    console.log(`Lifetime Earnings: $${(hero.lifetimeEarnings / 100).toFixed(2)}`);
-    console.log(`Total Referred: ${hero.totalReferred}`);
-    console.log(`Current globalEarningsRank: #${hero.globalEarningsRank}\n`);
+    logger.debug('\n========================================');
+    logger.debug('HERO MEMBER RANK CHECK');
+    logger.debug('========================================\n');
+    logger.debug(`Hero: ${hero.username}`);
+    logger.debug(`Lifetime Earnings: $${(hero.lifetimeEarnings / 100).toFixed(2)}`);
+    logger.debug(`Total Referred: ${hero.totalReferred}`);
+    logger.debug(`Current globalEarningsRank: #${hero.globalEarningsRank}\n`);
 
     // Get all members sorted by earnings to see actual rank
     const allMembersByEarnings = await prisma.member.findMany({
@@ -38,14 +40,14 @@ async function checkHeroRank() {
       take: 10
     });
 
-    console.log('Top 10 by actual earnings:');
+    logger.debug('Top 10 by actual earnings:');
     allMembersByEarnings.forEach((m, index) => {
       const isHero = m.username === hero.username;
-      console.log(`  ${index + 1}. ${m.username}: $${(m.lifetimeEarnings / 100).toFixed(2)} (DB rank: #${m.globalEarningsRank}) ${isHero ? '← HERO' : ''}`);
+      logger.debug(`  ${index + 1}. ${m.username}: $${(m.lifetimeEarnings / 100).toFixed(2)} (DB rank: #${m.globalEarningsRank}) ${isHero ? '← HERO' : ''}`);
     });
 
   } catch (error) {
-    console.error('Error:', error);
+    logger.error('Error:', error);
   } finally {
     await prisma.$disconnect();
   }

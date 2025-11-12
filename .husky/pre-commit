@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run security audit before allowing commit
+echo "🔐 Running security audit..."
+npx tsx scripts/security-audit.ts
+
+if [ $? -ne 0 ]; then
+  echo "❌ Security audit failed! Fix issues before committing."
+  exit 1
+fi
+
+echo "✅ Security audit passed!"

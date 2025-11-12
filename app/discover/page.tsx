@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { CommunityCard } from '../../components/discover/community-card';
 import { Logo } from '../../components/ui/logo';
 import { TrendingUp, Users, DollarSign } from 'lucide-react';
+import logger from '../../lib/logger';
+
 
 interface Community {
   id: string;
@@ -27,7 +29,7 @@ export default function DiscoverPage() {
         setIsLoading(false);
       })
       .catch(error => {
-        console.error('Failed to load communities:', error);
+        logger.error('Failed to load communities:', error);
         setIsLoading(false);
       });
   }, []);

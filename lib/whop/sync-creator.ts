@@ -6,6 +6,8 @@
 
 import { getCompany, getProduct, type WhopCompany, type WhopProduct } from './api-client';
 import { prisma } from '../db/prisma';
+import logger from '../logger';
+
 
 export interface SyncedCreatorData {
   companyName: string;
@@ -38,11 +40,11 @@ export async function fetchCreatorDataFromWhop(params: {
   try {
     // Priority 1: Fetch from company ID (most accurate)
     if (companyId) {
-      console.log(`🔄 Fetching company data from Whop: ${companyId}`);
+      logger.info(` Fetching company data from Whop: ${companyId}`);
       const company = await getCompany(companyId);
 
       if (company) {
-        console.log(`✅ Company data fetched: ${company.name}`);
+        logger.info(`Company data fetched: ${company.name}`);
         return {
           companyName: company.name || companyId,
           logoUrl: company.image_url || null,
@@ -53,11 +55,11 @@ export async function fetchCreatorDataFromWhop(params: {
 
     // Priority 2: Fetch from product ID
     if (productId) {
-      console.log(`🔄 Fetching product data from Whop: ${productId}`);
+      logger.info(` Fetching product data from Whop: ${productId}`);
       const product = await getProduct(productId);
 
       if (product) {
-        console.log(`✅ Product data fetched: ${product.name}`);
+        logger.info(`Product data fetched: ${product.name}`);
         return {
           companyName: product.name || productId,
           logoUrl: product.image_url || null,
@@ -66,11 +68,11 @@ export async function fetchCreatorDataFromWhop(params: {
       }
     }
 
-    console.warn('⚠️ No companyId or productId provided, using defaults');
+    logger.warn('⚠️ No companyId or productId provided, using defaults');
     return defaultData;
   } catch (error) {
-    console.error('❌ Failed to fetch creator data from Whop:', error);
-    console.log('📝 Using default data as fallback');
+    logger.error('❌ Failed to fetch creator data from Whop:', error);
+    logger.info(' Using default data as fallback');
     return defaultData;
   }
 }
@@ -121,7 +123,7 @@ export async function syncCreatorWithWhop(creatorId: string): Promise<{
       creator.description !== whopData.description;
 
     if (!needsUpdate) {
-      console.log(`✅ Creator ${creatorId} is already up to date`);
+      logger.info(`Creator ${creatorId} is already up to date`);
       return {
         success: true,
         updated: false,
@@ -139,14 +141,14 @@ export async function syncCreatorWithWhop(creatorId: string): Promise<{
       },
     });
 
-    console.log(`✅ Creator ${creatorId} synced with Whop data`);
+    logger.info(`Creator ${creatorId} synced with Whop data`);
     return {
       success: true,
       updated: true,
       data: whopData,
     };
   } catch (error) {
-    console.error(`❌ Failed to sync creator ${creatorId}:`, error);
+    logger.error(`❌ Failed to sync creator ${creatorId}:`, error);
     return {
       success: false,
       updated: false,
@@ -166,7 +168,7 @@ export async function syncAllCreatorsWithWhop(): Promise<{
   failed: number;
   skipped: number;
 }> {
-  console.log('🔄 Starting batch sync of all creators...');
+  logger.info(' Starting batch sync of all creators...');
 
   const creators = await prisma.creator.findMany({
     where: { isActive: true },
@@ -192,7 +194,7 @@ export async function syncAllCreatorsWithWhop(): Promise<{
     await new Promise(resolve => setTimeout(resolve, 100));
   }
 
-  console.log(`✅ Batch sync complete: ${synced} synced, ${skipped} skipped, ${failed} failed`);
+  logger.info(`Batch sync complete: ${synced} synced, ${skipped} skipped, ${failed} failed`);
 
   return {
     total: creators.length,
@@ -248,7 +250,7 @@ export async function createCreatorWithWhopData(params: {
     },
   });
 
-  console.log(`✅ Creator created with Whop data: ${creator.companyName} (${creator.id})`);
+  logger.info(`Creator created with Whop data: ${creator.companyName} (${creator.id})`);
 
   return {
     creatorId: creator.id,

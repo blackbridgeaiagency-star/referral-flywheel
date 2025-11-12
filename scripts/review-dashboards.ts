@@ -1,6 +1,8 @@
 import { chromium } from 'playwright';
 import * as fs from 'fs';
 import * as path from 'path';
+import logger from '../lib/logger';
+
 
 const SCREENSHOT_DIR = './screenshots/review';
 const BASE_URL = 'http://localhost:3000';
@@ -14,9 +16,9 @@ const PAGES_TO_REVIEW = [
 ];
 
 async function captureAllDashboards() {
-  console.log('🚀 Starting Dashboard Review');
-  console.log(`   Base URL: ${BASE_URL}`);
-  console.log(`   Pages to review: ${PAGES_TO_REVIEW.length}\n`);
+  logger.info(' Starting Dashboard Review');
+  logger.debug(`   Base URL: ${BASE_URL}`);
+  logger.debug(`   Pages to review: ${PAGES_TO_REVIEW.length}\n`);
 
   // Create screenshot directory
   if (!fs.existsSync(SCREENSHOT_DIR)) {
@@ -32,8 +34,8 @@ async function captureAllDashboards() {
   const screenshots: Array<{ name: string; path: string; url: string }> = [];
 
   for (const pageInfo of PAGES_TO_REVIEW) {
-    console.log(`\n📸 Capturing: ${pageInfo.description}`);
-    console.log(`   URL: ${BASE_URL}${pageInfo.url}`);
+    logger.debug(`\n📸 Capturing: ${pageInfo.description}`);
+    logger.debug(`   URL: ${BASE_URL}${pageInfo.url}`);
 
     try {
       await page.goto(`${BASE_URL}${pageInfo.url}`, {
@@ -51,7 +53,7 @@ async function captureAllDashboards() {
         fullPage: true,
       });
 
-      console.log(`   ✅ Saved: ${filepath}`);
+      logger.debug(`   ✅ Saved: ${filepath}`);
       screenshots.push({
         name: pageInfo.description,
         path: filepath,
@@ -70,7 +72,7 @@ async function captureAllDashboards() {
         fullPage: true,
       });
 
-      console.log(`   ✅ Saved (mobile): ${mobileFilepath}`);
+      logger.debug(`   ✅ Saved (mobile): ${mobileFilepath}`);
       screenshots.push({
         name: `${pageInfo.description} (Mobile)`,
         path: mobileFilepath,
@@ -81,7 +83,7 @@ async function captureAllDashboards() {
       await page.setViewportSize({ width: 1920, height: 1080 });
 
     } catch (error) {
-      console.error(`   ❌ Error capturing ${pageInfo.name}:`, error);
+      logger.error(`   ❌ Error capturing ${pageInfo.name}:`, error);
     }
   }
 
@@ -143,10 +145,10 @@ _(Will be filled after review)_
   const reportPath = path.join(SCREENSHOT_DIR, 'REVIEW-REPORT.md');
   fs.writeFileSync(reportPath, report);
 
-  console.log(`\n✅ Review Complete!`);
-  console.log(`   Screenshots: ${screenshots.length}`);
-  console.log(`   Location: ${SCREENSHOT_DIR}`);
-  console.log(`   Report: ${reportPath}\n`);
+  logger.debug(`\n✅ Review Complete!`);
+  logger.debug(`   Screenshots: ${screenshots.length}`);
+  logger.debug(`   Location: ${SCREENSHOT_DIR}`);
+  logger.debug(`   Report: ${reportPath}\n`);
 }
 
 captureAllDashboards().catch(console.error);

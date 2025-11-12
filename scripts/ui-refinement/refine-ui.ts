@@ -7,6 +7,8 @@ import { analyzeUIScreenshot } from './claude-api';
 import { orchestrateUIImprovement, logTokenUsage } from './apply-improvements';
 import * as fs from 'fs';
 import * as path from 'path';
+import logger from '../../lib/logger';
+
 
 interface IterationResult {
   iteration: number;
@@ -21,10 +23,10 @@ const MAX_ITERATIONS = 5;
 const MEMBER_DASHBOARD_URL = '/customer/mem_BA9kqIsPzRTk4B'; // Use existing test member
 
 async function runUIRefinement() {
-  console.log('🚀 Starting Automated UI Refinement');
-  console.log(`   Max iterations: ${MAX_ITERATIONS}`);
-  console.log(`   Target: Premium SaaS aesthetic`);
-  console.log(`   Method: Playwright + Claude API + Agent Orchestration\n`);
+  logger.info(' Starting Automated UI Refinement');
+  logger.debug(`   Max iterations: ${MAX_ITERATIONS}`);
+  logger.debug(`   Target: Premium SaaS aesthetic`);
+  logger.debug(`   Method: Playwright + Claude API + Agent Orchestration\n`);
 
   // Cleanup old screenshots
   cleanupOldScreenshots();
@@ -38,35 +40,35 @@ async function runUIRefinement() {
 
   try {
     // Navigate to dashboard
-    console.log(`🌐 Navigating to: ${MEMBER_DASHBOARD_URL}`);
+    logger.info(' Navigating to: ${MEMBER_DASHBOARD_URL}');
     await page.goto(MEMBER_DASHBOARD_URL, { waitUntil: 'networkidle' });
     await page.waitForTimeout(2000); // Let page fully render
 
     // Initial screenshot
-    console.log('\n📸 Capturing initial state...');
+    logger.debug('\n📸 Capturing initial state...');
     const initialScreenshot = await captureScreenshot(page, 'initial', 0);
-    console.log(`   Saved: ${initialScreenshot}\n`);
+    logger.debug(`   Saved: ${initialScreenshot}\n`);
 
     // Refinement loop
     for (let i = 1; i <= MAX_ITERATIONS; i++) {
-      console.log(`\n${'='.repeat(60)}`);
-      console.log(`🔄 ITERATION ${i}/${MAX_ITERATIONS}`);
-      console.log(`${'='.repeat(60)}\n`);
+      logger.debug(`\n${'='.repeat(60)}`);
+      logger.info(' ITERATION ${i}/${MAX_ITERATIONS}');
+      logger.debug(`${'='.repeat(60)}\n`);
 
       // Capture screenshot
       const screenshotPath = await captureScreenshot(page, 'dashboard', i);
 
       // Analyze with Claude API
-      console.log(`🤖 Analyzing UI with Claude API...`);
+      logger.debug(`🤖 Analyzing UI with Claude API...`);
       const analysis = await analyzeUIScreenshot(
         screenshotPath,
         i,
         allImprovements
       );
 
-      console.log(`\n💡 Improvements suggested:`);
+      logger.debug(`\n💡 Improvements suggested:`);
       analysis.improvements.forEach((imp, idx) => {
-        console.log(`   ${idx + 1}. ${imp}`);
+        logger.debug(`   ${idx + 1}. ${imp}`);
       });
 
       // Save iteration result
@@ -86,7 +88,7 @@ async function runUIRefinement() {
       await orchestrateUIImprovement(analysis.improvements, i);
 
       // Reload page to see changes
-      console.log(`\n🔄 Reloading page to see changes...`);
+      logger.debug(`\n🔄 Reloading page to see changes...`);
       await page.reload({ waitUntil: 'networkidle' });
       await page.waitForTimeout(2000);
 
@@ -96,25 +98,25 @@ async function runUIRefinement() {
 
       // Check if we should continue
       if (analysis.priority === 'low' && i >= 3) {
-        console.log(`\n✅ Reached diminishing returns (priority: low). Stopping early.`);
+        logger.debug(`\n✅ Reached diminishing returns (priority: low). Stopping early.`);
         break;
       }
     }
 
     // Final screenshot
-    console.log(`\n📸 Capturing final state...`);
+    logger.debug(`\n📸 Capturing final state...`);
     const finalScreenshot = await captureScreenshot(page, 'final', MAX_ITERATIONS + 1);
 
     // Generate report
     await generateReport(results, initialScreenshot, finalScreenshot);
 
-    console.log(`\n✅ UI Refinement Complete!`);
-    console.log(`   Total iterations: ${results.length}`);
-    console.log(`   Total improvements: ${allImprovements.length}`);
-    console.log(`   See report: ./scripts/ui-refinement/REPORT.md\n`);
+    logger.debug(`\n✅ UI Refinement Complete!`);
+    logger.debug(`   Total iterations: ${results.length}`);
+    logger.debug(`   Total improvements: ${allImprovements.length}`);
+    logger.debug(`   See report: ./scripts/ui-refinement/REPORT.md\n`);
 
   } catch (error) {
-    console.error('❌ Error during refinement:', error);
+    logger.error('❌ Error during refinement:', error);
     throw error;
   } finally {
     await browser.close();
@@ -126,7 +128,7 @@ async function generateReport(
   initialScreenshot: string,
   finalScreenshot: string
 ) {
-  console.log('\n📝 Generating refinement report...');
+  logger.debug('\n📝 Generating refinement report...');
 
   const report = `# UI Refinement Report
 *Generated: ${new Date().toISOString()}*
@@ -203,7 +205,7 @@ ${results.map(r => {
   const reportPath = path.join('./scripts/ui-refinement', 'REPORT.md');
   fs.writeFileSync(reportPath, report);
 
-  console.log(`✅ Report generated: ${reportPath}`);
+  logger.info('Report generated: ${reportPath}');
 }
 
 // Run refinement

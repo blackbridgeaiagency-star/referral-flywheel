@@ -1,7 +1,12 @@
 #!/usr/bin/env tsx
 import { PrismaClient } from '@prisma/client';
+import logger from '../lib/logger';
 
-const prodUrl = 'postgresql://postgres:cFWGc4UtNVXm6NYt@db.eerhpmjherotaqklpqnc.supabase.co:5432/postgres';
+
+// Use environment variable for database connection
+// Fallback to placeholder if not set (will fail but won't expose secrets)
+const prodUrl = process.env.DATABASE_URL?.replace('6543', '5432').replace('?pgbouncer=true', '') ||
+                'postgresql://postgres:[REPLACE_WITH_PASSWORD]@db.eerhpmjherotaqklpqnc.supabase.co:5432/postgres';
 
 const prisma = new PrismaClient({
   datasources: {
@@ -13,9 +18,9 @@ const prisma = new PrismaClient({
 
 async function checkTables() {
   try {
-    console.log('🔍 Checking production database...\n');
-    console.log('URL:', prodUrl.replace(/:[^:@]+@/, ':****@'));
-    console.log('');
+    logger.info(' Checking production database...\n');
+    logger.debug('URL:', prodUrl.replace(/:[^:@]+@/, ':****@'));
+    logger.debug('');
 
     // Get all tables
     const tables = await prisma.$queryRaw<Array<{tablename: string}>>`
@@ -24,17 +29,17 @@ async function checkTables() {
       ORDER BY tablename
     `;
 
-    console.log(`✅ Found ${tables.length} tables:`);
-    tables.forEach(t => console.log(`   - ${t.tablename}`));
-    console.log('');
+    logger.info('Found ${tables.length} tables:');
+    tables.forEach(t => logger.debug(`   - ${t.tablename}`));
+    logger.debug('');
 
     if (tables.length === 0) {
-      console.log('❌ No tables found! Run: npx prisma db push');
+      logger.error('No tables found! Run: npx prisma db push');
       process.exit(1);
     }
 
     // Count records in main tables
-    console.log('📊 Record counts:');
+    logger.info(' Record counts:');
     const [creators, members, commissions, clicks] = await Promise.all([
       prisma.creator.count(),
       prisma.member.count(),
@@ -42,21 +47,21 @@ async function checkTables() {
       prisma.attributionClick.count(),
     ]);
 
-    console.log(`   Creators: ${creators}`);
-    console.log(`   Members: ${members}`);
-    console.log(`   Commissions: ${commissions}`);
-    console.log(`   AttributionClicks: ${clicks}`);
-    console.log('');
+    logger.debug(`   Creators: ${creators}`);
+    logger.debug(`   Members: ${members}`);
+    logger.debug(`   Commissions: ${commissions}`);
+    logger.debug(`   AttributionClicks: ${clicks}`);
+    logger.debug('');
 
     if (creators === 0 && members === 0) {
-      console.log('ℹ️  Database is empty but schema exists.');
-      console.log('   This is normal for first deployment.');
+      logger.info('  Database is empty but schema exists.');
+      logger.debug('   This is normal for first deployment.');
     } else {
-      console.log('✅ Database has data!');
+      logger.info('Database has data!');
     }
 
   } catch (error: any) {
-    console.error('❌ Error:', error.message);
+    logger.error('❌ Error:', error.message);
     process.exit(1);
   } finally {
     await prisma.$disconnect();

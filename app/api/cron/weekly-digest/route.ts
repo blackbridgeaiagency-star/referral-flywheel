@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
 import { sendEmail } from '../../../../lib/email/client';
 import { generateWeeklyDigestEmail } from '../../../../lib/email/templates/creator/weekly-digest';
+import logger from '../../../../lib/logger';
+
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,7 +25,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('🔄 Starting weekly digest cron job...');
+    logger.info(' Starting weekly digest cron job...');
 
     // Get date range for last 7 days
     const now = new Date();
@@ -32,14 +34,14 @@ export async function POST(request: Request) {
     const weekStartDate = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     const weekEndDate = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-    console.log(`📅 Generating reports for: ${weekStartDate} - ${weekEndDate}`);
+    logger.info(` Generating reports for: ${weekStartDate} - ${weekEndDate}`);
 
     // Fetch all active creators
     const creators = await prisma.creator.findMany({
       where: { isActive: true }
     });
 
-    console.log(`📊 Found ${creators.length} active creators`);
+    logger.info(` Found ${creators.length} active creators`);
 
     let sentCount = 0;
     let failedCount = 0;
@@ -98,7 +100,7 @@ export async function POST(request: Request) {
 
         // TODO: Get creator email from Whop API or database
         // For now, skip sending (would use creator email)
-        console.log(`✅ Would send to ${creator.companyName}: ${newReferrals} referrals, $${totalRevenue.toFixed(2)}`);
+        logger.info(`Would send to ${creator.companyName}: ${newReferrals} referrals, $${totalRevenue.toFixed(2)}`);
         sentCount++;
 
         // Rate limiting
@@ -106,7 +108,7 @@ export async function POST(request: Request) {
 
       } catch (creatorError) {
         failedCount++;
-        console.error(`❌ Error processing creator ${creator.id}:`, creatorError);
+        logger.error(`❌ Error processing creator ${creator.id}:`, creatorError);
         continue;
       }
     }
@@ -120,11 +122,11 @@ export async function POST(request: Request) {
       timestamp: new Date().toISOString()
     };
 
-    console.log('✅ Weekly digest complete:', summary);
+    logger.info('Weekly digest complete:', summary);
     return NextResponse.json(summary);
 
   } catch (error) {
-    console.error('❌ Weekly digest cron error:', error);
+    logger.error('❌ Weekly digest cron error:', error);
     return NextResponse.json(
       {
         error: 'Cron job failed',

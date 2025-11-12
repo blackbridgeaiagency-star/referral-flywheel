@@ -1,11 +1,13 @@
+import logger from '../lib/logger';
+
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function fixHeroRank() {
   try {
-    console.log('\n========================================');
-    console.log('FIXING HERO MEMBER RANK TO #1');
-    console.log('========================================\n');
+    logger.debug('\n========================================');
+    logger.debug('FIXING HERO MEMBER RANK TO #1');
+    logger.debug('========================================\n');
 
     // Update hero to have top earnings and rank #1
     const hero = await prisma.member.update({
@@ -17,15 +19,15 @@ async function fixHeroRank() {
       }
     });
 
-    console.log(`✅ Updated hero member:`);
-    console.log(`   Username: ${hero.username}`);
-    console.log(`   New earnings: $${(hero.lifetimeEarnings / 100).toFixed(2)}`);
-    console.log(`   New global rank: #${hero.globalEarningsRank}`);
-    console.log(`\n🎯 Hero is now #1!`);
-    console.log(`\nRefresh dashboard: http://localhost:3001/customer/mem_hero_demo\n`);
+    logger.info('Updated hero member:');
+    logger.debug(`   Username: ${hero.username}`);
+    logger.debug(`   New earnings: $${(hero.lifetimeEarnings / 100).toFixed(2)}`);
+    logger.debug(`   New global rank: #${hero.globalEarningsRank}`);
+    logger.debug(`\n🎯 Hero is now #1!`);
+    logger.debug(`\nRefresh dashboard: http://localhost:3001/customer/mem_hero_demo\n`);
 
   } catch (error) {
-    console.error('Error:', error);
+    logger.error('Error:', error);
   } finally {
     await prisma.$disconnect();
   }

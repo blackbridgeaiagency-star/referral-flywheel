@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { X, Check, ArrowRight, ArrowLeft, Sparkles } from 'lucide-react';
+import logger from '../../lib/logger';
+
 
 interface OnboardingWizardProps {
   creatorId: string;
@@ -81,11 +83,11 @@ const WELCOME_TEMPLATES = [
 
 Welcome to {creatorName}! We're stoked to have you here.
 
-Here's something cool: You now have your own referral link that pays you 10% lifetime commission on everyone you invite!
+Here's something cool: You now have your own referral link! Every time you bring someone in, we track it and reward our top referrers with bonuses, free months, and exclusive perks.
 
 Your link: {referralLink}
 
-Share it with friends, post it on social media, or send it to anyone who'd love what we do. You'll earn passive income every month they stay. Pretty sweet, right?
+Share it with friends, post it on social media, or send it to anyone who'd love what we do. The more people you refer, the higher you rank, and the better your rewards!
 
 See you in the community! 🚀`,
   },
@@ -95,11 +97,11 @@ See you in the community! 🚀`,
 
 Welcome to {creatorName}.
 
-As a member, you have access to a referral program offering 10% lifetime commission on all referred members.
+As a member, you have access to our referral program where top contributors are rewarded for helping us grow.
 
 Your unique referral link: {referralLink}
 
-Share this link to start earning passive income. Commission is calculated monthly and paid directly to your account.
+Share this link to start building your referral count. We track all referrals and reward top performers with cash bonuses, membership credits, and exclusive benefits.
 
 For questions, contact our support team.
 
@@ -112,14 +114,14 @@ The {creatorName} Team`,
 
 You just joined {creatorName} - and you're about to discover something AMAZING!
 
-💰 YOUR MONEY-MAKING LINK:
+💰 YOUR REFERRAL LINK:
 {referralLink}
 
-This isn't just any link. This is YOUR ticket to passive income!
+This is YOUR ticket to earning rewards!
 
-Share it. Post it. Send it. Every person who joins through your link pays you 10% FOREVER!
+Share it. Post it. Send it. Every person who joins through your link gets tracked, and top referrers get REWARDED!
 
-Imagine: 100 referrals = $499/month in passive income!
+Typical rewards: $500-2000/month for our best performers!
 
 The community is waiting for you. Let's GO! 🔥`,
   },
@@ -131,13 +133,13 @@ You're now part of a community that rewards you for bringing value.
 
 📊 YOUR REFERRAL PROGRAM:
 • Link: {referralLink}
-• Commission: 10% lifetime recurring
-• Payment: Monthly, automatic
+• Tracking: Real-time referral analytics
+• Rewards: Top performers get paid
 • Potential: Unlimited
 
-The more value you share, the more you earn. It's that simple.
+The more value you share, the more you can earn. It's that simple.
 
-Ready to start? Share your link and watch your earnings grow.`,
+Ready to start? Share your link and climb the leaderboard.`,
   },
 ];
 
@@ -197,7 +199,7 @@ export function OnboardingWizard({ creatorId, currentName, onComplete, onSkip }:
 
       onComplete();
     } catch (error) {
-      console.error('Failed to complete onboarding:', error);
+      logger.error('Failed to complete onboarding:', error);
       alert('Failed to save settings. Please try again.');
     } finally {
       setIsSubmitting(false);

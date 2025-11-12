@@ -1,4 +1,6 @@
 import { prisma } from '../lib/db/prisma';
+import logger from '../lib/logger';
+
 
 async function verify10Members() {
   const members = await prisma.member.findMany({
@@ -6,7 +8,7 @@ async function verify10Members() {
     orderBy: { totalReferred: 'desc' }
   });
 
-  console.log('🔍 VERIFYING TOP 10 MEMBERS WITH REFERRALS:\n');
+  logger.info(' VERIFYING TOP 10 MEMBERS WITH REFERRALS:\n');
 
   let issuesFound = 0;
 
@@ -26,33 +28,33 @@ async function verify10Members() {
     const dbEarnings = commissions._sum.memberShare || 0;
     const earningsDiff = Math.abs(dbEarnings - member.lifetimeEarnings);
 
-    console.log(`${member.username}:`);
-    console.log(`  DB totalReferred: ${member.totalReferred}`);
-    console.log(`  Actual referrals: ${actualReferrals}`);
-    console.log(`  DB earnings: $${member.lifetimeEarnings.toFixed(2)}`);
-    console.log(`  Calculated earnings: $${dbEarnings.toFixed(2)}`);
-    console.log(`  Commissions: ${commissions._count} records`);
+    logger.debug(`${member.username}:`);
+    logger.debug(`  DB totalReferred: ${member.totalReferred}`);
+    logger.debug(`  Actual referrals: ${actualReferrals}`);
+    logger.debug(`  DB earnings: $${member.lifetimeEarnings.toFixed(2)}`);
+    logger.debug(`  Calculated earnings: $${dbEarnings.toFixed(2)}`);
+    logger.debug(`  Commissions: ${commissions._count} records`);
 
     // Validate
     if (dbEarnings > 0 && actualReferrals === 0) {
-      console.log(`  ❌ ISSUE: Has earnings but no referrals!\n`);
+      logger.debug(`  ❌ ISSUE: Has earnings but no referrals!\n`);
       issuesFound++;
     } else if (actualReferrals !== member.totalReferred) {
-      console.log(`  ❌ ISSUE: Referral count mismatch!\n`);
+      logger.debug(`  ❌ ISSUE: Referral count mismatch!\n`);
       issuesFound++;
     } else if (earningsDiff > 0.01) {
-      console.log(`  ❌ ISSUE: Earnings mismatch!\n`);
+      logger.debug(`  ❌ ISSUE: Earnings mismatch!\n`);
       issuesFound++;
     } else {
-      console.log(`  ✅ PERFECT DATA INTEGRITY\n`);
+      logger.debug(`  ✅ PERFECT DATA INTEGRITY\n`);
     }
   }
 
-  console.log('='.repeat(60));
+  logger.debug('='.repeat(60));
   if (issuesFound === 0) {
-    console.log('🎉 ALL 10 MEMBERS HAVE PERFECT DATA INTEGRITY!');
+    logger.info(' ALL 10 MEMBERS HAVE PERFECT DATA INTEGRITY!');
   } else {
-    console.log(`❌ Found ${issuesFound} issues`);
+    logger.error('Found ${issuesFound} issues');
   }
 
   await prisma.$disconnect();

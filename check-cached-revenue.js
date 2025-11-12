@@ -1,3 +1,5 @@
+import logger from './lib/logger';
+
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
@@ -11,16 +13,16 @@ const prisma = new PrismaClient();
     }
   });
 
-  console.log('='.repeat(80));
-  console.log('CACHED REVENUE FIELDS IN CREATOR TABLE');
-  console.log('='.repeat(80));
-  console.log('');
-  console.log('Creator:', creator.companyName);
-  console.log('totalRevenue (cached):', creator.totalRevenue.toFixed(2));
-  console.log('monthlyRevenue (cached):', creator.monthlyRevenue.toFixed(2));
-  console.log('');
-  console.log('NOTE: These are cached fields updated by webhooks');
-  console.log('They may not match real-time calculations');
+  logger.debug('='.repeat(80));
+  logger.debug('CACHED REVENUE FIELDS IN CREATOR TABLE');
+  logger.debug('='.repeat(80));
+  logger.debug('');
+  logger.debug('Creator:', creator.companyName);
+  logger.debug('totalRevenue (cached):', creator.totalRevenue.toFixed(2));
+  logger.debug('monthlyRevenue (cached):', creator.monthlyRevenue.toFixed(2));
+  logger.debug('');
+  logger.debug('NOTE: These are cached fields updated by webhooks');
+  logger.debug('They may not match real-time calculations');
 
   await prisma.$disconnect();
 })();

@@ -7,6 +7,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
+import logger from '../../../../lib/logger';
+
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +17,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!memberId || !platform) {
-      console.error('❌ Share tracking: Missing required fields', { memberId, platform });
+      logger.error('❌ Share tracking: Missing required fields', { memberId, platform });
       return NextResponse.json(
         { error: 'Missing required fields: memberId and platform are required' },
         { status: 400 }
@@ -37,7 +39,7 @@ export async function POST(request: NextRequest) {
     ];
 
     if (!validPlatforms.includes(platform)) {
-      console.error('❌ Share tracking: Invalid platform', { platform });
+      logger.error('❌ Share tracking: Invalid platform', { platform });
       return NextResponse.json(
         { error: `Invalid platform. Must be one of: ${validPlatforms.join(', ')}` },
         { status: 400 }
@@ -53,7 +55,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log(`📤 Share tracked: ${platform} by member ${memberId} (ID: ${shareEvent.id})`);
+    logger.info(` Share tracked: ${platform} by member ${memberId} (ID: ${shareEvent.id})`);
 
     return NextResponse.json({
       ok: true,
@@ -61,7 +63,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Share tracking error:', error);
+    logger.error('❌ Share tracking error:', error);
 
     // Check if it's a Prisma error (e.g., invalid memberId)
     if (error instanceof Error && error.message.includes('Foreign key constraint')) {

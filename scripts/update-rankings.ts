@@ -1,11 +1,13 @@
 // scripts/update-rankings.ts
 // Recalculate all member rankings with proper tie-breaking
 import { PrismaClient } from '@prisma/client';
+import logger from '../lib/logger';
+
 
 const prisma = new PrismaClient();
 
 async function updateRankings() {
-  console.log('🏆 Recalculating all member rankings with tie-breaking...\n');
+  logger.info(' Recalculating all member rankings with tie-breaking...\n');
 
   // Get all creators
   const creators = await prisma.creator.findMany({
@@ -13,7 +15,7 @@ async function updateRankings() {
   });
 
   // === GLOBAL RANKINGS (BY REFERRALS) ===
-  console.log('📊 Calculating global referral rankings...');
+  logger.info(' Calculating global referral rankings...');
   const allMembersByReferrals = await prisma.member.findMany({
     orderBy: [
       { totalReferred: 'desc' },
@@ -49,10 +51,10 @@ async function updateRankings() {
     });
   }
 
-  console.log(`✅ Updated ${allMembersByReferrals.length} global referral rankings`);
+  logger.info('Updated ${allMembersByReferrals.length} global referral rankings');
 
   // === GLOBAL RANKINGS (BY EARNINGS) ===
-  console.log('📊 Calculating global earnings rankings...');
+  logger.info(' Calculating global earnings rankings...');
   const allMembersByEarnings = await prisma.member.findMany({
     orderBy: [
       { lifetimeEarnings: 'desc' },
@@ -85,11 +87,11 @@ async function updateRankings() {
     });
   }
 
-  console.log(`✅ Updated ${allMembersByEarnings.length} global earnings rankings\n`);
+  logger.info('Updated ${allMembersByEarnings.length} global earnings rankings\n');
 
   // === COMMUNITY RANKINGS ===
   for (const creator of creators) {
-    console.log(`📊 Calculating community rankings for ${creator.companyName}...`);
+    logger.info(' Calculating community rankings for ${creator.companyName}...');
 
     const communityMembers = await prisma.member.findMany({
       where: { creatorId: creator.id },
@@ -124,10 +126,10 @@ async function updateRankings() {
       });
     }
 
-    console.log(`✅ Updated ${communityMembers.length} community rankings for ${creator.companyName}`);
+    logger.info('Updated ${communityMembers.length} community rankings for ${creator.companyName}');
   }
 
-  console.log('\n🎉 All rankings updated successfully with tie-breaking!');
+  logger.debug('\n🎉 All rankings updated successfully with tie-breaking!');
 }
 
 updateRankings()

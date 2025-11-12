@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Switch } from '../ui/switch';
 import { Gift, Save, Trophy, Clock } from 'lucide-react';
 import { Badge } from '../ui/badge';
+import logger from '../../lib/logger';
+
 
 interface RewardTier {
   count: number;
@@ -154,7 +156,7 @@ export function RewardManagementForm({
         welcomeMessage: welcomeMessage || null,
       };
 
-      console.log('📤 Saving reward settings:', payload);
+      logger.info(' Saving reward settings:', payload);
 
       // Save tier rewards
       const rewardsResponse = await fetch('/api/creator/rewards', {
@@ -168,7 +170,7 @@ export function RewardManagementForm({
       const rewardsData = await rewardsResponse.json();
 
       if (!rewardsResponse.ok) {
-        console.error('❌ Reward settings validation failed:', rewardsData);
+        logger.error('❌ Reward settings validation failed:', rewardsData);
         const errorMessage = rewardsData.error || 'Failed to save reward settings';
         const errorDetails = rewardsData.details
           ? '\n' + rewardsData.details.map((d: any) => `• ${d.path.join('.')}: ${d.message}`).join('\n')
@@ -203,12 +205,12 @@ export function RewardManagementForm({
       }
 
       setSaveSuccess(true);
-      console.log('✅ All reward settings saved successfully');
+      logger.info('All reward settings saved successfully');
 
       // Clear success message after 3 seconds
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
-      console.error('❌ Error saving reward settings:', err);
+      logger.error('❌ Error saving reward settings:', err);
       setError(err instanceof Error ? err.message : 'Failed to save settings');
     } finally {
       setIsSaving(false);

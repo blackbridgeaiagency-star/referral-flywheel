@@ -1,10 +1,12 @@
+import logger from '../lib/logger';
+
 // Script to optimize app icons for better performance
 const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
 
 async function optimizeIcons() {
-  console.log('🎨 Starting icon optimization...\n');
+  logger.info(' Starting icon optimization...\n');
 
   const optimizations = [
     {
@@ -38,14 +40,14 @@ async function optimizeIcons() {
     const inputPath = path.join(process.cwd(), input);
 
     if (!fs.existsSync(inputPath)) {
-      console.error(`❌ Source file not found: ${input}`);
+      logger.error(`❌ Source file not found: ${input}`);
       continue;
     }
 
     // Get original file size
     const originalStats = fs.statSync(inputPath);
     const originalSize = (originalStats.size / 1024 / 1024).toFixed(2);
-    console.log(`📁 Source: ${input} (${originalSize}MB)`);
+    logger.info(' Source: ${input} (${originalSize}MB)');
 
     for (const output of outputs) {
       const outputPath = path.join(process.cwd(), output.file);
@@ -55,7 +57,7 @@ async function optimizeIcons() {
         if (fs.existsSync(outputPath)) {
           const backupPath = outputPath.replace(/\.png$/, '.backup.png');
           fs.copyFileSync(outputPath, backupPath);
-          console.log(`  💾 Backed up: ${output.file}.backup.png`);
+          logger.debug(`  💾 Backed up: ${output.file}.backup.png`);
         }
 
         // Optimize image
@@ -87,22 +89,22 @@ async function optimizeIcons() {
         const savedSize = (originalStats.size / 1024 - newStats.size / 1024).toFixed(2);
         const savedPercent = ((1 - newStats.size / originalStats.size) * 100).toFixed(1);
 
-        console.log(`  ✅ ${output.description}`);
-        console.log(`     Size: ${newSize}KB (saved ${savedSize}KB / ${savedPercent}%)\n`);
+        logger.debug(`  ✅ ${output.description}`);
+        logger.debug(`     Size: ${newSize}KB (saved ${savedSize}KB / ${savedPercent}%)\n`);
 
       } catch (error) {
-        console.error(`  ❌ Failed to optimize ${output.file}:`, error.message);
+        logger.error(`  ❌ Failed to optimize ${output.file}:`, error.message);
       }
     }
   }
 
-  console.log('✨ Icon optimization complete!');
-  console.log('\n📊 Summary:');
-  console.log('  • app/icon.png - Optimized for PWA (512x512)');
-  console.log('  • app/apple-icon.png - Optimized for iOS (180x180)');
-  console.log('  • app/opengraph-image.png - Optimized for social (1200x630)');
-  console.log('\n💡 Backup files saved with .backup.png extension');
-  console.log('🚀 Your app will now load faster!');
+  logger.debug('✨ Icon optimization complete!');
+  logger.debug('\n📊 Summary:');
+  logger.debug('  • app/icon.png - Optimized for PWA (512x512)');
+  logger.debug('  • app/apple-icon.png - Optimized for iOS (180x180)');
+  logger.debug('  • app/opengraph-image.png - Optimized for social (1200x630)');
+  logger.debug('\n💡 Backup files saved with .backup.png extension');
+  logger.info(' Your app will now load faster!');
 }
 
 optimizeIcons().catch(console.error);

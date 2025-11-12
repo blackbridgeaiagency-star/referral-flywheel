@@ -25,6 +25,7 @@ import {
   PolarRadiusAxis,
   Radar,
 } from 'recharts';
+import logger from '../../lib/logger';
 import {
   TrendingUp,
   Users,
@@ -104,7 +105,7 @@ export default function AnalyticsDashboard() {
         setData(analyticsData);
       }
     } catch (error) {
-      console.error('Failed to fetch analytics:', error);
+      logger.error('Failed to fetch analytics:', error);
     } finally {
       setIsLoading(false);
     }

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
+import logger from '../../../../lib/logger';
+
 
 /**
  * POST /api/creator/onboarding
@@ -38,7 +40,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`📝 Completing onboarding for creator: ${creatorId}`);
+    logger.info(` Completing onboarding for creator: ${creatorId}`);
 
     // Update creator with onboarding data
     const updatedCreator = await prisma.creator.update({
@@ -71,7 +73,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log(`✅ Onboarding completed for ${updatedCreator.companyName}`);
+    logger.info(`Onboarding completed for ${updatedCreator.companyName}`);
 
     return NextResponse.json({
       success: true,
@@ -83,7 +85,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('❌ Error completing onboarding:', error);
+    logger.error('❌ Error completing onboarding:', error);
     return NextResponse.json(
       {
         error: 'Failed to complete onboarding',
@@ -111,7 +113,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    console.log(`⏭️  Skipping onboarding for creator: ${creatorId}`);
+    logger.debug(`⏭️  Skipping onboarding for creator: ${creatorId}`);
 
     // Mark onboarding as completed
     const updatedCreator = await prisma.creator.update({
@@ -122,7 +124,7 @@ export async function PUT(request: NextRequest) {
       },
     });
 
-    console.log(`✅ Onboarding skipped for ${updatedCreator.companyName}`);
+    logger.info(`Onboarding skipped for ${updatedCreator.companyName}`);
 
     return NextResponse.json({
       success: true,
@@ -134,7 +136,7 @@ export async function PUT(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('❌ Error skipping onboarding:', error);
+    logger.error('❌ Error skipping onboarding:', error);
     return NextResponse.json(
       {
         error: 'Failed to skip onboarding',

@@ -2,6 +2,8 @@
 import { prisma } from '../db/prisma';
 import { Prisma } from '@prisma/client';
 import { LRUCache } from 'lru-cache';
+import logger from '../logger';
+
 
 /**
  * Database Query Optimizer
@@ -89,7 +91,7 @@ function trackQueryPerformance(queryKey: string, duration: number): void {
 
   // Log slow queries
   if (duration > 1000) {
-    console.warn(`⚠️ Slow query detected: ${queryKey} took ${duration.toFixed(2)}ms`);
+    logger.warn(`⚠️ Slow query detected: ${queryKey} took ${duration.toFixed(2)}ms`);
   }
 }
 
@@ -251,7 +253,7 @@ export async function getOptimizedCreatorStats(creatorId: string) {
  * Preload and warm cache for frequently accessed data
  */
 export async function warmCache(): Promise<void> {
-  console.log('🔥 Warming query cache...');
+  logger.info(' Warming query cache...');
 
   try {
     // Get top creators to warm their caches
@@ -282,9 +284,9 @@ export async function warmCache(): Promise<void> {
       activeMembers.map(member => getOptimizedMemberStats(member.id))
     );
 
-    console.log(`✅ Cache warmed: ${topCreators.length} creators, ${activeMembers.length} members`);
+    logger.info('Cache warmed: ${topCreators.length} creators, ${activeMembers.length} members');
   } catch (error) {
-    console.error('❌ Cache warming failed:', error);
+    logger.error('❌ Cache warming failed:', error);
   }
 }
 
@@ -385,7 +387,7 @@ export async function analyzeQueryPerformance(query: string): Promise<{
       suggestions,
     };
   } catch (error) {
-    console.error('Query analysis failed:', error);
+    logger.error('Query analysis failed:', error);
     return {
       executionPlan: null,
       suggestions: ['Unable to analyze query'],
@@ -424,9 +426,9 @@ export function initQueryOptimizer(): void {
   setInterval(() => {
     const report = getQueryPerformanceReport();
     if (report.length > 0) {
-      console.log('📊 Query Performance Report:');
+      logger.info(' Query Performance Report:');
       report.slice(0, 5).forEach(q => {
-        console.log(`  ${q.query}: ${q.count} calls, avg ${q.avgTime.toFixed(2)}ms`);
+        logger.debug(`  ${q.query}: ${q.count} calls, avg ${q.avgTime.toFixed(2)}ms`);
       });
     }
   }, 60 * 1000); // Every minute

@@ -1,8 +1,10 @@
 // scripts/check-custom-rewards-status.ts
 import { prisma } from '../lib/db/prisma';
+import logger from '../lib/logger';
+
 
 async function checkCustomRewardsStatus() {
-  console.log('\n🔍 Checking Custom Rewards Status\n');
+  logger.debug('\n🔍 Checking Custom Rewards Status\n');
 
   try {
     const creators = await prisma.creator.findMany({
@@ -15,23 +17,23 @@ async function checkCustomRewardsStatus() {
     });
 
     creators.forEach(creator => {
-      console.log(`📋 ${creator.companyName}:`);
-      console.log(`   Custom Rewards: ${creator.customRewardEnabled ? '✅ ENABLED' : '❌ DISABLED'}`);
+      logger.info(' ${creator.companyName}:');
+      logger.debug(`   Custom Rewards: ${creator.customRewardEnabled ? '✅ ENABLED' : '❌ DISABLED'}`);
       if (creator.customRewardEnabled) {
-        console.log(`   Timeframe: ${creator.customRewardTimeframe}`);
-        console.log(`   Type: ${creator.customRewardType}`);
+        logger.debug(`   Timeframe: ${creator.customRewardTimeframe}`);
+        logger.debug(`   Type: ${creator.customRewardType}`);
       }
-      console.log();
+      logger.debug();
     });
 
-    console.log('💡 How it works:');
-    console.log('   1. Toggle custom rewards ON/OFF in creator dashboard');
-    console.log('   2. Click "Save Competition Settings"');
-    console.log('   3. Refresh member dashboard');
-    console.log('   4. Banner appears/disappears based on customRewardEnabled');
+    logger.info(' How it works:');
+    logger.debug('   1. Toggle custom rewards ON/OFF in creator dashboard');
+    logger.debug('   2. Click "Save Competition Settings"');
+    logger.debug('   3. Refresh member dashboard');
+    logger.debug('   4. Banner appears/disappears based on customRewardEnabled');
 
   } catch (error) {
-    console.error('❌ Error:', error);
+    logger.error('❌ Error:', error);
   } finally {
     await prisma.$disconnect();
   }

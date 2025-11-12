@@ -8,6 +8,7 @@ import { checkAttribution } from '../../../../lib/utils/attribution';
 import { sendWelcomeMessage } from '../../../../lib/whop/messaging';
 import { withRetry, shouldRetry } from '../../../../lib/utils/webhook-retry';
 import { withRateLimit } from '../../../../lib/security/rate-limit-utils';
+import logger from '../../../../lib/logger';
 import {
   isSubscriptionPayment,
   normalizeBillingPeriod,
@@ -31,19 +32,26 @@ export async function POST(request: NextRequest) {
       const signature = request.headers.get('whop-signature');
       const secret = process.env.WHOP_WEBHOOK_SECRET!;
 
-      // Only validate signature if present (test webhooks may not have it)
-      if (signature) {
+      // Require signature in production
+      if (!signature) {
+        // Allow unsigned webhooks only in development
+        if (process.env.NODE_ENV === 'production') {
+          logger.error('Missing webhook signature in production');
+          return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
+        } else {
+          logger.warn('No signature (development mode)');
+        }
+      } else {
+        // Validate signature
         const expectedSignature = crypto
           .createHmac('sha256', secret)
           .update(body)
           .digest('hex');
 
         if (signature !== expectedSignature) {
-          console.error('❌ Invalid webhook signature');
+          logger.error('Invalid webhook signature');
           return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
         }
-      } else {
-        console.log('⚠️  No signature (test webhook)');
       }
 
       const payload = JSON.parse(body);
@@ -60,7 +68,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      console.log(`📦 Webhook received: ${payload.action} (ID: ${webhookEvent.id})`);
+      logger.webhook(` Webhook received: ${payload.action} (ID: ${webhookEvent.id})`);
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // 3. ROUTE TO APPROPRIATE HANDLER
@@ -110,7 +118,7 @@ export async function POST(request: NextRequest) {
           break;
 
         default:
-          console.log(`⚠️  Unhandled webhook type: ${payload.action}`);
+          logger.warn(`  Unhandled webhook type: ${payload.action}`);
           result = { ok: true, message: 'Event logged but not processed' };
       }
 
@@ -128,7 +136,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(result);
 
     } catch (error: any) {
-      console.error('❌ Webhook processing error:', error);
+      logger.error('❌ Webhook processing error:', error);
 
       // Log the error but don't block webhook
       if (webhookEvent) {
@@ -138,7 +146,7 @@ export async function POST(request: NextRequest) {
             errorMessage: error.message,
             retryCount: { increment: 1 },
           },
-        }).catch(err => console.error('Failed to log error:', err));
+        }).catch(err => logger.error('Failed to log error:', err));
       }
 
       return NextResponse.json(
@@ -153,11 +161,11 @@ export async function POST(request: NextRequest) {
 // HANDLER: Payment Succeeded (Initial & Recurring)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function handlePaymentSucceeded(data: any, webhookEventId: string, request: NextRequest) {
-  console.log('💳 Processing payment.succeeded...');
+  logger.info(' Processing payment.succeeded...');
 
   // Validate required fields
   if (!data || !data.membership_id || !data.company_id || !data.id) {
-    console.error('❌ Missing required webhook data:', { data });
+    logger.error('❌ Missing required webhook data:', { data });
     return { ok: false, error: 'Missing required webhook data' };
   }
 
@@ -171,7 +179,7 @@ async function handlePaymentSucceeded(data: any, webhookEventId: string, request
   );
 
   if (!isSubscription) {
-    console.log('⏭️  Skipping non-subscription payment');
+    logger.debug('⏭️  Skipping non-subscription payment');
     return {
       ok: true,
       skipped: true,
@@ -188,7 +196,7 @@ async function handlePaymentSucceeded(data: any, webhookEventId: string, request
   });
 
   if (existingCommission) {
-    console.log(`⏭️ Payment ${data.id} already processed (idempotent)`);
+    logger.debug(`⏭️ Payment ${data.id} already processed (idempotent)`);
     return {
       ok: true,
       message: 'Payment already processed',
@@ -203,7 +211,7 @@ async function handlePaymentSucceeded(data: any, webhookEventId: string, request
 
   if (existingMember) {
     // Handle recurring payment for existing member
-    console.log('💳 Recurring payment for:', existingMember.username);
+    logger.info(' Recurring payment for:', existingMember.username);
     await handleRecurringPayment(
       existingMember,
       data,
@@ -276,13 +284,13 @@ async function handlePaymentSucceeded(data: any, webhookEventId: string, request
     },
   });
 
-  console.log(`✅ Member created: ${member.referralCode} (${memberOrigin})`);
+  logger.info(`Member created: ${member.referralCode} (${memberOrigin})`);
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // PROCESS COMMISSION IF REFERRED
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if (attribution && data.final_amount) {
-    console.log('💸 Processing commission for referred member...');
+    logger.info(' Processing commission for referred member...');
     await withRetry(
       () => processCommission({
         referrerCode: attribution.referralCode,
@@ -298,7 +306,7 @@ async function handlePaymentSucceeded(data: any, webhookEventId: string, request
         maxAttempts: 3,
         baseDelay: 1000,
         onRetry: (attempt, error) => {
-          console.log(`⏳ Retrying commission processing (attempt ${attempt}):`, error.message);
+          logger.debug(`⏳ Retrying commission processing (attempt ${attempt}):`, error.message);
         }
       }
     );
@@ -318,7 +326,7 @@ async function handlePaymentSucceeded(data: any, webhookEventId: string, request
 // HANDLER: Payment Refunded (CRITICAL!)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function handlePaymentRefunded(data: any, webhookEventId: string) {
-  console.log('💸 Processing refund...');
+  logger.info(' Processing refund...');
 
   const { id: refundId, payment_id: paymentId, amount, reason } = data;
 
@@ -334,7 +342,7 @@ async function handlePaymentRefunded(data: any, webhookEventId: string) {
   });
 
   if (!originalCommission) {
-    console.error(`❌ Cannot refund - no commission found for payment ${paymentId}`);
+    logger.error(`❌ Cannot refund - no commission found for payment ${paymentId}`);
     return { ok: false, error: 'Commission not found' };
   }
 
@@ -344,7 +352,7 @@ async function handlePaymentRefunded(data: any, webhookEventId: string) {
   });
 
   if (existingRefund) {
-    console.log('⏭️  Refund already processed');
+    logger.debug('⏭️  Refund already processed');
     return { ok: true, message: 'Already refunded' };
   }
 
@@ -369,7 +377,7 @@ async function handlePaymentRefunded(data: any, webhookEventId: string) {
     platformShareReversed = originalCommission.platformShare * refundRatio;
   }
 
-  console.log(`
+  logger.debug(`
     ═══════════════════════════════════════
     💸 REFUND PROCESSING
     ───────────────────────────────────────
@@ -450,7 +458,7 @@ async function handlePaymentRefunded(data: any, webhookEventId: string) {
     });
   });
 
-  console.log('✅ Refund processed successfully');
+  logger.info('Refund processed successfully');
 
   return {
     ok: true,
@@ -464,7 +472,7 @@ async function handlePaymentRefunded(data: any, webhookEventId: string) {
 // HANDLER: Membership Created
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function handleMembershipCreated(data: any, webhookEventId: string) {
-  console.log('👤 Membership created (event logged)');
+  logger.info(' Membership created (event logged)');
   // This is typically followed by payment.succeeded, so we just log it
   return { ok: true, message: 'Event logged' };
 }
@@ -473,7 +481,7 @@ async function handleMembershipCreated(data: any, webhookEventId: string) {
 // HANDLER: Membership Deleted (Cancellation)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function handleMembershipDeleted(data: any, webhookEventId: string) {
-  console.log('🚪 Member cancelled...');
+  logger.info(' Member cancelled...');
 
   const member = await prisma.member.findUnique({
     where: { membershipId: data.membership_id },
@@ -495,7 +503,7 @@ async function handleMembershipDeleted(data: any, webhookEventId: string) {
     },
   });
 
-  console.log(`✅ Marked member ${member.username} as cancelled`);
+  logger.info(`Marked member ${member.username} as cancelled`);
 
   return { ok: true };
 }
@@ -504,7 +512,7 @@ async function handleMembershipDeleted(data: any, webhookEventId: string) {
 // HANDLER: Payment Failed
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function handlePaymentFailed(data: any, webhookEventId: string) {
-  console.log('❌ Payment failed...');
+  logger.error('Payment failed...');
 
   const member = await prisma.member.findUnique({
     where: { membershipId: data.membership_id },
@@ -524,7 +532,7 @@ async function handlePaymentFailed(data: any, webhookEventId: string) {
     },
   });
 
-  console.log(`⚠️  Payment failure recorded for ${member.username}`);
+  logger.warn(`  Payment failure recorded for ${member.username}`);
 
   return { ok: true };
 }
@@ -533,7 +541,7 @@ async function handlePaymentFailed(data: any, webhookEventId: string) {
 // HANDLER: Trial Started
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function handleTrialStarted(data: any, webhookEventId: string) {
-  console.log('🎁 Trial started...');
+  logger.info(' Trial started...');
 
   const member = await prisma.member.findUnique({
     where: { membershipId: data.membership_id },
@@ -561,7 +569,7 @@ async function handleTrialStarted(data: any, webhookEventId: string) {
 // HANDLER: Trial Ended
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function handleTrialEnded(data: any, webhookEventId: string) {
-  console.log('⏰ Trial ended...');
+  logger.debug('⏰ Trial ended...');
 
   const member = await prisma.member.findUnique({
     where: { membershipId: data.membership_id },
@@ -584,7 +592,7 @@ async function handleTrialEnded(data: any, webhookEventId: string) {
 // HANDLER: Subscription Cancelled (different from membership.deleted)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function handleSubscriptionCancelled(data: any, webhookEventId: string) {
-  console.log('🔚 Subscription cancelled...');
+  logger.info(' Subscription cancelled...');
 
   // Similar to membership.deleted
   return handleMembershipDeleted(data, webhookEventId);
@@ -618,7 +626,7 @@ async function processCommission({
   });
 
   if (!referrer) {
-    console.error('❌ Referrer not found:', referrerCode);
+    logger.error('❌ Referrer not found:', referrerCode);
     return;
   }
 
@@ -688,11 +696,11 @@ async function processCommission({
     }),
   ]);
 
-  console.log(`💰 Commission processed: $${memberShare} → ${referrerCode}`);
+  logger.info(` Commission processed: $${memberShare} → ${referrerCode}`);
 
   // 🎉 First referral success celebration
   if (isFirstReferral) {
-    console.log(`🎊 FIRST REFERRAL SUCCESS for ${referrerCode}!`);
+    logger.info(` FIRST REFERRAL SUCCESS for ${referrerCode}!`);
   }
 }
 
@@ -707,7 +715,7 @@ async function handleRecurringPayment(
 ) {
   // Validate data
   if (!data.final_amount || !data.id) {
-    console.error('❌ Missing required data in recurring payment webhook');
+    logger.error('❌ Missing required data in recurring payment webhook');
     return;
   }
 
@@ -717,7 +725,7 @@ async function handleRecurringPayment(
   });
 
   if (existingCommission) {
-    console.log(`⏭️ Recurring payment ${data.id} already processed`);
+    logger.debug(`⏭️ Recurring payment ${data.id} already processed`);
     return;
   }
 
@@ -739,7 +747,7 @@ async function handleRecurringPayment(
 
   // ONLY process commission if this member was referred (ignore organic members)
   if (member.referredBy) {
-    console.log('💸 Processing recurring commission for referred member...');
+    logger.info(' Processing recurring commission for referred member...');
     const referrer = await prisma.member.findUnique({
       where: { referralCode: member.referredBy }
     });
@@ -792,10 +800,10 @@ async function handleRecurringPayment(
         }),
       ]);
 
-      console.log(`💰 Recurring commission: $${memberShare} → ${referrer.referralCode}`);
+      logger.info(` Recurring commission: $${memberShare} → ${referrer.referralCode}`);
     }
   } else {
-    console.log('✔️  Organic member recurring payment - no commission to process');
+    logger.debug('✔️  Organic member recurring payment - no commission to process');
   }
 }
 

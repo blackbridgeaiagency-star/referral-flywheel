@@ -9,6 +9,8 @@
  */
 
 import { prisma } from '../db/prisma';
+import logger from '../logger';
+
 
 // Add this model to Prisma schema later:
 // model ShareEvent {
@@ -84,7 +86,7 @@ export async function trackShare(event: ShareEvent): Promise<void> {
     //   },
     // });
   } catch (error) {
-    console.error('Failed to track share:', error);
+    logger.error('Failed to track share:', error);
     // Don't throw - tracking failures shouldn't break the app
   }
 }
@@ -109,7 +111,7 @@ export async function getMemberShareStats(memberId: string): Promise<ShareStats>
       shareStreak: 0,
     };
   } catch (error) {
-    console.error('Failed to get share stats:', error);
+    logger.error('Failed to get share stats:', error);
     return {
       totalShares: 0,
       sharesByPlatform: {} as Record<SharePlatform, number>,
@@ -151,7 +153,7 @@ export async function getShareConversionFunnel(
     // For now, return empty array
     return [];
   } catch (error) {
-    console.error('Failed to get share conversion funnel:', error);
+    logger.error('Failed to get share conversion funnel:', error);
     return [];
   }
 }
@@ -217,7 +219,7 @@ export async function getPlatformPerformance(creatorId: string): Promise<{
       recommendations,
     };
   } catch (error) {
-    console.error('Failed to get platform performance:', error);
+    logger.error('Failed to get platform performance:', error);
     return {
       topPlatform: null,
       avgClicksPerShare: {} as Record<SharePlatform, number>,
@@ -246,7 +248,7 @@ export async function shouldRemindToShare(memberId: string): Promise<boolean> {
 
     return false; // Temporarily disabled
   } catch (error) {
-    console.error('Failed to check share reminder:', error);
+    logger.error('Failed to check share reminder:', error);
     return false;
   }
 }
@@ -285,7 +287,7 @@ export async function calculateShareStreak(memberId: string): Promise<number> {
 
     return 0; // Temporarily disabled
   } catch (error) {
-    console.error('Failed to calculate share streak:', error);
+    logger.error('Failed to calculate share streak:', error);
     return 0;
   }
 }

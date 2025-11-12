@@ -3,16 +3,18 @@
 // SAFE: Only removes demo data, preserves real user data
 
 import { PrismaClient } from '@prisma/client';
+import logger from '../lib/logger';
+
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🧹 Starting demo data cleanup...\n');
-  console.log('⚠️  This will ONLY delete demo data (emails with @demo.com and demo user IDs)\n');
-  console.log('✅ Real user data will be preserved!\n');
+  logger.debug('🧹 Starting demo data cleanup...\n');
+  logger.warn('  This will ONLY delete demo data (emails with @demo.com and demo user IDs)\n');
+  logger.info('Real user data will be preserved!\n');
 
   // Step 1: Find all demo member IDs
-  console.log('🔍 Finding demo members...');
+  logger.info(' Finding demo members...');
   const demoMembers = await prisma.member.findMany({
     where: {
       OR: [
@@ -28,50 +30,50 @@ async function main() {
     select: { id: true, userId: true, email: true },
   });
   const demoMemberIds = demoMembers.map(m => m.id);
-  console.log(`   Found ${demoMembers.length} demo members\n`);
+  logger.debug(`   Found ${demoMembers.length} demo members\n`);
 
   // Step 2: Delete attribution clicks
-  console.log('🔗 Deleting demo attribution clicks...');
+  logger.info(' Deleting demo attribution clicks...');
   const attributions = await prisma.attributionClick.deleteMany({
     where: {
       memberId: { in: demoMemberIds },
     },
   });
-  console.log(`   ✅ Deleted ${attributions.count} attribution clicks\n`);
+  logger.debug(`   ✅ Deleted ${attributions.count} attribution clicks\n`);
 
   // Step 3: Delete share events
-  console.log('📤 Deleting demo share events...');
+  logger.info(' Deleting demo share events...');
   const shares = await prisma.shareEvent.deleteMany({
     where: {
       memberId: { in: demoMemberIds },
     },
   });
-  console.log(`   ✅ Deleted ${shares.count} share events\n`);
+  logger.debug(`   ✅ Deleted ${shares.count} share events\n`);
 
   // Step 4: Delete commissions
-  console.log('💰 Deleting demo commissions...');
+  logger.info(' Deleting demo commissions...');
   const commissions = await prisma.commission.deleteMany({
     where: {
       memberId: { in: demoMemberIds },
     },
   });
-  console.log(`   ✅ Deleted ${commissions.count} commissions\n`);
+  logger.debug(`   ✅ Deleted ${commissions.count} commissions\n`);
 
   // Step 5: Delete demo members
-  console.log('👥 Deleting demo members...');
+  logger.info(' Deleting demo members...');
   const members = await prisma.member.deleteMany({
     where: {
       id: { in: demoMemberIds },
     },
   });
-  console.log(`   ✅ Deleted ${members.count} members\n`);
+  logger.debug(`   ✅ Deleted ${members.count} members\n`);
 
   // Step 6: Reset creator stats (only if no real members exist)
-  console.log('📊 Checking for real members...');
+  logger.info(' Checking for real members...');
   const realMemberCount = await prisma.member.count();
 
   if (realMemberCount === 0) {
-    console.log('   No real members found, resetting creator stats...');
+    logger.debug('   No real members found, resetting creator stats...');
     await prisma.creator.updateMany({
       where: { companyId: 'biz_kkGoY7OvzWXRdK' },
       data: {
@@ -80,26 +82,26 @@ async function main() {
         monthlyRevenue: 0,
       },
     });
-    console.log('   ✅ Creator stats reset\n');
+    logger.debug('   ✅ Creator stats reset\n');
   } else {
-    console.log(`   ✅ Found ${realMemberCount} real members, keeping creator stats intact\n`);
+    logger.debug(`   ✅ Found ${realMemberCount} real members, keeping creator stats intact\n`);
   }
 
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('✅ Demo data cleanup complete!\n');
-  console.log('📊 Summary:');
-  console.log(`   • Members deleted: ${members.count}`);
-  console.log(`   • Commissions deleted: ${commissions.count}`);
-  console.log(`   • Attribution clicks deleted: ${attributions.count}`);
-  console.log(`   • Share events deleted: ${shares.count}`);
-  console.log(`   • Real members preserved: ${realMemberCount}`);
-  console.log('\n🎯 Your database is now ready for real users!');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+  logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  logger.info('Demo data cleanup complete!\n');
+  logger.info(' Summary:');
+  logger.debug(`   • Members deleted: ${members.count}`);
+  logger.debug(`   • Commissions deleted: ${commissions.count}`);
+  logger.debug(`   • Attribution clicks deleted: ${attributions.count}`);
+  logger.debug(`   • Share events deleted: ${shares.count}`);
+  logger.debug(`   • Real members preserved: ${realMemberCount}`);
+  logger.debug('\n🎯 Your database is now ready for real users!');
+  logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error cleaning up demo data:', e);
+    logger.error('❌ Error cleaning up demo data:', e);
     process.exit(1);
   })
   .finally(async () => {

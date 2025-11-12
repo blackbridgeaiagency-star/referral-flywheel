@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
 import { withRateLimit } from '../../../../lib/security/rate-limit-utils';
+import logger from '../../../../lib/logger';
+
 
 export async function POST(request: NextRequest) {
   return withRateLimit(request, async () => {
@@ -53,7 +55,7 @@ export async function POST(request: NextRequest) {
         referralCode: updatedMember.referralCode,
       });
     } catch (error) {
-      console.error('❌ Error updating referral code:', error);
+      logger.error('❌ Error updating referral code:', error);
       return NextResponse.json(
         { error: 'Failed to update referral code' },
         { status: 500 }

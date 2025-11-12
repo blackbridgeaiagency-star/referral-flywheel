@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
 import { startOfMonth, format } from 'date-fns';
+import logger from '../../../../lib/logger';
+
 
 /**
  * Bulletproof Monthly Stats Reset Cron Job
@@ -35,7 +37,7 @@ export async function POST(request: NextRequest) {
     const expectedAuth = `Bearer ${process.env.CRON_SECRET}`;
 
     if (authHeader !== expectedAuth) {
-      console.error('❌ Unauthorized monthly reset attempt');
+      logger.error('❌ Unauthorized monthly reset attempt');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -46,7 +48,7 @@ export async function POST(request: NextRequest) {
     const dayOfMonth = now.getUTCDate();
 
     if (dayOfMonth !== 1) {
-      console.warn(`⚠️  Monthly reset should run on 1st, but today is ${dayOfMonth}`);
+      logger.warn(`⚠️  Monthly reset should run on 1st, but today is ${dayOfMonth}`);
 
       // Allow manual trigger with special header
       const forceHeader = request.headers.get('x-force-reset');
@@ -56,13 +58,13 @@ export async function POST(request: NextRequest) {
           { status: 403 }
         );
       }
-      console.log('🔓 Force reset enabled, proceeding...');
+      logger.info(' Force reset enabled, proceeding...');
     }
 
     const previousMonth = format(new Date(now.getFullYear(), now.getMonth() - 1, 1), 'yyyy-MM');
     const currentMonth = format(startOfMonth(now), 'yyyy-MM');
 
-    console.log(`🔄 Starting monthly reset: ${previousMonth} → ${currentMonth}`);
+    logger.info(` Starting monthly reset: ${previousMonth} → ${currentMonth}`);
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // SAFETY 2: Check if already reset for this month
@@ -75,7 +77,7 @@ export async function POST(request: NextRequest) {
     if (lastReset?.lastMonthReset) {
       const lastResetMonth = format(lastReset.lastMonthReset, 'yyyy-MM');
       if (lastResetMonth === currentMonth) {
-        console.log('⏭️  Already reset for this month, skipping');
+        logger.debug('⏭️  Already reset for this month, skipping');
         return NextResponse.json({ ok: true, message: 'Already reset' });
       }
     }
@@ -83,7 +85,7 @@ export async function POST(request: NextRequest) {
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // STEP 1: Create snapshots BEFORE resetting
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    console.log('📸 Creating snapshots...');
+    logger.info(' Creating snapshots...');
 
     const members = await prisma.member.findMany({
       select: {
@@ -94,7 +96,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log(`  Found ${members.length} members to snapshot`);
+    logger.debug(`  Found ${members.length} members to snapshot`);
 
     // Create member snapshots
     await prisma.monthlySnapshot.createMany({
@@ -130,12 +132,12 @@ export async function POST(request: NextRequest) {
       skipDuplicates: true,
     });
 
-    console.log('✅ Snapshots created');
+    logger.info('Snapshots created');
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // STEP 2: Reset all monthly fields
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    console.log('🔄 Resetting monthly stats...');
+    logger.info(' Resetting monthly stats...');
 
     const [memberUpdate, creatorUpdate] = await Promise.all([
       prisma.member.updateMany({
@@ -154,13 +156,13 @@ export async function POST(request: NextRequest) {
       }),
     ]);
 
-    console.log(`✅ Reset ${memberUpdate.count} members`);
-    console.log(`✅ Reset ${creatorUpdate.count} creators`);
+    logger.info(`Reset ${memberUpdate.count} members`);
+    logger.info(`Reset ${creatorUpdate.count} creators`);
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // STEP 3: Verification
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    console.log('🔍 Verifying reset...');
+    logger.info(' Verifying reset...');
 
     const verification = await prisma.member.aggregate({
       _sum: { monthlyReferred: true, monthlyEarnings: true },
@@ -171,18 +173,18 @@ export async function POST(request: NextRequest) {
       verification._sum.monthlyEarnings === 0;
 
     if (!verificationPassed) {
-      console.error('❌ VERIFICATION FAILED: Monthly stats not all zero!');
+      logger.error('❌ VERIFICATION FAILED: Monthly stats not all zero!');
       return NextResponse.json(
         { error: 'Reset verification failed' },
         { status: 500 }
       );
     }
 
-    console.log('═══════════════════════════════════════');
-    console.log('✅ MONTHLY RESET COMPLETE');
-    console.log(`   Previous month: ${previousMonth} (archived)`);
-    console.log(`   Current month: ${currentMonth} (started fresh)`);
-    console.log('═══════════════════════════════════════');
+    logger.debug('═══════════════════════════════════════');
+    logger.info('MONTHLY RESET COMPLETE');
+    logger.debug(`   Previous month: ${previousMonth} (archived)`);
+    logger.debug(`   Current month: ${currentMonth} (started fresh)`);
+    logger.debug('═══════════════════════════════════════');
 
     return NextResponse.json({
       ok: true,
@@ -195,7 +197,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Monthly reset failed:', error);
+    logger.error('❌ Monthly reset failed:', error);
     return NextResponse.json(
       { error: 'Monthly reset failed', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

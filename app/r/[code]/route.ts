@@ -3,6 +3,8 @@ import { prisma } from '../../../lib/db/prisma';
 import { generateFingerprint } from '../../../lib/utils/fingerprint';
 import { hashIP, extractRealIP } from '../../../lib/utils/ip-hash';
 import { applyRateLimit } from '../../../lib/security/rate-limit-utils';
+import logger from '../../../lib/logger';
+
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -33,7 +35,7 @@ export async function GET(
     );
 
     if (!rateLimitResult.success) {
-      console.log(`⚠️ Rate limit exceeded for IP: ${realIP}`);
+      logger.warn(` Rate limit exceeded for IP: ${realIP}`);
       const retryAfterSeconds = Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000);
       return NextResponse.json(
         {
@@ -54,11 +56,11 @@ export async function GET(
 
     // Validate referral code format
     if (!code || code.length < 5) {
-      console.error('❌ Invalid referral code format:', code);
+      logger.error('❌ Invalid referral code format:', code);
       return redirectWithError('invalid_code');
     }
 
-    console.log('🔗 Referral click:', code);
+    logger.info(' Referral click:', code);
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // 1. FIND MEMBER BY REFERRAL CODE
@@ -69,12 +71,12 @@ export async function GET(
     });
 
     if (!member) {
-      console.error('❌ Member not found for code:', code);
+      logger.error('❌ Member not found for code:', code);
       return redirectWithError('invalid_code');
     }
 
     if (!member.creator) {
-      console.error('❌ Creator not found for member:', member.id);
+      logger.error('❌ Creator not found for member:', member.id);
       return redirectWithError('invalid_code');
     }
 
@@ -93,7 +95,7 @@ export async function GET(
     });
 
     if (existingClick) {
-      console.log('⏭️  Duplicate click detected, using existing attribution');
+      logger.debug('⏭️  Duplicate click detected, using existing attribution');
       // Still redirect - don't create duplicate
       return redirectToProduct(member.creator.productId, code);
     }
@@ -120,10 +122,10 @@ export async function GET(
         }
       });
 
-      console.log(`✅ Attribution created for ${code} (expires in 30 days)`);
+      logger.info(`Attribution created for ${code} (expires in 30 days)`);
     } catch (dbError) {
       // Log error but continue with redirect (don't block user)
-      console.error('❌ Failed to create attribution:', dbError);
+      logger.error('❌ Failed to create attribution:', dbError);
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -136,7 +138,7 @@ export async function GET(
       });
     } catch (updateError) {
       // Non-critical, just log
-      console.error('⚠️ Failed to update lastActive:', updateError);
+      logger.error('⚠️ Failed to update lastActive:', updateError);
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -145,7 +147,7 @@ export async function GET(
     return redirectToProduct(member.creator.productId, code);
 
   } catch (error) {
-    console.error('❌ Referral redirect error:', error);
+    logger.error('❌ Referral redirect error:', error);
     return redirectWithError('server_error');
   }
 }
@@ -159,7 +161,7 @@ function redirectToProduct(productId: string, referralCode: string): NextRespons
   const response = NextResponse.redirect(whopProductUrl);
 
   // Set referral cookie (30 days)
-  response.cookies.set('referral_code', referralCode, {
+  response.cookies.set('ref_code', referralCode, {
     maxAge: 30 * 24 * 60 * 60, // 30 days in seconds
     path: '/',
     httpOnly: true,

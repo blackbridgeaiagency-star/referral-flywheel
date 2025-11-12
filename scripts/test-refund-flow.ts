@@ -11,12 +11,14 @@
  */
 
 import { prisma } from '../lib/db/prisma';
+import logger from '../lib/logger';
+
 
 const WEBHOOK_ENDPOINT = process.env.NEXT_PUBLIC_APP_URL + '/api/webhooks/whop';
 
 async function testRefundFlow() {
-  console.log('\n🧪 REFUND FLOW TEST SUITE\n');
-  console.log('═══════════════════════════════════════════════════════════\n');
+  logger.debug('\n🧪 REFUND FLOW TEST SUITE\n');
+  logger.debug('═══════════════════════════════════════════════════════════\n');
 
   let passed = 0;
   let failed = 0;
@@ -24,7 +26,7 @@ async function testRefundFlow() {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // TEST 1: Setup - Create test data
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('📋 Test 1: Setting up test data...');
+  logger.info(' Test 1: Setting up test data...');
 
   try {
     // Create test creator
@@ -115,12 +117,12 @@ async function testRefundFlow() {
       update: {},
     });
 
-    console.log('✅ Test 1 PASSED: Test data created');
-    console.log(`   Referrer: ${referrer.username} (Balance: $${referrer.lifetimeEarnings})`);
-    console.log(`   Commission: $${commission.saleAmount} (Member share: $${commission.memberShare})\n`);
+    logger.info('Test 1 PASSED: Test data created');
+    logger.debug(`   Referrer: ${referrer.username} (Balance: $${referrer.lifetimeEarnings})`);
+    logger.debug(`   Commission: $${commission.saleAmount} (Member share: $${commission.memberShare})\n`);
     passed++;
   } catch (error: any) {
-    console.error('❌ Test 1 FAILED:', error.message);
+    logger.error('❌ Test 1 FAILED:', error.message);
     failed++;
     return;
   }
@@ -128,7 +130,7 @@ async function testRefundFlow() {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // TEST 2: Full Refund
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('📋 Test 2: Processing full refund...');
+  logger.info(' Test 2: Processing full refund...');
 
   try {
     const refundWebhook = {
@@ -185,20 +187,20 @@ async function testRefundFlow() {
       where: { memberId: updatedReferrer.id },
     });
 
-    console.log('✅ Test 2 PASSED: Full refund processed correctly');
-    console.log(`   Refund Amount: $${refund.refundAmount}`);
-    console.log(`   Member Share Reversed: $${refund.memberShareReversed}`);
-    console.log(`   New Referrer Balance: $${updatedReferrer.lifetimeEarnings}\n`);
+    logger.info('Test 2 PASSED: Full refund processed correctly');
+    logger.debug(`   Refund Amount: $${refund.refundAmount}`);
+    logger.debug(`   Member Share Reversed: $${refund.memberShareReversed}`);
+    logger.debug(`   New Referrer Balance: $${updatedReferrer.lifetimeEarnings}\n`);
     passed++;
   } catch (error: any) {
-    console.error('❌ Test 2 FAILED:', error.message);
+    logger.error('❌ Test 2 FAILED:', error.message);
     failed++;
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // TEST 3: Double Refund Prevention (Idempotency)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('📋 Test 3: Testing double refund prevention...');
+  logger.info(' Test 3: Testing double refund prevention...');
 
   try {
     const balanceBefore = await prisma.member.findUnique({
@@ -247,18 +249,18 @@ async function testRefundFlow() {
       throw new Error(`Found ${refundCount} refund records, expected 1`);
     }
 
-    console.log('✅ Test 3 PASSED: Double refund prevented (idempotent)');
-    console.log(`   Balance unchanged: $${balanceAfter?.lifetimeEarnings}\n`);
+    logger.info('Test 3 PASSED: Double refund prevented (idempotent)');
+    logger.debug(`   Balance unchanged: $${balanceAfter?.lifetimeEarnings}\n`);
     passed++;
   } catch (error: any) {
-    console.error('❌ Test 3 FAILED:', error.message);
+    logger.error('❌ Test 3 FAILED:', error.message);
     failed++;
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // TEST 4: Partial Refund
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('📋 Test 4: Processing partial refund...');
+  logger.info(' Test 4: Processing partial refund...');
 
   try {
     // Create another commission for partial refund testing
@@ -339,20 +341,20 @@ async function testRefundFlow() {
       throw new Error(`Commission status is ${updatedCommission?.status}, expected 'partial_refund'`);
     }
 
-    console.log('✅ Test 4 PASSED: Partial refund processed correctly');
-    console.log(`   Original Sale: $${newCommission.saleAmount}`);
-    console.log(`   Refund Amount: $${refund.refundAmount} (50%)`);
-    console.log(`   Member Share Reversed: $${refund.memberShareReversed} (50% of $10)\n`);
+    logger.info('Test 4 PASSED: Partial refund processed correctly');
+    logger.debug(`   Original Sale: $${newCommission.saleAmount}`);
+    logger.debug(`   Refund Amount: $${refund.refundAmount} (50%)`);
+    logger.debug(`   Member Share Reversed: $${refund.memberShareReversed} (50% of $10)\n`);
     passed++;
   } catch (error: any) {
-    console.error('❌ Test 4 FAILED:', error.message);
+    logger.error('❌ Test 4 FAILED:', error.message);
     failed++;
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // TEST 5: Refund Creates Negative Balance (Edge Case)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('📋 Test 5: Testing refund with negative balance...');
+  logger.info(' Test 5: Testing refund with negative balance...');
 
   try {
     // Set referrer balance to $2 (less than commission of $4.999)
@@ -417,27 +419,27 @@ async function testRefundFlow() {
       throw new Error(`Referrer balance is $${updatedReferrer.lifetimeEarnings}, expected $${expectedBalance}`);
     }
 
-    console.log('✅ Test 5 PASSED: Negative balance handled correctly');
-    console.log(`   Balance after refund: $${updatedReferrer.lifetimeEarnings.toFixed(2)} (NEGATIVE)\n`);
+    logger.info('Test 5 PASSED: Negative balance handled correctly');
+    logger.debug(`   Balance after refund: $${updatedReferrer.lifetimeEarnings.toFixed(2)} (NEGATIVE)\n`);
     passed++;
   } catch (error: any) {
-    console.error('❌ Test 5 FAILED:', error.message);
+    logger.error('❌ Test 5 FAILED:', error.message);
     failed++;
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // SUMMARY
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('\n═══════════════════════════════════════════════════════════');
-  console.log('📊 TEST RESULTS');
-  console.log('═══════════════════════════════════════════════════════════');
-  console.log(`✅ Passed: ${passed}`);
-  console.log(`❌ Failed: ${failed}`);
-  console.log(`📈 Success Rate: ${((passed / (passed + failed)) * 100).toFixed(2)}%`);
-  console.log('═══════════════════════════════════════════════════════════\n');
+  logger.debug('\n═══════════════════════════════════════════════════════════');
+  logger.info(' TEST RESULTS');
+  logger.debug('═══════════════════════════════════════════════════════════');
+  logger.info('Passed: ${passed}');
+  logger.error('Failed: ${failed}');
+  logger.info(' Success Rate: ${((passed / (passed + failed)) * 100).toFixed(2)}%');
+  logger.debug('═══════════════════════════════════════════════════════════\n');
 
   // Cleanup
-  console.log('🧹 Cleaning up test data...');
+  logger.debug('🧹 Cleaning up test data...');
   await prisma.refund.deleteMany({
     where: {
       whopRefundId: {
@@ -472,7 +474,7 @@ async function testRefundFlow() {
     where: { companyId: 'test_company_refund' },
   });
 
-  console.log('✅ Cleanup complete\n');
+  logger.info('Cleanup complete\n');
 
   process.exit(failed > 0 ? 1 : 0);
 }

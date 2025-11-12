@@ -1,3 +1,5 @@
+import logger from '../logger';
+
 // lib/whop/api-client.ts
 /**
  * Whop REST API v2 Client
@@ -10,7 +12,7 @@ const WHOP_API_BASE = 'https://api.whop.com/api/v2';
 const WHOP_API_KEY = process.env.WHOP_API_KEY;
 
 if (!WHOP_API_KEY) {
-  console.warn('⚠️ WHOP_API_KEY not configured - Whop API calls will fail');
+  logger.warn('⚠️ WHOP_API_KEY not configured - Whop API calls will fail');
 }
 
 /**
@@ -37,7 +39,7 @@ async function whopApiRequest<T>(
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`❌ Whop API error (${response.status}):`, errorText);
+    logger.error(`❌ Whop API error (${response.status}):`, errorText);
     throw new Error(`Whop API error: ${response.status} ${errorText}`);
   }
 
@@ -63,7 +65,7 @@ export interface WhopCompany {
  * Fetch company details by company ID
  */
 export async function getCompany(companyId: string): Promise<WhopCompany> {
-  console.log(`📡 Fetching company details: ${companyId}`);
+  logger.info(` Fetching company details: ${companyId}`);
   const response = await whopApiRequest<{ data: WhopCompany }>(
     `/companies/${companyId}`
   );
@@ -94,7 +96,7 @@ export interface WhopMembership {
 export async function getCompanyMemberships(
   companyId: string
 ): Promise<WhopMembership[]> {
-  console.log(`📡 Fetching memberships for company: ${companyId}`);
+  logger.info(` Fetching memberships for company: ${companyId}`);
   const response = await whopApiRequest<{ data: WhopMembership[] }>(
     `/memberships?company_id=${companyId}`
   );
@@ -105,7 +107,7 @@ export async function getCompanyMemberships(
  * Get a specific membership by ID
  */
 export async function getMembership(membershipId: string): Promise<WhopMembership> {
-  console.log(`📡 Fetching membership: ${membershipId}`);
+  logger.info(` Fetching membership: ${membershipId}`);
   const response = await whopApiRequest<{ data: WhopMembership }>(
     `/memberships/${membershipId}`
   );
@@ -127,7 +129,7 @@ export interface WhopUser {
  * Get user details
  */
 export async function getUser(userId: string): Promise<WhopUser> {
-  console.log(`📡 Fetching user: ${userId}`);
+  logger.info(` Fetching user: ${userId}`);
   const response = await whopApiRequest<{ data: WhopUser }>(
     `/users/${userId}`
   );
@@ -149,7 +151,7 @@ export async function sendDirectMessage(
   }
 ): Promise<{ success: boolean; messageId?: string }> {
   try {
-    console.log(`📧 Sending DM to user: ${userId}`);
+    logger.info(` Sending DM to user: ${userId}`);
 
     // Try the chat endpoint for sending messages (requires chat:message:create permission)
     // Alternative endpoints to try: /chat/messages, /support_chat/messages, /companies/{id}/chat
@@ -169,17 +171,17 @@ export async function sendDirectMessage(
       }
     );
 
-    console.log(`✅ Message sent successfully`);
+    logger.info('Message sent successfully');
     return {
       success: true,
       messageId: response.id,
     };
   } catch (error) {
-    console.error(`❌ Failed to send DM:`, error);
+    logger.error(`❌ Failed to send DM:`, error);
 
     // Try alternative endpoint for support chat
     try {
-      console.log(`📧 Trying support chat endpoint...`);
+      logger.info(' Trying support chat endpoint...');
       const supportResponse = await whopApiRequest<{ success: boolean; id?: string }>(
         `/support_chat/messages`,
         {
@@ -192,13 +194,13 @@ export async function sendDirectMessage(
         }
       );
 
-      console.log(`✅ Message sent via support chat`);
+      logger.info('Message sent via support chat');
       return {
         success: true,
         messageId: supportResponse.id,
       };
     } catch (supportError) {
-      console.error(`❌ Support chat also failed:`, supportError);
+      logger.error(`❌ Support chat also failed:`, supportError);
     }
 
     // Don't throw - return failure status so caller can handle gracefully
@@ -225,7 +227,7 @@ export interface WhopProduct {
  * Get product details
  */
 export async function getProduct(productId: string): Promise<WhopProduct> {
-  console.log(`📡 Fetching product: ${productId}`);
+  logger.info(` Fetching product: ${productId}`);
   const response = await whopApiRequest<{ data: WhopProduct }>(
     `/products/${productId}`
   );

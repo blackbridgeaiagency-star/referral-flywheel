@@ -4,6 +4,8 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Activity, TrendingUp, MousePointer, DollarSign } from 'lucide-react';
+import logger from '../../lib/logger';
+
 
 interface TodayStatsProps {
   creatorId: string;
@@ -34,7 +36,7 @@ export function TodayStatsCard({ creatorId }: TodayStatsProps) {
       setStats(data);
       setLastUpdate(new Date());
     } catch (error) {
-      console.error('Error fetching today stats:', error);
+      logger.error('Error fetching today stats:', error);
     } finally {
       setIsLoading(false);
     }

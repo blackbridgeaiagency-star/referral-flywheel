@@ -1,6 +1,8 @@
 // app/api/cron/reset-monthly/route.ts
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
+import logger from '../../../../lib/logger';
+
 
 // Force dynamic rendering (don't pre-render at build time)
 export const dynamic = 'force-dynamic';
@@ -20,12 +22,12 @@ export async function GET(request: Request) {
     const authHeader = request.headers.get('authorization');
     if (process.env.CRON_SECRET) {
       if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-        console.error('❌ Unauthorized cron request');
+        logger.error('❌ Unauthorized cron request');
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
     }
 
-    console.log('🔄 Starting monthly reset...');
+    logger.info(' Starting monthly reset...');
     const startTime = Date.now();
 
     // Reset all members' monthly stats in a single query
@@ -62,13 +64,13 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('❌ Monthly reset failed:', error);
+    logger.error('❌ Monthly reset failed:', error);
 
     // Try to log the failure
     try {
       await logResetEvent(0, 0, 0, error as Error);
     } catch (logError) {
-      console.error('Failed to log reset error:', logError);
+      logger.error('Failed to log reset error:', logError);
     }
 
     return NextResponse.json(
@@ -106,7 +108,7 @@ async function logResetEvent(
   };
 
   // For now, just log to console
-  console.log('📊 Reset Event:', JSON.stringify(eventData, null, 2));
+  logger.info(' Reset Event:', JSON.stringify(eventData, null, 2));
 
   // TODO: In production, consider creating an AuditLog table:
   // await prisma.auditLog.create({

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { EarningsChart } from './EarningsChart';
+import logger from '../../lib/logger';
+
 
 interface EarningsChartWrapperProps {
   memberId: string;
@@ -42,10 +44,10 @@ export function EarningsChartWrapper({ memberId, initialData }: EarningsChartWra
           const newData = await response.json();
           setData(newData);
         } else {
-          console.error('Failed to fetch earnings data:', response.statusText);
+          logger.error('Failed to fetch earnings data:', response.statusText);
         }
       } catch (error) {
-        console.error('Error fetching earnings data:', error);
+        logger.error('Error fetching earnings data:', error);
       } finally {
         setIsLoading(false);
       }

@@ -6,9 +6,11 @@
  */
 
 import { prisma } from '../lib/db/prisma';
+import logger from '../lib/logger';
+
 
 async function backfillMemberBilling() {
-  console.log('🔄 Starting member billing data backfill...\n');
+  logger.info(' Starting member billing data backfill...\n');
 
   try {
     // Get all members without billing data
@@ -25,10 +27,10 @@ async function backfillMemberBilling() {
       },
     });
 
-    console.log(`📊 Found ${membersWithoutBilling.length} members without billing data\n`);
+    logger.info(' Found ${membersWithoutBilling.length} members without billing data\n');
 
     if (membersWithoutBilling.length === 0) {
-      console.log('✅ All members already have billing data!');
+      logger.info('All members already have billing data!');
       return;
     }
 
@@ -45,18 +47,18 @@ async function backfillMemberBilling() {
 
       updatedCount++;
       if (updatedCount % 10 === 0) {
-        console.log(`   Updated ${updatedCount}/${membersWithoutBilling.length} members...`);
+        logger.debug(`   Updated ${updatedCount}/${membersWithoutBilling.length} members...`);
       }
     }
 
-    console.log(`\n✅ Successfully backfilled ${updatedCount} members!`);
-    console.log('\n📋 Summary:');
-    console.log(`   - All existing members set to "monthly" billing`);
-    console.log(`   - monthlyValue = subscriptionPrice (${membersWithoutBilling[0]?.subscriptionPrice || 'N/A'})`);
-    console.log('\n💡 Note: If any of these were actually annual/lifetime, you\'ll need to manually correct them.\n');
+    logger.debug(`\n✅ Successfully backfilled ${updatedCount} members!`);
+    logger.debug('\n📋 Summary:');
+    logger.debug(`   - All existing members set to "monthly" billing`);
+    logger.debug(`   - monthlyValue = subscriptionPrice (${membersWithoutBilling[0]?.subscriptionPrice || 'N/A'})`);
+    logger.debug('\n💡 Note: If any of these were actually annual/lifetime, you\'ll need to manually correct them.\n');
 
   } catch (error) {
-    console.error('❌ Error backfilling member billing data:', error);
+    logger.error('❌ Error backfilling member billing data:', error);
     throw error;
   } finally {
     await prisma.$disconnect();
@@ -66,10 +68,10 @@ async function backfillMemberBilling() {
 // Run the backfill
 backfillMemberBilling()
   .then(() => {
-    console.log('🎉 Backfill complete!');
+    logger.info(' Backfill complete!');
     process.exit(0);
   })
   .catch((error) => {
-    console.error('💥 Backfill failed:', error);
+    logger.error('💥 Backfill failed:', error);
     process.exit(1);
   });

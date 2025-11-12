@@ -3,6 +3,8 @@
 import { useEffect } from 'react';
 import { Button } from '../components/ui/button';
 import { AlertCircle, RefreshCw, Home } from 'lucide-react';
+import logger from '../lib/logger';
+
 
 export default function Error({
   error,
@@ -13,7 +15,7 @@ export default function Error({
 }) {
   useEffect(() => {
     // Log error to monitoring service
-    console.error('Global error boundary:', error);
+    logger.error('Global error boundary:', error);
   }, [error]);
 
   return (

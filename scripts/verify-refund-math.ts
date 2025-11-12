@@ -10,6 +10,8 @@
  */
 
 import { prisma } from '../lib/db/prisma';
+import logger from '../lib/logger';
+
 
 interface VerificationResult {
   refundId: string;
@@ -19,8 +21,8 @@ interface VerificationResult {
 }
 
 async function verifyRefundMath() {
-  console.log('\n🔍 REFUND MATH VERIFICATION\n');
-  console.log('═══════════════════════════════════════════════════════════\n');
+  logger.debug('\n🔍 REFUND MATH VERIFICATION\n');
+  logger.debug('═══════════════════════════════════════════════════════════\n');
 
   const results: VerificationResult[] = [];
   let totalPassed = 0;
@@ -38,10 +40,10 @@ async function verifyRefundMath() {
     },
   });
 
-  console.log(`📊 Found ${refunds.length} refunds to verify\n`);
+  logger.info(' Found ${refunds.length} refunds to verify\n');
 
   if (refunds.length === 0) {
-    console.log('✅ No refunds to verify. Database is clean!\n');
+    logger.info('No refunds to verify. Database is clean!\n');
     return;
   }
 
@@ -49,9 +51,9 @@ async function verifyRefundMath() {
     const errors: string[] = [];
     const warnings: string[] = [];
 
-    console.log(`\n🔍 Verifying Refund: ${refund.whopRefundId}`);
-    console.log(`   Payment: ${refund.whopPaymentId}`);
-    console.log(`   Amount: $${refund.refundAmount.toFixed(2)}`);
+    logger.debug(`\n🔍 Verifying Refund: ${refund.whopRefundId}`);
+    logger.debug(`   Payment: ${refund.whopPaymentId}`);
+    logger.debug(`   Amount: $${refund.refundAmount.toFixed(2)}`);
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // CHECK 1: Refund amount vs Commission amount
@@ -148,9 +150,9 @@ async function verifyRefundMath() {
         );
       }
 
-      console.log(`   Type: PARTIAL (${(refundRatio * 100).toFixed(2)}% of original $${commission.saleAmount})`);
+      logger.debug(`   Type: PARTIAL (${(refundRatio * 100).toFixed(2)}% of original $${commission.saleAmount})`);
     } else {
-      console.log(`   Type: FULL`);
+      logger.debug(`   Type: FULL`);
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -170,17 +172,17 @@ async function verifyRefundMath() {
     const passed = errors.length === 0;
 
     if (passed) {
-      console.log(`   ✅ PASSED - All checks passed`);
+      logger.debug(`   ✅ PASSED - All checks passed`);
       totalPassed++;
     } else {
-      console.log(`   ❌ FAILED - ${errors.length} error(s) found`);
+      logger.debug(`   ❌ FAILED - ${errors.length} error(s) found`);
       totalFailed++;
-      errors.forEach((error) => console.log(`      - ${error}`));
+      errors.forEach((error) => logger.debug(`      - ${error}`));
     }
 
     if (warnings.length > 0) {
-      console.log(`   ⚠️  WARNINGS:`);
-      warnings.forEach((warning) => console.log(`      - ${warning}`));
+      logger.debug(`   ⚠️  WARNINGS:`);
+      warnings.forEach((warning) => logger.debug(`      - ${warning}`));
     }
 
     results.push({
@@ -190,48 +192,48 @@ async function verifyRefundMath() {
       warnings,
     });
 
-    console.log(`   Shares Reversed:`);
-    console.log(`      Member:   $${refund.memberShareReversed.toFixed(2)} (${((refund.memberShareReversed / refund.refundAmount) * 100).toFixed(1)}%)`);
-    console.log(`      Creator:  $${refund.creatorShareReversed.toFixed(2)} (${((refund.creatorShareReversed / refund.refundAmount) * 100).toFixed(1)}%)`);
-    console.log(`      Platform: $${refund.platformShareReversed.toFixed(2)} (${((refund.platformShareReversed / refund.refundAmount) * 100).toFixed(1)}%)`);
+    logger.debug(`   Shares Reversed:`);
+    logger.debug(`      Member:   $${refund.memberShareReversed.toFixed(2)} (${((refund.memberShareReversed / refund.refundAmount) * 100).toFixed(1)}%)`);
+    logger.debug(`      Creator:  $${refund.creatorShareReversed.toFixed(2)} (${((refund.creatorShareReversed / refund.refundAmount) * 100).toFixed(1)}%)`);
+    logger.debug(`      Platform: $${refund.platformShareReversed.toFixed(2)} (${((refund.platformShareReversed / refund.refundAmount) * 100).toFixed(1)}%)`);
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // SUMMARY
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('\n═══════════════════════════════════════════════════════════');
-  console.log('📊 VERIFICATION SUMMARY');
-  console.log('═══════════════════════════════════════════════════════════');
-  console.log(`Total Refunds: ${refunds.length}`);
-  console.log(`✅ Passed: ${totalPassed}`);
-  console.log(`❌ Failed: ${totalFailed}`);
-  console.log(`📈 Success Rate: ${((totalPassed / refunds.length) * 100).toFixed(2)}%`);
-  console.log('═══════════════════════════════════════════════════════════\n');
+  logger.debug('\n═══════════════════════════════════════════════════════════');
+  logger.info(' VERIFICATION SUMMARY');
+  logger.debug('═══════════════════════════════════════════════════════════');
+  logger.debug(`Total Refunds: ${refunds.length}`);
+  logger.info('Passed: ${totalPassed}');
+  logger.error('Failed: ${totalFailed}');
+  logger.info(' Success Rate: ${((totalPassed / refunds.length) * 100).toFixed(2)}%');
+  logger.debug('═══════════════════════════════════════════════════════════\n');
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // OVERALL FINANCIAL AUDIT
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('💰 OVERALL FINANCIAL AUDIT\n');
+  logger.info(' OVERALL FINANCIAL AUDIT\n');
 
   const totalRefundAmount = refunds.reduce((sum, r) => sum + r.refundAmount, 0);
   const totalMemberReversed = refunds.reduce((sum, r) => sum + r.memberShareReversed, 0);
   const totalCreatorReversed = refunds.reduce((sum, r) => sum + r.creatorShareReversed, 0);
   const totalPlatformReversed = refunds.reduce((sum, r) => sum + r.platformShareReversed, 0);
 
-  console.log(`Total Refunded: $${totalRefundAmount.toFixed(2)}`);
-  console.log(`   Member Share:   $${totalMemberReversed.toFixed(2)} (${((totalMemberReversed / totalRefundAmount) * 100).toFixed(2)}%)`);
-  console.log(`   Creator Share:  $${totalCreatorReversed.toFixed(2)} (${((totalCreatorReversed / totalRefundAmount) * 100).toFixed(2)}%)`);
-  console.log(`   Platform Share: $${totalPlatformReversed.toFixed(2)} (${((totalPlatformReversed / totalRefundAmount) * 100).toFixed(2)}%)\n`);
+  logger.debug(`Total Refunded: $${totalRefundAmount.toFixed(2)}`);
+  logger.debug(`   Member Share:   $${totalMemberReversed.toFixed(2)} (${((totalMemberReversed / totalRefundAmount) * 100).toFixed(2)}%)`);
+  logger.debug(`   Creator Share:  $${totalCreatorReversed.toFixed(2)} (${((totalCreatorReversed / totalRefundAmount) * 100).toFixed(2)}%)`);
+  logger.debug(`   Platform Share: $${totalPlatformReversed.toFixed(2)} (${((totalPlatformReversed / totalRefundAmount) * 100).toFixed(2)}%)\n`);
 
   // Check if shares add up
   const totalShares = totalMemberReversed + totalCreatorReversed + totalPlatformReversed;
   const shareDifference = Math.abs(totalShares - totalRefundAmount);
 
   if (shareDifference > 0.10) {
-    console.log(`⚠️  WARNING: Total shares ($${totalShares.toFixed(2)}) don't match total refunds ($${totalRefundAmount.toFixed(2)})`);
-    console.log(`   Difference: $${shareDifference.toFixed(2)}\n`);
+    logger.warn('  WARNING: Total shares ($${totalShares.toFixed(2)}) don't match total refunds ($${totalRefundAmount.toFixed(2)})`);
+    logger.debug(`   Difference: $${shareDifference.toFixed(2)}\n`);
   } else {
-    console.log(`✅ Financial audit passed: All shares add up correctly\n`);
+    logger.info('Financial audit passed: All shares add up correctly\n');
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

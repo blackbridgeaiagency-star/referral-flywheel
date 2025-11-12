@@ -8,6 +8,8 @@ import path from 'path';
 import { createReadStream } from 'fs';
 import crypto from 'crypto';
 import { prisma } from '@/lib/db/prisma';
+import logger from '../../lib/logger';
+
 
 const execAsync = promisify(exec);
 
@@ -51,7 +53,7 @@ export async function performBackup(
   const startTime = Date.now();
   const backupConfig = { ...DEFAULT_CONFIG, ...config };
 
-  console.log('🔄 Starting database backup...');
+  logger.info(' Starting database backup...');
 
   try {
     // 1. Generate backup metadata
@@ -65,35 +67,35 @@ export async function performBackup(
 
     // 2. Perform database dump
     const dumpResult = await dumpDatabase(backupFile, backupConfig);
-    console.log(`✅ Database dumped: ${dumpResult.size} bytes`);
+    logger.info('Database dumped: ${dumpResult.size} bytes');
 
     // 3. Compress if requested
     let finalFile = backupFile;
     if (backupConfig.compress) {
       finalFile = await compressBackup(backupFile);
-      console.log('✅ Backup compressed');
+      logger.info('Backup compressed');
     }
 
     // 4. Encrypt if requested
     if (backupConfig.encrypt) {
       finalFile = await encryptBackup(finalFile);
-      console.log('✅ Backup encrypted');
+      logger.info('Backup encrypted');
     }
 
     // 5. Store backup
     const storageResult = await storeBackup(finalFile, backupConfig);
-    console.log(`✅ Backup stored: ${storageResult.location}`);
+    logger.info('Backup stored: ${storageResult.location}');
 
     // 6. Verify backup integrity
     const isValid = await verifyBackup(finalFile);
     if (!isValid) {
       throw new Error('Backup verification failed');
     }
-    console.log('✅ Backup verified');
+    logger.info('Backup verified');
 
     // 7. Clean up old backups
     await cleanupOldBackups(backupConfig);
-    console.log('✅ Old backups cleaned');
+    logger.info('Old backups cleaned');
 
     // 8. Log backup metadata
     await logBackupMetadata({
@@ -110,7 +112,7 @@ export async function performBackup(
     await cleanupTempFiles(tempDir);
 
     const duration = Date.now() - startTime;
-    console.log(`✅ Backup completed in ${duration}ms`);
+    logger.info('Backup completed in ${duration}ms');
 
     return {
       success: true,
@@ -120,7 +122,7 @@ export async function performBackup(
     };
 
   } catch (error) {
-    console.error('❌ Backup failed:', error);
+    logger.error('❌ Backup failed:', error);
 
     // Send alert for backup failure
     await sendBackupAlert({
@@ -206,7 +208,7 @@ async function encryptBackup(inputFile: string): Promise<string> {
   const encryptionKey = process.env.BACKUP_ENCRYPTION_KEY;
 
   if (!encryptionKey) {
-    console.warn('⚠️ BACKUP_ENCRYPTION_KEY not set, skipping encryption');
+    logger.warn('⚠️ BACKUP_ENCRYPTION_KEY not set, skipping encryption');
     return inputFile;
   }
 
@@ -306,7 +308,7 @@ async function storeS3(backupFile: string): Promise<string> {
   // });
 
   // await s3Client.send(command);
-  console.log('S3 upload disabled - AWS SDK not installed');
+  logger.debug('S3 upload disabled - AWS SDK not installed');
 
   return `s3://${bucketName}/${key}`;
 }
@@ -330,7 +332,7 @@ async function verifyBackup(backupFile: string): Promise<boolean> {
 
     return true;
   } catch (error) {
-    console.error('Backup verification error:', error);
+    logger.error('Backup verification error:', error);
     return false;
   }
 }
@@ -390,7 +392,7 @@ async function cleanupOldBackups(config: BackupConfig): Promise<void> {
 async function deleteBackup(backupId: string): Promise<void> {
   // Implementation depends on storage location
   // This would delete from S3/local storage and update database
-  console.log(`Deleting old backup: ${backupId}`);
+  logger.debug(`Deleting old backup: ${backupId}`);
 }
 
 /**
@@ -414,7 +416,7 @@ async function logBackupMetadata(metadata: {
   checksum: string;
 }): Promise<void> {
   // In production, this would write to a backup_logs table
-  console.log('Backup metadata:', metadata);
+  logger.debug('Backup metadata:', metadata);
 }
 
 /**
@@ -424,7 +426,7 @@ async function cleanupTempFiles(tempDir: string): Promise<void> {
   try {
     await fs.rm(tempDir, { recursive: true, force: true });
   } catch (error) {
-    console.warn('Failed to clean temp files:', error);
+    logger.warn('Failed to clean temp files:', error);
   }
 }
 
@@ -436,7 +438,7 @@ async function sendBackupAlert(alert: {
   error?: string;
   timestamp: Date;
 }): Promise<void> {
-  console.log('Backup alert:', alert);
+  logger.debug('Backup alert:', alert);
 
   // In production, send to monitoring service
   if (process.env.MONITORING_WEBHOOK_URL) {
@@ -468,18 +470,18 @@ export async function restoreBackup(
     throw new Error('Must confirm restore operation in production');
   }
 
-  console.log('🔄 Starting database restore...');
+  logger.info(' Starting database restore...');
 
   try {
     // Implementation would restore from backup file
     // This is a placeholder for the actual restore logic
 
     const duration = Date.now() - startTime;
-    console.log(`✅ Restore completed in ${duration}ms`);
+    logger.info('Restore completed in ${duration}ms');
 
     return { success: true, duration };
   } catch (error) {
-    console.error('❌ Restore failed:', error);
+    logger.error('❌ Restore failed:', error);
     throw error;
   }
 }
@@ -488,11 +490,11 @@ export async function restoreBackup(
 if (require.main === module) {
   performBackup()
     .then(result => {
-      console.log('Backup successful:', result);
+      logger.debug('Backup successful:', result);
       process.exit(0);
     })
     .catch(error => {
-      console.error('Backup failed:', error);
+      logger.error('Backup failed:', error);
       process.exit(1);
     });
 }

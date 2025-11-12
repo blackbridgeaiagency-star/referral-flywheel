@@ -19,6 +19,8 @@ import { parseArgs } from 'util'
 import * as dotenv from 'dotenv'
 import { join } from 'path'
 import crypto from 'crypto'
+import logger from '../lib/logger';
+
 
 // Load environment variables
 dotenv.config({ path: join(process.cwd(), '.env.local') })
@@ -63,12 +65,12 @@ const results = {
 }
 
 function log(message: string, color: keyof typeof colors = 'reset') {
-  console.log(`${colors[color]}${message}${colors.reset}`)
+  logger.debug(`${colors[color]}${message}${colors.reset}`)
 }
 
 function logVerbose(message: string) {
   if (isVerbose) {
-    console.log(`${colors.cyan}[VERBOSE] ${message}${colors.reset}`)
+    logger.debug(`${colors.cyan}[VERBOSE] ${message}${colors.reset}`)
   }
 }
 
@@ -510,7 +512,7 @@ async function main() {
 
     process.exit(results.failed.length > 0 ? 1 : 0)
   } catch (error) {
-    console.error('Fatal error:', error)
+    logger.error('Fatal error:', error)
     process.exit(1)
   } finally {
     await prisma.$disconnect()

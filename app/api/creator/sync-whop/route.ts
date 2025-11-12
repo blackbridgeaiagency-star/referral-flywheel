@@ -2,6 +2,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
 import { getCompany } from '../../../../lib/whop/api-client';
+import logger from '../../../../lib/logger';
+
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,7 +36,7 @@ export async function POST(request: Request) {
     }
 
     // Fetch latest data from Whop
-    console.log(`📡 Syncing creator ${creatorId} with Whop API...`);
+    logger.info(` Syncing creator ${creatorId} with Whop API...`);
 
     try {
       const whopCompany = await getCompany(creator.companyId);
@@ -49,7 +51,7 @@ export async function POST(request: Request) {
         }
       });
 
-      console.log(`✅ Creator synced successfully: ${updatedCreator.companyName}`);
+      logger.info(`Creator synced successfully: ${updatedCreator.companyName}`);
 
       return NextResponse.json({
         success: true,
@@ -62,7 +64,7 @@ export async function POST(request: Request) {
       });
 
     } catch (apiError) {
-      console.error(`❌ Failed to fetch from Whop API:`, apiError);
+      logger.error(`❌ Failed to fetch from Whop API:`, apiError);
       return NextResponse.json(
         {
           error: 'Failed to sync with Whop',
@@ -73,7 +75,7 @@ export async function POST(request: Request) {
     }
 
   } catch (error) {
-    console.error('❌ Sync error:', error);
+    logger.error('❌ Sync error:', error);
     return NextResponse.json(
       {
         error: 'Internal server error',

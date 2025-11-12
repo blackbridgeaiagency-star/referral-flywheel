@@ -1,5 +1,7 @@
 // lib/utils/attribution.ts
 import { prisma } from '../db/prisma';
+import logger from '../logger';
+
 
 /**
  * Check for attribution via cookie or database lookup
@@ -40,10 +42,10 @@ export async function checkAttribution(
       });
 
       if (click) {
-        console.log('✅ Attribution found via cookie:', refCodeValue);
+        logger.info('Attribution found via cookie:', refCodeValue);
         return { referralCode: click.referralCode, id: click.id };
       } else {
-        console.log('⚠️  Cookie found but attribution expired or converted');
+        logger.warn('  Cookie found but attribution expired or converted');
       }
     }
 
@@ -62,15 +64,15 @@ export async function checkAttribution(
     });
 
     if (click) {
-      console.log('✅ Attribution found via fingerprint:', click.referralCode);
+      logger.info('Attribution found via fingerprint:', click.referralCode);
       return { referralCode: click.referralCode, id: click.id };
     }
 
-    console.log('ℹ️  No attribution found (organic signup)');
+    logger.info('  No attribution found (organic signup)');
     return null;
 
   } catch (error) {
-    console.error('❌ Error checking attribution:', error);
+    logger.error('❌ Error checking attribution:', error);
     // Return null instead of throwing - organic signup is acceptable
     return null;
   }

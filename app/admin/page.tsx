@@ -3,8 +3,9 @@
 
 import { useState, useEffect } from 'react';
 import { Card } from '../../components/ui/card';
+import logger from '../../lib/logger';
 import {
-  DollarSign,
+DollarSign,
   Users,
   TrendingUp,
   AlertTriangle,
@@ -25,24 +26,52 @@ interface PlatformStats {
   systemHealth: 'healthy' | 'degraded' | 'down';
 }
 
+interface ActivityItem {
+  id: string;
+  type: 'payment' | 'member' | 'commission' | 'fraud';
+  message: string;
+  timestamp: string;
+  metadata?: any;
+}
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState<PlatformStats | null>(null);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('30d');
 
   useEffect(() => {
     fetchStats();
+    fetchActivities();
   }, [timeRange]);
 
   const fetchStats = async () => {
     try {
-      const response = await fetch(`/api/admin/stats?range=${timeRange}`);
+      const response = await fetch(`/api/admin/stats?range=${timeRange}`, {
+        headers: {
+          'x-admin-token': 'e2e9e2ae1a4a7755111668aa55a22b59502f46eadd95705b0ad9f3882ef1a18d'
+        }
+      });
       const data = await response.json();
       setStats(data);
     } catch (error) {
-      console.error('Failed to fetch stats:', error);
+      logger.error('Failed to fetch stats:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchActivities = async () => {
+    try {
+      const response = await fetch('/api/admin/activity?limit=10', {
+        headers: {
+          'x-admin-token': 'e2e9e2ae1a4a7755111668aa55a22b59502f46eadd95705b0ad9f3882ef1a18d'
+        }
+      });
+      const data = await response.json();
+      setActivities(data);
+    } catch (error) {
+      logger.error('Failed to fetch activities:', error);
     }
   };
 
@@ -181,26 +210,21 @@ export default function AdminDashboard() {
             Recent Activity
           </h3>
           <div className="space-y-3">
-            <ActivityItem
-              type="payment"
-              message="New payment processed: $49.99"
-              time="2 minutes ago"
-            />
-            <ActivityItem
-              type="member"
-              message="New member signup: john_doe"
-              time="5 minutes ago"
-            />
-            <ActivityItem
-              type="commission"
-              message="Commission paid: $4.99 to alice_smith"
-              time="10 minutes ago"
-            />
-            <ActivityItem
-              type="fraud"
-              message="Suspicious activity detected for user_123"
-              time="15 minutes ago"
-            />
+            {activities.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Activity className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">No recent activity</p>
+              </div>
+            ) : (
+              activities.slice(0, 5).map((activity) => (
+                <ActivityItemComponent
+                  key={activity.id}
+                  type={activity.type}
+                  message={activity.message}
+                  time={formatRelativeTime(activity.timestamp)}
+                />
+              ))
+            )}
           </div>
         </Card>
 
@@ -249,8 +273,24 @@ export default function AdminDashboard() {
   );
 }
 
+// Helper function to format relative time
+function formatRelativeTime(timestamp: string): string {
+  const now = new Date();
+  const past = new Date(timestamp);
+  const diffMs = now.getTime() - past.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+  if (diffDays < 30) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+  return past.toLocaleDateString();
+}
+
 // Activity Item Component
-function ActivityItem({
+function ActivityItemComponent({
   type,
   message,
   time

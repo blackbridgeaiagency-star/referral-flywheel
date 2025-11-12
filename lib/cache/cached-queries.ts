@@ -1,6 +1,8 @@
 // lib/cache/cached-queries.ts
 import { prisma } from '../db/prisma';
 import { cache, CACHE_CONFIG, CacheInvalidation } from './redis';
+import logger from '../logger';
+
 
 /**
  * Cached leaderboard query with Redis
@@ -309,7 +311,7 @@ export async function getCachedCommissionAnalytics(
  * Warm up cache with frequently accessed data
  */
 export async function warmUpCache(creatorId?: string) {
-  console.log('🔥 Warming up cache...');
+  logger.info(' Warming up cache...');
 
   try {
     // Warm up global leaderboard
@@ -324,9 +326,9 @@ export async function warmUpCache(creatorId?: string) {
       ]);
     }
 
-    console.log('✅ Cache warmed up successfully');
+    logger.info('Cache warmed up successfully');
   } catch (error) {
-    console.error('❌ Cache warm-up failed:', error);
+    logger.error('❌ Cache warm-up failed:', error);
   }
 }
 
@@ -334,19 +336,19 @@ export async function warmUpCache(creatorId?: string) {
  * Cache maintenance - clear old entries
  */
 export async function performCacheMaintenance() {
-  console.log('🧹 Performing cache maintenance...');
+  logger.debug('🧹 Performing cache maintenance...');
 
   try {
     // Get cache stats
     const stats = await cache.getStats();
-    console.log('📊 Cache stats:', stats);
+    logger.info(' Cache stats:', stats);
 
     // Clear old analytics data (older than 1 day)
     await cache.deletePattern(`${CACHE_CONFIG.PREFIXES.ANALYTICS}*`);
 
-    console.log('✅ Cache maintenance completed');
+    logger.info('Cache maintenance completed');
   } catch (error) {
-    console.error('❌ Cache maintenance failed:', error);
+    logger.error('❌ Cache maintenance failed:', error);
   }
 }
 

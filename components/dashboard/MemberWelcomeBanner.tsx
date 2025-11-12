@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { X, Sparkles, Copy, Check } from 'lucide-react';
+import logger from '../../lib/logger';
+
 
 interface MemberWelcomeBannerProps {
   memberName: string;
@@ -38,7 +40,7 @@ export function MemberWelcomeBanner({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error('Failed to copy:', error);
+      logger.error('Failed to copy:', error);
     }
   };
 

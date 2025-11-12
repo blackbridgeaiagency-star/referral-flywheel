@@ -1,3 +1,5 @@
+import logger from '../lib/logger';
+
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
@@ -9,12 +11,12 @@ async function checkData() {
     });
 
     if (!creator) {
-      console.log('No creators found');
+      logger.debug('No creators found');
       return;
     }
 
-    console.log('Creator:', creator.companyName);
-    console.log('Creator ID:', creator.id);
+    logger.debug('Creator:', creator.companyName);
+    logger.debug('Creator ID:', creator.id);
 
     // Get members with referrals
     const members = await prisma.member.findMany({
@@ -28,9 +30,9 @@ async function checkData() {
       take: 3
     });
 
-    console.log('\nTop 3 members by referral count:');
+    logger.debug('\nTop 3 members by referral count:');
     for (const m of members) {
-      console.log(`- ${m.username}: ${m.totalReferred} referrals (code: ${m.referralCode})`);
+      logger.debug(`- ${m.username}: ${m.totalReferred} referrals (code: ${m.referralCode})`);
 
       // Check how many referred members exist
       const referredMembers = await prisma.member.count({
@@ -39,7 +41,7 @@ async function checkData() {
           creatorId: creator.id
         }
       });
-      console.log(`  Referred members in DB: ${referredMembers}`);
+      logger.debug(`  Referred members in DB: ${referredMembers}`);
 
       // Check commissions for those referred members
       const referredMemberIds = await prisma.member.findMany({
@@ -61,8 +63,8 @@ async function checkData() {
       });
 
       const totalRevenue = commissions.reduce((sum, c) => sum + c.saleAmount, 0);
-      console.log(`  Paid commissions: ${commissions.length}`);
-      console.log(`  Revenue generated: $${(totalRevenue / 100).toFixed(2)}`);
+      logger.debug(`  Paid commissions: ${commissions.length}`);
+      logger.debug(`  Revenue generated: $${(totalRevenue / 100).toFixed(2)}`);
     }
 
     // Check total creator revenue
@@ -71,11 +73,11 @@ async function checkData() {
       select: { saleAmount: true }
     });
     const totalRevenue = totalCommissions.reduce((sum, c) => sum + c.saleAmount, 0);
-    console.log(`\nTotal creator revenue: $${(totalRevenue / 100).toFixed(2)}`);
-    console.log(`Total paid commissions: ${totalCommissions.length}`);
+    logger.debug(`\nTotal creator revenue: $${(totalRevenue / 100).toFixed(2)}`);
+    logger.debug(`Total paid commissions: ${totalCommissions.length}`);
 
   } catch (error) {
-    console.error('Error:', error);
+    logger.error('Error:', error);
   } finally {
     await prisma.$disconnect();
   }

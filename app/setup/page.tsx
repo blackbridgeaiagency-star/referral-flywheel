@@ -7,6 +7,8 @@ import { Input } from '../../components/ui/input';
 import { Card } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Check, ArrowRight, ArrowLeft, Sparkles, Trophy, Users, MessageSquare } from 'lucide-react';
+import logger from '../../lib/logger';
+
 
 interface SetupState {
   welcomeMessage: string;
@@ -72,7 +74,7 @@ export default function SetupPage() {
         alert(`Setup failed: ${error.message || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Setup error:', error);
+      logger.error('Setup error:', error);
       alert('Setup failed. Please try again.');
     } finally {
       setIsLoading(false);

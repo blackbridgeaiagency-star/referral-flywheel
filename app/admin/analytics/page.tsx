@@ -20,6 +20,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { Line, Bar, Pie, Funnel } from 'recharts';
+import logger from '../../../lib/logger';
 import {
   LineChart,
   BarChart,
@@ -84,11 +85,15 @@ export default function AnalyticsPage() {
 
   const fetchAnalytics = async () => {
     try {
-      const response = await fetch(`/api/admin/analytics/comprehensive?period=${period}`);
+      const response = await fetch(`/api/admin/analytics/comprehensive?period=${period}`, {
+        headers: {
+          'x-admin-token': 'e2e9e2ae1a4a7755111668aa55a22b59502f46eadd95705b0ad9f3882ef1a18d'
+        }
+      });
       const data = await response.json();
       setAnalytics(data);
     } catch (error) {
-      console.error('Failed to fetch analytics:', error);
+      logger.error('Failed to fetch analytics:', error);
     } finally {
       setLoading(false);
     }
@@ -96,7 +101,11 @@ export default function AnalyticsPage() {
 
   const exportReport = async () => {
     try {
-      const response = await fetch(`/api/admin/analytics/export?period=${period}`);
+      const response = await fetch(`/api/admin/analytics/export?period=${period}`, {
+        headers: {
+          'x-admin-token': 'e2e9e2ae1a4a7755111668aa55a22b59502f46eadd95705b0ad9f3882ef1a18d'
+        }
+      });
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -104,7 +113,7 @@ export default function AnalyticsPage() {
       a.download = `analytics-report-${period}-${new Date().toISOString()}.pdf`;
       a.click();
     } catch (error) {
-      console.error('Export failed:', error);
+      logger.error('Export failed:', error);
     }
   };
 

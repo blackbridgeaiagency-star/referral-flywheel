@@ -14,6 +14,8 @@
  */
 
 import { prisma } from '../db/prisma';
+import logger from '../logger';
+
 
 export interface FraudCheck {
   riskScore: number; // 0-100
@@ -136,7 +138,7 @@ export async function checkSelfReferral(
       });
     }
   } catch (error) {
-    console.error('Error checking self-referral:', error);
+    logger.error('Error checking self-referral:', error);
   }
 
   return flags;
@@ -214,7 +216,7 @@ export async function checkClickFraud(
       });
     }
   } catch (error) {
-    console.error('Error checking click fraud:', error);
+    logger.error('Error checking click fraud:', error);
   }
 
   return flags;
@@ -284,7 +286,7 @@ export async function checkCommissionAbuse(memberId: string): Promise<FraudFlag[
       });
     }
   } catch (error) {
-    console.error('Error checking commission abuse:', error);
+    logger.error('Error checking commission abuse:', error);
   }
 
   return flags;
@@ -337,7 +339,7 @@ export async function checkMultipleAccounts(
       });
     }
   } catch (error) {
-    console.error('Error checking multiple accounts:', error);
+    logger.error('Error checking multiple accounts:', error);
   }
 
   return flags;
@@ -410,7 +412,7 @@ export async function performFraudCheck(params: {
       details: params,
     };
   } catch (error) {
-    console.error('Error performing fraud check:', error);
+    logger.error('Error performing fraud check:', error);
 
     // Return safe default on error
     return {

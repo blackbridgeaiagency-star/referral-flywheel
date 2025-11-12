@@ -1,6 +1,8 @@
 // lib/queue/webhook-queue.ts
 import { prisma } from '../db/prisma';
 import { cache } from '../cache/redis';
+import logger from '../logger';
+
 
 /**
  * Webhook job status
@@ -105,7 +107,7 @@ export class WebhookQueue {
         const { paymentId, userId, amount, productId } = job.payload;
 
         // Process payment webhook
-        console.log(`Processing payment webhook: ${paymentId}`);
+        logger.debug(`Processing payment webhook: ${paymentId}`);
 
         // Your payment processing logic here
         // This would include commission calculation, member updates, etc.
@@ -122,7 +124,7 @@ export class WebhookQueue {
       process: async (job) => {
         const { memberId, email, referralCode } = job.payload;
 
-        console.log(`Processing member signup: ${memberId}`);
+        logger.debug(`Processing member signup: ${memberId}`);
 
         // Send welcome message, update stats, etc.
       },
@@ -134,7 +136,7 @@ export class WebhookQueue {
       process: async (job) => {
         const { refundId, paymentId, amount } = job.payload;
 
-        console.log(`Processing refund webhook: ${refundId}`);
+        logger.debug(`Processing refund webhook: ${refundId}`);
 
         // Handle refund logic, update commissions, etc.
       },
@@ -146,7 +148,7 @@ export class WebhookQueue {
    */
   registerProcessor(processor: WebhookProcessor) {
     this.processors.set(processor.type, processor);
-    console.log(`✅ Registered webhook processor: ${processor.type}`);
+    logger.info('Registered webhook processor: ${processor.type}');
   }
 
   /**
@@ -179,7 +181,7 @@ export class WebhookQueue {
     // Store job in cache/database
     await this.saveJob(job);
 
-    console.log(`📥 Enqueued webhook job: ${jobId} (type: ${type})`);
+    logger.info(' Enqueued webhook job: ${jobId} (type: ${type})');
 
     // If queue is running, it will pick up the job automatically
     // Otherwise, you might want to trigger processing
@@ -195,12 +197,12 @@ export class WebhookQueue {
    */
   start() {
     if (this.isRunning) {
-      console.log('⚠️ Webhook queue already running');
+      logger.warn(' Webhook queue already running');
       return;
     }
 
     this.isRunning = true;
-    console.log('🚀 Starting webhook queue processor');
+    logger.info(' Starting webhook queue processor');
 
     // Start polling for jobs
     this.poll();
@@ -210,7 +212,7 @@ export class WebhookQueue {
    * Stop the queue processor
    */
   async stop() {
-    console.log('🛑 Stopping webhook queue processor');
+    logger.info(' Stopping webhook queue processor');
     this.isRunning = false;
 
     if (this.pollTimer) {
@@ -219,11 +221,11 @@ export class WebhookQueue {
 
     // Wait for active jobs to complete
     while (this.activeJobs.size > 0) {
-      console.log(`⏳ Waiting for ${this.activeJobs.size} active jobs to complete`);
+      logger.debug(`⏳ Waiting for ${this.activeJobs.size} active jobs to complete`);
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
-    console.log('✅ Webhook queue stopped');
+    logger.webhook('Webhook queue stopped');
   }
 
   /**
@@ -235,7 +237,7 @@ export class WebhookQueue {
     try {
       await this.processNext();
     } catch (error) {
-      console.error('Error in queue poll:', error);
+      logger.error('Error in queue poll:', error);
     }
 
     // Schedule next poll
@@ -258,7 +260,7 @@ export class WebhookQueue {
     // Process jobs in parallel
     await Promise.all(
       jobs.map(job => this.processJob(job).catch(err => {
-        console.error(`Error processing job ${job.id}:`, err);
+        logger.error(`Error processing job ${job.id}:`, err);
       }))
     );
   }
@@ -279,7 +281,7 @@ export class WebhookQueue {
       job.attempts++;
       await this.saveJob(job);
 
-      console.log(`⚙️ Processing webhook job: ${job.id} (attempt ${job.attempts})`);
+      logger.debug(`⚙️ Processing webhook job: ${job.id} (attempt ${job.attempts})`);
 
       // Get processor
       const processor = this.processors.get(job.type);
@@ -295,9 +297,9 @@ export class WebhookQueue {
       job.processedAt = new Date();
       await this.saveJob(job);
 
-      console.log(`✅ Webhook job completed: ${job.id}`);
+      logger.webhook('Webhook job completed: ${job.id}');
     } catch (error: any) {
-      console.error(`❌ Webhook job failed: ${job.id}`, error);
+      logger.error(`❌ Webhook job failed: ${job.id}`, error);
 
       // Get processor for error handling
       const processor = this.processors.get(job.type);
@@ -318,13 +320,13 @@ export class WebhookQueue {
         job.lastError = error.message;
         job.nextRetryAt = new Date(Date.now() + delay);
 
-        console.log(`🔄 Scheduling retry for ${job.id} in ${delay}ms`);
+        logger.info(' Scheduling retry for ${job.id} in ${delay}ms');
       } else {
         // Move to dead letter queue
         job.status = WebhookJobStatus.DEAD;
         job.lastError = error.message;
 
-        console.error(`💀 Job moved to dead letter: ${job.id}`);
+        logger.error(`💀 Job moved to dead letter: ${job.id}`);
 
         // Call error handler if provided
         if (processor?.onError) {
@@ -419,7 +421,7 @@ export class WebhookQueue {
     job.nextRetryAt = undefined;
 
     await this.saveJob(job);
-    console.log(`🔄 Job queued for retry: ${jobId}`);
+    logger.info(' Job queued for retry: ${jobId}');
   }
 
   /**
@@ -479,7 +481,7 @@ export class WebhookQueue {
 
     await cache.set(queueKey, activeQueue, 86400);
 
-    console.log(`🗑️ Cleared ${deadJobs.length} dead letter jobs`);
+    logger.info('️ Cleared ${deadJobs.length} dead letter jobs');
     return deadJobs.length;
   }
 }
@@ -495,12 +497,12 @@ export function initWebhookQueue() {
 
   // Graceful shutdown
   process.on('SIGTERM', async () => {
-    console.log('SIGTERM received, stopping webhook queue');
+    logger.debug('SIGTERM received, stopping webhook queue');
     await webhookQueue.stop();
   });
 
   process.on('SIGINT', async () => {
-    console.log('SIGINT received, stopping webhook queue');
+    logger.debug('SIGINT received, stopping webhook queue');
     await webhookQueue.stop();
   });
 }

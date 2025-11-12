@@ -23,13 +23,13 @@ Copy these to Vercel Dashboard (`vercel env add`):
 
 ```bash
 # Database (Supabase)
-DATABASE_URL=postgresql://postgres:cFWGc4UtNVXm6NYt@db.eerhpmjherotaqklpqnc.supabase.co:6543/postgres?pgbouncer=true
+DATABASE_URL=postgresql://postgres:[REGENERATE_PASSWORD]@db.eerhpmjherotaqklpqnc.supabase.co:6543/postgres?pgbouncer=true
 
-# Whop Integration
-WHOP_API_KEY=wFlUR9Nil3SXRgbss31y6XhSpA8UtkoBI3GsL3J42Bs
-WHOP_WEBHOOK_SECRET=ws_4504b4a33dc97e85bb34a44207d74fadc8151412a25b07729efb623ca86e412b
+# Whop Integration (Get from https://whop.com/dashboard/developer)
+WHOP_API_KEY=[REGENERATE_IN_WHOP_DASHBOARD]
+WHOP_WEBHOOK_SECRET=[REGENERATE_IN_WHOP_DASHBOARD]
 
-# Whop Public IDs
+# Whop Public IDs (Keep these as is - they're public)
 NEXT_PUBLIC_WHOP_APP_ID=app_xa1a8NaAKUVPuO
 NEXT_PUBLIC_WHOP_COMPANY_ID=biz_kkGoY7OvzWXRdK
 NEXT_PUBLIC_WHOP_AGENT_USER_ID=user_QzqUqxWUTwyHz
@@ -37,10 +37,10 @@ NEXT_PUBLIC_WHOP_AGENT_USER_ID=user_QzqUqxWUTwyHz
 # App URL (UPDATE THIS!)
 NEXT_PUBLIC_APP_URL=https://your-production-domain.vercel.app
 
-# Security Tokens
-ADMIN_API_KEY=5923970a4846cae58a963a0c33716ae27b319bdb0b7a7e15386dc134c2800d88
-CRON_SECRET=23815ff20528b2a0d287654eb0ff1a88334bff6bf8d7507574ad6e6a7b1df683
-EXPORT_API_KEY=612265de53a6b2d6d03136b96cdc9cbb010770ce56d358732f53ce9d08bd5f76
+# Security Tokens (Generate new ones with: openssl rand -hex 32)
+ADMIN_API_KEY=[GENERATE_NEW_WITH: openssl rand -hex 32]
+CRON_SECRET=[GENERATE_NEW_WITH: openssl rand -hex 32]
+EXPORT_API_KEY=[GENERATE_NEW_WITH: openssl rand -hex 32]
 ```
 
 ### Optional but Recommended

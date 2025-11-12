@@ -5,6 +5,8 @@ import { X, Trophy, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { formatCurrency } from '../../lib/utils/commission';
+import logger from '../../lib/logger';
+
 
 interface LeaderboardEntry {
   id: string;
@@ -47,7 +49,7 @@ export function LeaderboardPanel({
         const scope = activeTab === 'community' ? 'community' : 'global';
         const url = `/api/leaderboard?type=${type}&scope=${scope}&creatorId=${creatorId}&limit=100&memberId=${currentMemberId}`;
 
-        console.log('🔍 Fetching leaderboard:', url);
+        logger.info(' Fetching leaderboard:', url);
         const response = await fetch(url);
         if (response.ok) {
           const data = await response.json();
@@ -59,10 +61,10 @@ export function LeaderboardPanel({
           setLeaderboard(data.leaderboard || []);
           setUserRank(data.userRank || null);
         } else {
-          console.error('❌ API response not OK:', response.status);
+          logger.error('❌ API response not OK:', response.status);
         }
       } catch (error) {
-        console.error('❌ Error fetching leaderboard:', error);
+        logger.error('❌ Error fetching leaderboard:', error);
       } finally {
         setIsLoading(false);
       }

@@ -1,21 +1,23 @@
 // lib/db/prisma.ts
 import { PrismaClient } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
+import logger from '../logger';
+
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Configuration for connection pooling and retry
+// Configuration for connection pooling and retry - OPTIMIZED FOR HIGH LOAD
 const prismaOptions: Prisma.PrismaClientOptions = {
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'], // Reduced logging for performance
   datasources: {
     db: {
       url: process.env.DATABASE_URL,
     },
   },
-  // Error formatting to make debugging easier
-  errorFormat: 'pretty',
+  // Error formatting
+  errorFormat: process.env.NODE_ENV === 'development' ? 'pretty' : 'minimal', // Minimal in production for performance
 };
 
 // Create PrismaClient with connection retry logic
@@ -40,7 +42,7 @@ function createPrismaClient() {
 
         if (isConnectionError && attempt < maxRetries - 1) {
           const delay = retryDelay(attempt);
-          console.warn(`Database connection failed (attempt ${attempt + 1}/${maxRetries}). Retrying in ${delay}ms...`);
+          logger.warn(`Database connection failed (attempt ${attempt + 1}/${maxRetries}). Retrying in ${delay}ms...`);
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
@@ -64,7 +66,7 @@ export async function testDatabaseConnection(): Promise<{ success: boolean; erro
     await prisma.$queryRaw`SELECT 1`;
     return { success: true };
   } catch (error) {
-    console.error('Database connection test failed:', error);
+    logger.error('Database connection test failed:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -77,7 +79,7 @@ export async function disconnectDatabase() {
   try {
     await prisma.$disconnect();
   } catch (error) {
-    console.error('Error disconnecting from database:', error);
+    logger.error('Error disconnecting from database:', error);
     // Force exit if graceful disconnect fails
     process.exit(1);
   }

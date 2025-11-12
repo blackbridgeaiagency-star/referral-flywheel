@@ -1,8 +1,10 @@
 // scripts/test-full-reward-flow.ts
 import { prisma } from '../lib/db/prisma';
+import logger from '../lib/logger';
+
 
 async function testFullRewardFlow() {
-  console.log('\n🧪 Testing Full Reward Flow\n');
+  logger.debug('\n🧪 Testing Full Reward Flow\n');
 
   try {
     const creator = await prisma.creator.findFirst({
@@ -26,22 +28,22 @@ async function testFullRewardFlow() {
     });
 
     if (!creator) {
-      console.log('❌ Creator not found');
+      logger.error('Creator not found');
       return;
     }
 
-    console.log(`📋 FitnessHub Current Settings:\n`);
-    console.log(`🎁 Reward Tiers:`);
-    console.log(`   Bronze: ${creator.tier1Count} refs → "${creator.tier1Reward}"`);
-    console.log(`   Silver: ${creator.tier2Count} refs → "${creator.tier2Reward}"`);
-    console.log(`   Gold: ${creator.tier3Count} refs → "${creator.tier3Reward}"`);
-    console.log(`   Platinum: ${creator.tier4Count} refs → "${creator.tier4Reward}"`);
+    logger.info(' FitnessHub Current Settings:\n');
+    logger.info(' Reward Tiers:');
+    logger.debug(`   Bronze: ${creator.tier1Count} refs → "${creator.tier1Reward}"`);
+    logger.debug(`   Silver: ${creator.tier2Count} refs → "${creator.tier2Reward}"`);
+    logger.debug(`   Gold: ${creator.tier3Count} refs → "${creator.tier3Reward}"`);
+    logger.debug(`   Platinum: ${creator.tier4Count} refs → "${creator.tier4Reward}"`);
 
-    console.log(`\n🏆 Custom Competition:`);
-    console.log(`   Enabled: ${creator.customRewardEnabled}`);
-    console.log(`   Timeframe: ${creator.customRewardTimeframe}`);
-    console.log(`   Type: ${creator.customRewardType}`);
-    console.log(`   1st Place: ${creator.customReward1st}`);
+    logger.debug(`\n🏆 Custom Competition:`);
+    logger.debug(`   Enabled: ${creator.customRewardEnabled}`);
+    logger.debug(`   Timeframe: ${creator.customRewardTimeframe}`);
+    logger.debug(`   Type: ${creator.customRewardType}`);
+    logger.debug(`   1st Place: ${creator.customReward1st}`);
 
     const member = await prisma.member.findFirst({
       where: { creatorId: creator.id },
@@ -59,23 +61,23 @@ async function testFullRewardFlow() {
       else if (member.totalReferred >= creator.tier2Count) currentRank = 'Silver';
       else if (member.totalReferred >= creator.tier1Count) currentRank = 'Bronze';
 
-      console.log(`\n👤 Sample Member: ${member.username}`);
-      console.log(`   Referrals: ${member.totalReferred}`);
-      console.log(`   Current Rank: ${currentRank}`);
-      console.log(`   Dashboard: http://localhost:3000/customer/${member.membershipId}`);
+      logger.debug(`\n👤 Sample Member: ${member.username}`);
+      logger.debug(`   Referrals: ${member.totalReferred}`);
+      logger.debug(`   Current Rank: ${currentRank}`);
+      logger.debug(`   Dashboard: http://localhost:3000/customer/${member.membershipId}`);
     }
 
-    console.log(`\n📝 To Test:`);
-    console.log(`   1. Go to: http://localhost:3000/seller-product/prod_fitnesshub_test`);
-    console.log(`   2. Change Bronze from ${creator.tier1Count} to 7`);
-    console.log(`   3. Change reward from "${creator.tier1Reward}" to "A Pat On The Back"`);
-    console.log(`   4. Toggle custom competition ON/OFF`);
-    console.log(`   5. Click "Save Changes"`);
-    console.log(`   6. Refresh member dashboard`);
-    console.log(`   7. Verify changes appear!`);
+    logger.debug(`\n📝 To Test:`);
+    logger.debug(`   1. Go to: http://localhost:3000/seller-product/prod_fitnesshub_test`);
+    logger.debug(`   2. Change Bronze from ${creator.tier1Count} to 7`);
+    logger.debug(`   3. Change reward from "${creator.tier1Reward}" to "A Pat On The Back"`);
+    logger.debug(`   4. Toggle custom competition ON/OFF`);
+    logger.debug(`   5. Click "Save Changes"`);
+    logger.debug(`   6. Refresh member dashboard`);
+    logger.debug(`   7. Verify changes appear!`);
 
   } catch (error) {
-    console.error('❌ Error:', error);
+    logger.error('❌ Error:', error);
   } finally {
     await prisma.$disconnect();
   }

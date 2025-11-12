@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Copy, Check, Twitter, Share2, Linkedin, MessageCircle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
+import logger from '../../lib/logger';
+
 
 interface ReferralLinkCardProps {
   code: string;
@@ -26,9 +28,9 @@ export function ReferralLinkCard({ code, url, memberId }: ReferralLinkCardProps)
           shareType: 'link',
         }),
       });
-      console.log(`📤 Tracked share: ${platform}`);
+      logger.info(' Tracked share: ${platform}');
     } catch (error) {
-      console.error('Failed to track share:', error);
+      logger.error('Failed to track share:', error);
       // Don't block user action if tracking fails
     }
   };

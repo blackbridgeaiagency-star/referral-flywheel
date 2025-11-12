@@ -1,6 +1,8 @@
 // app/api/rewards/claim/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
+import logger from '../../../../lib/logger';
+
 
 /**
  * POST /api/rewards/claim
@@ -52,15 +54,15 @@ export async function POST(request: NextRequest) {
 
     // TODO: When Whop messaging is enabled, send actual message to creator
     // For now, log to console
-    console.log('🎁 REWARD CLAIM REQUEST');
-    console.log('========================');
-    console.log(`Member: ${member.username} (${member.email})`);
-    console.log(`Referral Code: ${member.referralCode}`);
-    console.log(`Community: ${creator.companyName}`);
-    console.log(`Rank: #${rank}`);
-    console.log(`Reward: ${reward}`);
-    console.log(`Timeframe: ${timeframe || 'N/A'}`);
-    console.log('========================');
+    logger.info(' REWARD CLAIM REQUEST');
+    logger.debug('========================');
+    logger.debug(`Member: ${member.username} (${member.email})`);
+    logger.debug(`Referral Code: ${member.referralCode}`);
+    logger.debug(`Community: ${creator.companyName}`);
+    logger.debug(`Rank: #${rank}`);
+    logger.debug(`Reward: ${reward}`);
+    logger.debug(`Timeframe: ${timeframe || 'N/A'}`);
+    logger.debug('========================');
 
     // Return success
     return NextResponse.json(
@@ -71,7 +73,7 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('❌ Error processing claim request:', error);
+    logger.error('❌ Error processing claim request:', error);
 
     return NextResponse.json(
       {

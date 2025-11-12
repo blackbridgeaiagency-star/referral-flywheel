@@ -4,6 +4,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import io, { Socket } from 'socket.io-client';
 import { NotificationType, NotificationPriority, SocketEvent } from './websocket-server';
+import logger from '../logger';
+
 
 interface Notification {
   id: string;
@@ -69,7 +71,7 @@ export function useWebSocket(options: WebSocketOptions) {
 
     // Connection events
     socket.on('connect', () => {
-      console.log('✅ WebSocket connected');
+      logger.info('WebSocket connected');
       setState(prev => ({ ...prev, connected: true }));
 
       // Join user room
@@ -85,12 +87,12 @@ export function useWebSocket(options: WebSocketOptions) {
     });
 
     socket.on('disconnect', () => {
-      console.log('❌ WebSocket disconnected');
+      logger.error('WebSocket disconnected');
       setState(prev => ({ ...prev, connected: false }));
     });
 
     socket.on('error', (error) => {
-      console.error('WebSocket error:', error);
+      logger.error('WebSocket error:', error);
     });
 
     // Notification events
@@ -294,7 +296,7 @@ function playNotificationSound(priority: NotificationPriority) {
     audio.volume = priority === NotificationPriority.URGENT ? 1.0 : 0.5;
     audio.play().catch(console.error);
   } catch (error) {
-    console.error('Failed to play notification sound:', error);
+    logger.error('Failed to play notification sound:', error);
   }
 }
 
@@ -338,7 +340,7 @@ function showAchievementAnimation(achievement: any) {
     const audio = new Audio('/sounds/achievement.mp3');
     audio.play().catch(console.error);
   } catch (error) {
-    console.error('Failed to play achievement sound:', error);
+    logger.error('Failed to play achievement sound:', error);
   }
 
   // Remove after 5 seconds
@@ -384,7 +386,7 @@ function showCommissionAnimation(commission: any) {
     const audio = new Audio('/sounds/cash.mp3');
     audio.play().catch(console.error);
   } catch (error) {
-    console.error('Failed to play cash sound:', error);
+    logger.error('Failed to play cash sound:', error);
   }
 
   // Remove after 4 seconds

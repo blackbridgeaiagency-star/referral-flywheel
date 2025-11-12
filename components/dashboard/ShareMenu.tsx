@@ -13,6 +13,8 @@ import {
   X,
 } from 'lucide-react';
 import { useToast } from '../ui/toast-provider';
+import logger from '../../lib/logger';
+
 
 interface ShareMenuProps {
   referralUrl: string;
@@ -42,7 +44,7 @@ export function ShareMenu({ referralUrl, referralCode, memberId, communityName =
         }),
       });
     } catch (error) {
-      console.error('Failed to track share:', error);
+      logger.error('Failed to track share:', error);
     }
   };
 

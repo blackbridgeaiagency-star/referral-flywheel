@@ -16,6 +16,8 @@ import {
   type MessageTemplate,
 } from '../../lib/templates/message-templates';
 import { Copy, Check } from 'lucide-react';
+import logger from '../../lib/logger';
+
 
 interface TemplateSelectorProps {
   referralLink: string;
@@ -69,7 +71,7 @@ export function TemplateSelector({
 
       setTimeout(() => setCopiedId(null), 2000);
     } catch (error) {
-      console.error('Failed to copy:', error);
+      logger.error('Failed to copy:', error);
     }
   };
 

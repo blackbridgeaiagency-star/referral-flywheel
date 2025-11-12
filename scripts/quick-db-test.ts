@@ -5,13 +5,18 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import logger from '../lib/logger';
 
-const testUrl = 'postgresql://postgres:cFWGc4UtNVXm6NYt@db.eerhpmjherotaqklpqnc.supabase.co:6543/postgres?pgbouncer=true&connection_limit=1';
+
+// Use environment variable for database connection
+// Fallback to placeholder if not set (will fail but won't expose secrets)
+const testUrl = process.env.DATABASE_URL ||
+                'postgresql://postgres:[REPLACE_WITH_PASSWORD]@db.eerhpmjherotaqklpqnc.supabase.co:6543/postgres?pgbouncer=true&connection_limit=1';
 
 async function testConnection() {
-  console.log('🔍 Testing database connection...\n');
-  console.log('URL:', testUrl.replace(/:[^:@]+@/, ':****@')); // Mask password
-  console.log('');
+  logger.info(' Testing database connection...\n');
+  logger.debug('URL:', testUrl.replace(/:[^:@]+@/, ':****@')); // Mask password
+  logger.debug('');
 
   const prisma = new PrismaClient({
     datasources: {
@@ -26,73 +31,73 @@ async function testConnection() {
     const startTime = Date.now();
 
     // Test 1: Basic connection
-    console.log('Test 1: Basic connection...');
+    logger.debug('Test 1: Basic connection...');
     await prisma.$queryRaw`SELECT 1`;
     const latency = Date.now() - startTime;
-    console.log(`✅ Connection successful (${latency}ms latency)\n`);
+    logger.info('Connection successful (${latency}ms latency)\n');
 
     // Test 2: Check tables
-    console.log('Test 2: Checking tables...');
+    logger.debug('Test 2: Checking tables...');
     const tables = await prisma.$queryRaw<Array<{tablename: string}>>`
       SELECT tablename FROM pg_tables
       WHERE schemaname = 'public'
       ORDER BY tablename
     `;
-    console.log(`✅ Found ${tables.length} tables:`);
-    tables.forEach(t => console.log(`   - ${t.tablename}`));
-    console.log('');
+    logger.info('Found ${tables.length} tables:');
+    tables.forEach(t => logger.debug(`   - ${t.tablename}`));
+    logger.debug('');
 
     // Test 3: Check if main tables exist
-    console.log('Test 3: Checking main tables...');
+    logger.debug('Test 3: Checking main tables...');
     const requiredTables = ['Creator', 'Member', 'Commission', 'AttributionClick'];
     const existingTables = tables.map(t => t.tablename);
 
     for (const table of requiredTables) {
       if (existingTables.includes(table)) {
-        console.log(`   ✅ ${table} exists`);
+        logger.debug(`   ✅ ${table} exists`);
       } else {
-        console.log(`   ❌ ${table} missing`);
+        logger.debug(`   ❌ ${table} missing`);
       }
     }
-    console.log('');
+    logger.debug('');
 
     // Test 4: Count records
-    console.log('Test 4: Counting records...');
+    logger.debug('Test 4: Counting records...');
     try {
       const [creators, members, commissions] = await Promise.all([
         prisma.creator.count(),
         prisma.member.count(),
         prisma.commission.count(),
       ]);
-      console.log(`   Creators: ${creators}`);
-      console.log(`   Members: ${members}`);
-      console.log(`   Commissions: ${commissions}`);
+      logger.debug(`   Creators: ${creators}`);
+      logger.debug(`   Members: ${members}`);
+      logger.debug(`   Commissions: ${commissions}`);
     } catch (error) {
-      console.log('   ⚠️ Could not count records (tables might not exist)');
+      logger.debug('   ⚠️ Could not count records (tables might not exist)');
     }
 
-    console.log('\n✅ All tests passed! Database is accessible.\n');
-    console.log('Next steps:');
-    console.log('1. Ensure this DATABASE_URL is set in Vercel');
-    console.log('2. Include ?pgbouncer=true&connection_limit=1');
-    console.log('3. Redeploy your application');
+    logger.debug('\n✅ All tests passed! Database is accessible.\n');
+    logger.debug('Next steps:');
+    logger.debug('1. Ensure this DATABASE_URL is set in Vercel');
+    logger.debug('2. Include ?pgbouncer=true&connection_limit=1');
+    logger.debug('3. Redeploy your application');
 
   } catch (error: any) {
-    console.error('\n❌ Connection failed!\n');
-    console.error('Error:', error.message);
+    logger.error('\n❌ Connection failed!\n');
+    logger.error('Error:', error.message);
 
     if (error.message.includes("Can't reach database server")) {
-      console.log('\nPossible causes:');
-      console.log('1. Supabase project is paused (check Supabase dashboard)');
-      console.log('2. Incorrect host or port');
-      console.log('3. Network/firewall issues');
+      logger.debug('\nPossible causes:');
+      logger.debug('1. Supabase project is paused (check Supabase dashboard)');
+      logger.debug('2. Incorrect host or port');
+      logger.debug('3. Network/firewall issues');
     } else if (error.message.includes('authentication failed')) {
-      console.log('\nPossible causes:');
-      console.log('1. Incorrect password');
-      console.log('2. Password needs URL encoding for special characters');
-      console.log('3. User permissions issue');
+      logger.debug('\nPossible causes:');
+      logger.debug('1. Incorrect password');
+      logger.debug('2. Password needs URL encoding for special characters');
+      logger.debug('3. User permissions issue');
     } else if (error.code === 'P1001') {
-      console.log('\nDatabase server is unreachable. Check if Supabase project is active.');
+      logger.debug('\nDatabase server is unreachable. Check if Supabase project is active.');
     }
 
     process.exit(1);

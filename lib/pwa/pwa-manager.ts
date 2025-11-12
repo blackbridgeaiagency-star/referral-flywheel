@@ -1,5 +1,7 @@
 // lib/pwa/pwa-manager.ts
 import { useState, useEffect } from 'react';
+import logger from '../logger';
+
 
 /**
  * PWA installation state
@@ -143,11 +145,11 @@ export function usePWA() {
       const { outcome } = await installState.deferredPrompt.userChoice;
 
       if (outcome === 'accepted') {
-        console.log('PWA installed');
+        logger.debug('PWA installed');
         return true;
       }
     } catch (error) {
-      console.error('Failed to install PWA:', error);
+      logger.error('Failed to install PWA:', error);
     }
 
     return false;
@@ -158,7 +160,7 @@ export function usePWA() {
    */
   const requestPushPermission = async () => {
     if (!pushState.isSupported) {
-      console.warn('Push notifications not supported');
+      logger.warn('Push notifications not supported');
       return false;
     }
 
@@ -189,7 +191,7 @@ export function usePWA() {
         return true;
       }
     } catch (error) {
-      console.error('Failed to request push permission:', error);
+      logger.error('Failed to request push permission:', error);
     }
 
     return false;
@@ -212,7 +214,7 @@ export function usePWA() {
 
       return true;
     } catch (error) {
-      console.error('Failed to unsubscribe:', error);
+      logger.error('Failed to unsubscribe:', error);
       return false;
     }
   };
@@ -243,13 +245,13 @@ export function usePWA() {
  */
 export async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) {
-    console.log('Service workers not supported');
+    logger.debug('Service workers not supported');
     return;
   }
 
   try {
     const registration = await navigator.serviceWorker.register('/sw.js');
-    console.log('Service worker registered:', registration);
+    logger.debug('Service worker registered:', registration);
 
     // Check for updates periodically
     setInterval(() => {
@@ -258,7 +260,7 @@ export async function registerServiceWorker() {
 
     return registration;
   } catch (error) {
-    console.error('Service worker registration failed:', error);
+    logger.error('Service worker registration failed:', error);
   }
 }
 
@@ -289,7 +291,7 @@ export async function sendPushNotification(
 
     return response.ok;
   } catch (error) {
-    console.error('Failed to send push notification:', error);
+    logger.error('Failed to send push notification:', error);
     return false;
   }
 }
@@ -307,7 +309,7 @@ async function saveSubscription(subscription: PushSubscription) {
       body: JSON.stringify(subscription),
     });
   } catch (error) {
-    console.error('Failed to save subscription:', error);
+    logger.error('Failed to save subscription:', error);
   }
 }
 
@@ -324,7 +326,7 @@ async function removeSubscription(subscription: PushSubscription) {
       body: JSON.stringify(subscription),
     });
   } catch (error) {
-    console.error('Failed to remove subscription:', error);
+    logger.error('Failed to remove subscription:', error);
   }
 }
 
@@ -359,7 +361,7 @@ export async function checkForUpdates() {
       return true;
     }
   } catch (error) {
-    console.error('Failed to check for updates:', error);
+    logger.error('Failed to check for updates:', error);
   }
 
   return false;

@@ -2,125 +2,127 @@
 // Tests all security and performance improvements
 
 import { generateCsrfToken, validateCsrfToken } from '../lib/security/csrf';
+import logger from '../lib/logger';
 
-console.log('🧪 P1/P2 FIXES COMPREHENSIVE TEST\n');
-console.log('='.repeat(60));
+
+logger.debug('🧪 P1/P2 FIXES COMPREHENSIVE TEST\n');
+logger.debug('='.repeat(60));
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // TEST 1: Redis Caching (Graceful Degradation)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-console.log('\n✅ TEST 1: Redis Caching Implementation');
-console.log('─'.repeat(60));
+logger.debug('\n✅ TEST 1: Redis Caching Implementation');
+logger.debug('─'.repeat(60));
 
-console.log('Redis Configuration:');
-console.log(`  ✓ Graceful degradation: Enabled`);
-console.log(`  ✓ Max retry attempts: 3 (reduced from 10)`);
-console.log(`  ✓ ECONNREFUSED handling: Silent in development`);
-console.log(`  ✓ Environment variable: REDIS_DISABLED support`);
-console.log(`  ✓ Status: App works without Redis ✅`);
+logger.debug('Redis Configuration:');
+logger.debug(`  ✓ Graceful degradation: Enabled`);
+logger.debug(`  ✓ Max retry attempts: 3 (reduced from 10)`);
+logger.debug(`  ✓ ECONNREFUSED handling: Silent in development`);
+logger.debug(`  ✓ Environment variable: REDIS_DISABLED support`);
+logger.debug(`  ✓ Status: App works without Redis ✅`);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // TEST 2: Rate Limiting on Referral Redirect
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-console.log('\n\n⚡ TEST 2: Rate Limiting on Referral Redirect');
-console.log('─'.repeat(60));
+logger.debug('\n\n⚡ TEST 2: Rate Limiting on Referral Redirect');
+logger.debug('─'.repeat(60));
 
-console.log('Rate Limit Configuration:');
-console.log(`  ✓ Endpoint: /r/[code]`);
-console.log(`  ✓ Window: 60 seconds (1 minute)`);
-console.log(`  ✓ Max requests: 30 per IP`);
-console.log(`  ✓ Response: 429 Too Many Requests`);
-console.log(`  ✓ Headers: Retry-After included`);
-console.log(`  ✓ Protection: Click farming ✅`);
-console.log(`  ✓ Protection: DoS attacks ✅`);
+logger.debug('Rate Limit Configuration:');
+logger.debug(`  ✓ Endpoint: /r/[code]`);
+logger.debug(`  ✓ Window: 60 seconds (1 minute)`);
+logger.debug(`  ✓ Max requests: 30 per IP`);
+logger.debug(`  ✓ Response: 429 Too Many Requests`);
+logger.debug(`  ✓ Headers: Retry-After included`);
+logger.debug(`  ✓ Protection: Click farming ✅`);
+logger.debug(`  ✓ Protection: DoS attacks ✅`);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // TEST 3: CSRF Protection
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-console.log('\n\n🔒 TEST 3: CSRF Protection');
-console.log('─'.repeat(60));
+logger.debug('\n\n🔒 TEST 3: CSRF Protection');
+logger.debug('─'.repeat(60));
 
 // Test CSRF token generation
-console.log('\nCsrf Token Generation:');
+logger.debug('\nCsrf Token Generation:');
 const token1 = generateCsrfToken();
 const token2 = generateCsrfToken();
 
-console.log(`  Generated Token 1: ${token1.substring(0, 30)}...`);
-console.log(`  Generated Token 2: ${token2.substring(0, 30)}...`);
-console.log(`  Tokens unique: ${token1 !== token2 ? '✅' : '❌'}`);
+logger.debug(`  Generated Token 1: ${token1.substring(0, 30)}...`);
+logger.debug(`  Generated Token 2: ${token2.substring(0, 30)}...`);
+logger.debug(`  Tokens unique: ${token1 !== token2 ? '✅' : '❌'}`);
 
 // Test CSRF token validation
-console.log('\nCsrf Token Validation:');
+logger.debug('\nCsrf Token Validation:');
 
 // Valid token (just generated)
 const validResult = validateCsrfToken(token1);
-console.log(`  ✅ Valid token: ${validResult ? 'ACCEPTED' : 'REJECTED'}`);
+logger.debug(`  ✅ Valid token: ${validResult ? 'ACCEPTED' : 'REJECTED'}`);
 
 // Invalid token (malformed)
 const invalidToken = 'invalid-token-format';
 const invalidResult = validateCsrfToken(invalidToken);
-console.log(`  ✅ Invalid token: ${!invalidResult ? 'REJECTED' : 'ACCEPTED'}`);
+logger.debug(`  ✅ Invalid token: ${!invalidResult ? 'REJECTED' : 'ACCEPTED'}`);
 
 // Expired token (simulate old timestamp)
 const expiredToken = `abc123:${Date.now() - 7200000}:def456`;
 const expiredResult = validateCsrfToken(expiredToken);
-console.log(`  ✅ Expired token: ${!expiredResult ? 'REJECTED' : 'ACCEPTED'}`);
+logger.debug(`  ✅ Expired token: ${!expiredResult ? 'REJECTED' : 'ACCEPTED'}`);
 
 // Empty token
 const emptyResult = validateCsrfToken('');
-console.log(`  ✅ Empty token: ${!emptyResult ? 'REJECTED' : 'ACCEPTED'}`);
+logger.debug(`  ✅ Empty token: ${!emptyResult ? 'REJECTED' : 'ACCEPTED'}`);
 
-console.log('\nCSRF Configuration:');
-console.log(`  ✓ Token format: token:timestamp:signature`);
-console.log(`  ✓ Expiry: 1 hour`);
-console.log(`  ✓ Protected methods: POST, PUT, DELETE, PATCH`);
-console.log(`  ✓ Excluded paths: /api/webhooks, /api/health`);
-console.log(`  ✓ Cookie name: csrf-token`);
-console.log(`  ✓ Header name: x-csrf-token`);
-console.log(`  ✓ API endpoint: /api/csrf ✅`);
+logger.debug('\nCSRF Configuration:');
+logger.debug(`  ✓ Token format: token:timestamp:signature`);
+logger.debug(`  ✓ Expiry: 1 hour`);
+logger.debug(`  ✓ Protected methods: POST, PUT, DELETE, PATCH`);
+logger.debug(`  ✓ Excluded paths: /api/webhooks, /api/health`);
+logger.debug(`  ✓ Cookie name: csrf-token`);
+logger.debug(`  ✓ Header name: x-csrf-token`);
+logger.debug(`  ✓ API endpoint: /api/csrf ✅`);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // TEST 4: Security Headers
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-console.log('\n\n🛡️  TEST 4: Security Headers');
-console.log('─'.repeat(60));
+logger.debug('\n\n🛡️  TEST 4: Security Headers');
+logger.debug('─'.repeat(60));
 
-console.log('Implemented Headers:');
-console.log('  ✓ Content-Security-Policy');
-console.log('    - default-src: self');
-console.log('    - script-src: self + unsafe-eval/inline + whop.com');
-console.log('    - frame-ancestors: none');
-console.log('    - form-action: self + whop.com');
-console.log('');
-console.log('  ✓ X-Frame-Options: DENY');
-console.log('    - Protection: Clickjacking ✅');
-console.log('');
-console.log('  ✓ X-Content-Type-Options: nosniff');
-console.log('    - Protection: MIME sniffing ✅');
-console.log('');
-console.log('  ✓ X-XSS-Protection: 1; mode=block');
-console.log('    - Protection: XSS attacks ✅');
-console.log('');
-console.log('  ✓ Referrer-Policy: strict-origin-when-cross-origin');
-console.log('    - Protection: Information leakage ✅');
-console.log('');
-console.log('  ✓ Strict-Transport-Security');
-console.log('    - max-age: 31536000 (1 year)');
-console.log('    - includeSubDomains: true');
-console.log('    - Protection: HTTPS downgrade ✅');
-console.log('');
-console.log('  ✓ Permissions-Policy');
-console.log('    - camera: disabled');
-console.log('    - microphone: disabled');
-console.log('    - geolocation: disabled');
-console.log('    - interest-cohort: disabled (FLoC)');
+logger.debug('Implemented Headers:');
+logger.debug('  ✓ Content-Security-Policy');
+logger.debug('    - default-src: self');
+logger.debug('    - script-src: self + unsafe-eval/inline + whop.com');
+logger.debug('    - frame-ancestors: none');
+logger.debug('    - form-action: self + whop.com');
+logger.debug('');
+logger.debug('  ✓ X-Frame-Options: DENY');
+logger.debug('    - Protection: Clickjacking ✅');
+logger.debug('');
+logger.debug('  ✓ X-Content-Type-Options: nosniff');
+logger.debug('    - Protection: MIME sniffing ✅');
+logger.debug('');
+logger.debug('  ✓ X-XSS-Protection: 1; mode=block');
+logger.debug('    - Protection: XSS attacks ✅');
+logger.debug('');
+logger.debug('  ✓ Referrer-Policy: strict-origin-when-cross-origin');
+logger.debug('    - Protection: Information leakage ✅');
+logger.debug('');
+logger.debug('  ✓ Strict-Transport-Security');
+logger.debug('    - max-age: 31536000 (1 year)');
+logger.debug('    - includeSubDomains: true');
+logger.debug('    - Protection: HTTPS downgrade ✅');
+logger.debug('');
+logger.debug('  ✓ Permissions-Policy');
+logger.debug('    - camera: disabled');
+logger.debug('    - microphone: disabled');
+logger.debug('    - geolocation: disabled');
+logger.debug('    - interest-cohort: disabled (FLoC)');
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // SUMMARY
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-console.log('\n\n' + '='.repeat(60));
-console.log('📊 TEST SUMMARY');
-console.log('='.repeat(60));
+logger.debug('\n\n' + '='.repeat(60));
+logger.info(' TEST SUMMARY');
+logger.debug('='.repeat(60));
 
 const testResults = [
   { name: 'Redis Caching (P1)', status: '✅', details: 'Graceful degradation implemented' },
@@ -129,28 +131,28 @@ const testResults = [
   { name: 'Security Headers (P2)', status: '✅', details: '7 headers configured' },
 ];
 
-console.log('');
+logger.debug('');
 testResults.forEach(test => {
-  console.log(`${test.status} ${test.name}`);
-  console.log(`   ${test.details}`);
+  logger.debug(`${test.status} ${test.name}`);
+  logger.debug(`   ${test.details}`);
 });
 
-console.log('\n' + '='.repeat(60));
-console.log('✅ All P1/P2 Fixes: IMPLEMENTED & TESTED');
-console.log('='.repeat(60));
+logger.debug('\n' + '='.repeat(60));
+logger.info('All P1/P2 Fixes: IMPLEMENTED & TESTED');
+logger.debug('='.repeat(60));
 
-console.log('\n🎯 Security Improvements:');
-console.log('  • Click farming: PREVENTED');
-console.log('  • DoS attacks: MITIGATED');
-console.log('  • CSRF attacks: PROTECTED');
-console.log('  • Clickjacking: BLOCKED');
-console.log('  • XSS attacks: MITIGATED');
-console.log('  • MIME sniffing: PREVENTED');
-console.log('  • HTTPS downgrade: PROTECTED');
+logger.debug('\n🎯 Security Improvements:');
+logger.debug('  • Click farming: PREVENTED');
+logger.debug('  • DoS attacks: MITIGATED');
+logger.debug('  • CSRF attacks: PROTECTED');
+logger.debug('  • Clickjacking: BLOCKED');
+logger.debug('  • XSS attacks: MITIGATED');
+logger.debug('  • MIME sniffing: PREVENTED');
+logger.debug('  • HTTPS downgrade: PROTECTED');
 
-console.log('\n⚡ Performance Improvements:');
-console.log('  • Redis caching: ENABLED (optional)');
-console.log('  • Database queries: OPTIMIZED (from P0)');
-console.log('  • Rate limiting: EFFICIENT');
+logger.debug('\n⚡ Performance Improvements:');
+logger.debug('  • Redis caching: ENABLED (optional)');
+logger.debug('  • Database queries: OPTIMIZED (from P0)');
+logger.debug('  • Rate limiting: EFFICIENT');
 
-console.log('\n🎉 ALL FIXES VERIFIED!\n');
+logger.debug('\n🎉 ALL FIXES VERIFIED!\n');

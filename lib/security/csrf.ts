@@ -1,6 +1,8 @@
 // P2: CSRF Protection Implementation
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import logger from '../logger';
+
 
 const CSRF_SECRET = process.env.CSRF_SECRET || 'default-csrf-secret-change-in-production';
 const CSRF_TOKEN_HEADER = 'x-csrf-token';
@@ -52,7 +54,7 @@ export function validateCsrfToken(token: string): boolean {
       Buffer.from(expectedSignature)
     );
   } catch (error) {
-    console.error('CSRF validation error:', error);
+    logger.error('CSRF validation error:', error);
     return false;
   }
 }

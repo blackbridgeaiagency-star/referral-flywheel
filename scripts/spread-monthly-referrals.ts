@@ -3,6 +3,8 @@
 
 import { PrismaClient } from '@prisma/client';
 import { generateReferralCode } from '../lib/utils/referral-code';
+import logger from '../lib/logger';
+
 
 const prisma = new PrismaClient();
 
@@ -16,7 +18,7 @@ function octoberDate() {
 }
 
 async function main() {
-  console.log('📅 Spreading October 2025 referrals across top performers...\n');
+  logger.info(' Spreading October 2025 referrals across top performers...\n');
 
   // Get top 20 performers (excluding hero who already has October data)
   const topPerformers = await prisma.member.findMany({
@@ -38,7 +40,7 @@ async function main() {
     take: 20,
   });
 
-  console.log(`Found ${topPerformers.length} top performers\n`);
+  logger.debug(`Found ${topPerformers.length} top performers\n`);
 
   let totalMembersCreated = 0;
 
@@ -46,7 +48,7 @@ async function main() {
     // Each top performer gets 2-8 referrals this month (randomized for natural distribution)
     const monthlyReferrals = Math.floor(Math.random() * 7) + 2; // 2-8 referrals
 
-    console.log(`Creating ${monthlyReferrals} October referrals for ${performer.username}...`);
+    logger.debug(`Creating ${monthlyReferrals} October referrals for ${performer.username}...`);
 
     for (let i = 0; i < monthlyReferrals; i++) {
       const username = `OctRef_${performer.username}_${i + 1}`;
@@ -87,18 +89,18 @@ async function main() {
       },
     });
 
-    console.log(`   ✅ Updated ${performer.username}: monthlyReferred = ${monthlyReferrals}\n`);
+    logger.debug(`   ✅ Updated ${performer.username}: monthlyReferred = ${monthlyReferrals}\n`);
   }
 
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('✅ October referrals distributed successfully!\n');
-  console.log('📊 Summary:');
-  console.log(`   • Top performers updated: ${topPerformers.length}`);
-  console.log(`   • New October members created: ${totalMembersCreated}`);
-  console.log('\n🎯 Your Creator Dashboard "Top Referrers" table should now show:');
-  console.log('   ✅ "This Month" column populated for top 20 performers');
-  console.log('   ✅ Natural distribution: 2-8 referrals per performer');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+  logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  logger.info('October referrals distributed successfully!\n');
+  logger.info(' Summary:');
+  logger.debug(`   • Top performers updated: ${topPerformers.length}`);
+  logger.debug(`   • New October members created: ${totalMembersCreated}`);
+  logger.debug('\n🎯 Your Creator Dashboard "Top Referrers" table should now show:');
+  logger.debug('   ✅ "This Month" column populated for top 20 performers');
+  logger.debug('   ✅ Natural distribution: 2-8 referrals per performer');
+  logger.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 }
 
 main()

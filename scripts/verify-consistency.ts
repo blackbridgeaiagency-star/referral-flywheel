@@ -16,6 +16,8 @@
 
 import { prisma } from '../lib/db/prisma';
 import { logConsistencyCheck } from '../lib/utils/logger';
+import logger from '../lib/logger';
+
 
 interface ConsistencyCheck {
   name: string;
@@ -26,7 +28,7 @@ interface ConsistencyCheck {
 }
 
 async function verifyConsistency() {
-  console.log('🔍 Starting data consistency verification...\n');
+  logger.info(' Starting data consistency verification...\n');
 
   const checks: ConsistencyCheck[] = [];
   let allPassed = true;
@@ -213,34 +215,34 @@ async function verifyConsistency() {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // SUMMARY
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('\n═══════════════════════════════════════════════════════════════');
-  console.log('📊 CONSISTENCY VERIFICATION SUMMARY');
-  console.log('═══════════════════════════════════════════════════════════════\n');
+  logger.debug('\n═══════════════════════════════════════════════════════════════');
+  logger.info(' CONSISTENCY VERIFICATION SUMMARY');
+  logger.debug('═══════════════════════════════════════════════════════════════\n');
 
   const passedCount = checks.filter((c) => c.passed).length;
   const failedCount = checks.filter((c) => !c.passed).length;
 
-  console.log(`Total Checks: ${checks.length}`);
-  console.log(`✅ Passed: ${passedCount}`);
-  console.log(`❌ Failed: ${failedCount}\n`);
+  logger.debug(`Total Checks: ${checks.length}`);
+  logger.info('Passed: ${passedCount}');
+  logger.error('Failed: ${failedCount}\n');
 
   if (failedCount > 0) {
-    console.log('Failed Checks:');
+    logger.debug('Failed Checks:');
     checks
       .filter((c) => !c.passed)
       .forEach((c) => {
-        console.log(`  ❌ ${c.name}`);
-        console.log(`     Expected: ${c.expected}, Actual: ${c.actual}, Diff: ${c.difference}`);
+        logger.debug(`  ❌ ${c.name}`);
+        logger.debug(`     Expected: ${c.expected}, Actual: ${c.actual}, Diff: ${c.difference}`);
       });
   }
 
-  console.log('\n═══════════════════════════════════════════════════════════════');
+  logger.debug('\n═══════════════════════════════════════════════════════════════');
 
   if (allPassed) {
-    console.log('✅ ALL CONSISTENCY CHECKS PASSED!\n');
+    logger.info('ALL CONSISTENCY CHECKS PASSED!\n');
     process.exit(0);
   } else {
-    console.log('❌ SOME CONSISTENCY CHECKS FAILED!\n');
+    logger.error('SOME CONSISTENCY CHECKS FAILED!\n');
     process.exit(1);
   }
 }
@@ -248,7 +250,7 @@ async function verifyConsistency() {
 // Run verification
 verifyConsistency()
   .catch((error) => {
-    console.error('❌ Error running consistency verification:', error);
+    logger.error('❌ Error running consistency verification:', error);
     process.exit(1);
   })
   .finally(() => {

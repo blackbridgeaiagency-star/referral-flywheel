@@ -3,6 +3,8 @@
 // To enable Sentry: npm install @sentry/nextjs and restore the original implementation
 
 import React from 'react';
+import logger from '../logger';
+
 
 /**
  * Error tracking utilities - console-only implementation
@@ -126,7 +128,7 @@ export function trackPerformance(
   duration: number,
   metadata?: Record<string, any>
 ): void {
-  console.log(`[PERFORMANCE] ${name}: ${duration}ms`, metadata);
+  logger.debug(`[PERFORMANCE] ${name}: ${duration}ms`, metadata);
 }
 
 /**
@@ -136,7 +138,7 @@ export function trackEvent(
   name: string,
   data?: Record<string, any>
 ): void {
-  console.log(`[EVENT] ${name}`, data);
+  logger.debug(`[EVENT] ${name}`, data);
 }
 
 /**

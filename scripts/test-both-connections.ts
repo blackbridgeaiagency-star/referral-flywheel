@@ -1,19 +1,25 @@
 #!/usr/bin/env tsx
 import { PrismaClient } from '@prisma/client';
+import logger from '../lib/logger';
 
-const directUrl = 'postgresql://postgres:cFWGc4UtNVXm6NYt@db.eerhpmjherotaqklpqnc.supabase.co:5432/postgres';
-const pooledUrl = 'postgresql://postgres:cFWGc4UtNVXm6NYt@db.eerhpmjherotaqklpqnc.supabase.co:6543/postgres?pgbouncer=true';
+
+// Use environment variable for database connections
+// Fallback to placeholders if not set (will fail but won't expose secrets)
+const baseUrl = process.env.DATABASE_URL ||
+                'postgresql://postgres:[REPLACE_WITH_PASSWORD]@db.eerhpmjherotaqklpqnc.supabase.co:6543/postgres?pgbouncer=true';
+const directUrl = baseUrl.replace('6543', '5432').replace('?pgbouncer=true', '');
+const pooledUrl = baseUrl.includes('pgbouncer') ? baseUrl : baseUrl + '?pgbouncer=true';
 
 async function testConnection(url: string, name: string) {
   const prisma = new PrismaClient({ datasources: { db: { url } } });
   
   try {
-    console.log(`\n🔍 Testing ${name}...`);
+    logger.debug(`\n🔍 Testing ${name}...`);
     const creators = await prisma.creator.count();
-    console.log(`   ✅ Creators: ${creators}`);
+    logger.debug(`   ✅ Creators: ${creators}`);
     return true;
   } catch (error: any) {
-    console.log(`   ❌ Error: ${error.message.split('\n')[0]}`);
+    logger.debug(`   ❌ Error: ${error.message.split('\n')[0]}`);
     return false;
   } finally {
     await prisma.$disconnect();
@@ -21,7 +27,7 @@ async function testConnection(url: string, name: string) {
 }
 
 async function main() {
-  console.log('Testing both connection types:\n');
+  logger.debug('Testing both connection types:\n');
   await testConnection(directUrl, 'Direct Connection (port 5432)');
   await testConnection(pooledUrl, 'Pooled Connection (port 6543)');
 }

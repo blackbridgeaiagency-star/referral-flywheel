@@ -69,19 +69,19 @@ export function MemberOnboardingModal({
           <div className="bg-gradient-to-r from-purple-900/30 to-blue-900/30 rounded-xl p-4 border border-purple-500/30">
             <p className="text-white font-medium mb-2">🎉 You're now part of something special!</p>
             <p className="text-gray-300 text-sm">
-              As a member, you get exclusive access to our referral program where you can earn real money.
+              As a member, you get exclusive access to our referral program where top contributors earn real rewards.
             </p>
           </div>
         </div>
       )
     },
     {
-      title: "Earn 10% Lifetime Commission",
+      title: "How Referral Rewards Work",
       icon: <TrendingUp className="w-8 h-8" />,
       content: (
         <div className="space-y-4">
           <p className="text-gray-300 text-lg">
-            Here's how you can start earning passive income:
+            Here's how you can start earning rewards:
           </p>
           <div className="space-y-3">
             <div className="flex items-start gap-3">
@@ -98,8 +98,8 @@ export function MemberOnboardingModal({
                 2
               </div>
               <div>
-                <p className="text-white font-medium">They Join</p>
-                <p className="text-gray-400 text-sm">When someone signs up using your link</p>
+                <p className="text-white font-medium">We Track Everything</p>
+                <p className="text-gray-400 text-sm">See your referral count grow in real-time</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -107,14 +107,14 @@ export function MemberOnboardingModal({
                 3
               </div>
               <div>
-                <p className="text-white font-medium">You Earn Forever</p>
-                <p className="text-gray-400 text-sm">Get 10% commission every month they stay!</p>
+                <p className="text-white font-medium">{creatorName} Rewards Top Performers</p>
+                <p className="text-gray-400 text-sm">Get cash, free months, VIP access, and exclusive perks!</p>
               </div>
             </div>
           </div>
           <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-3">
             <p className="text-green-400 text-sm font-medium">
-              💰 Example: 10 referrals = ~$50/month in passive income!
+              💰 Top performers in similar communities earn $500-2,000/month in rewards!
             </p>
           </div>
         </div>

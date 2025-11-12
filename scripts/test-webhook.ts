@@ -13,6 +13,8 @@
 
 import { calculateCommission } from '../lib/utils/commission';
 import { logCommissionSplit, logCalculation } from '../lib/utils/logger';
+import logger from '../lib/logger';
+
 
 interface TestCase {
   name: string;
@@ -23,7 +25,7 @@ interface TestCase {
 }
 
 async function testWebhook() {
-  console.log('🧪 Starting webhook commission calculation tests...\n');
+  logger.debug('🧪 Starting webhook commission calculation tests...\n');
 
   const testCases: TestCase[] = [
     {
@@ -67,11 +69,11 @@ async function testWebhook() {
   const results: Array<{ test: string; passed: boolean; details: string }> = [];
 
   for (const testCase of testCases) {
-    console.log(`═══════════════════════════════════════════════════════════════`);
-    console.log(`🧪 TEST: ${testCase.name}`);
-    console.log(`───────────────────────────────────────────────────────────────`);
-    console.log(`Sale Amount: $${testCase.saleAmount.toFixed(2)}`);
-    console.log(`───────────────────────────────────────────────────────────────\n`);
+    logger.debug(`═══════════════════════════════════════════════════════════════`);
+    logger.debug(`🧪 TEST: ${testCase.name}`);
+    logger.debug(`───────────────────────────────────────────────────────────────`);
+    logger.debug(`Sale Amount: $${testCase.saleAmount.toFixed(2)}`);
+    logger.debug(`───────────────────────────────────────────────────────────────\n`);
 
     // Calculate commission using the actual utility function
     const { memberShare, creatorShare, platformShare } =
@@ -112,14 +114,14 @@ async function testWebhook() {
     });
 
     if (passed) {
-      console.log(`✅ ${testCase.name} - PASSED\n`);
+      logger.info('${testCase.name} - PASSED\n');
       results.push({
         test: testCase.name,
         passed: true,
         details: 'All commission splits are correct',
       });
     } else {
-      console.log(`❌ ${testCase.name} - FAILED\n`);
+      logger.error('${testCase.name} - FAILED\n');
       allPassed = false;
 
       const errors: string[] = [];
@@ -153,47 +155,47 @@ async function testWebhook() {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // SUMMARY
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('\n═══════════════════════════════════════════════════════════════');
-  console.log('📊 WEBHOOK TEST SUMMARY');
-  console.log('═══════════════════════════════════════════════════════════════\n');
+  logger.debug('\n═══════════════════════════════════════════════════════════════');
+  logger.info(' WEBHOOK TEST SUMMARY');
+  logger.debug('═══════════════════════════════════════════════════════════════\n');
 
   const passedCount = results.filter((r) => r.passed).length;
   const failedCount = results.filter((r) => !r.passed).length;
 
-  console.log(`Total Tests: ${results.length}`);
-  console.log(`✅ Passed: ${passedCount}`);
-  console.log(`❌ Failed: ${failedCount}\n`);
+  logger.debug(`Total Tests: ${results.length}`);
+  logger.info('Passed: ${passedCount}');
+  logger.error('Failed: ${failedCount}\n');
 
   if (failedCount > 0) {
-    console.log('Failed Tests:');
+    logger.debug('Failed Tests:');
     results
       .filter((r) => !r.passed)
       .forEach((r) => {
-        console.log(`  ❌ ${r.test}`);
-        console.log(`     ${r.details}`);
+        logger.debug(`  ❌ ${r.test}`);
+        logger.debug(`     ${r.details}`);
       });
   }
 
-  console.log('\n═══════════════════════════════════════════════════════════════');
+  logger.debug('\n═══════════════════════════════════════════════════════════════');
 
   if (allPassed) {
-    console.log('✅ ALL WEBHOOK TESTS PASSED!\n');
+    logger.info('ALL WEBHOOK TESTS PASSED!\n');
 
-    console.log('📝 COMMISSION SPLIT VERIFICATION:');
-    console.log('   Member:   10% ✅');
-    console.log('   Creator:  70% ✅');
-    console.log('   Platform: 20% ✅');
-    console.log('   Total:    100% ✅\n');
+    logger.info(' COMMISSION SPLIT VERIFICATION:');
+    logger.debug('   Member:   10% ✅');
+    logger.debug('   Creator:  70% ✅');
+    logger.debug('   Platform: 20% ✅');
+    logger.debug('   Total:    100% ✅\n');
 
     process.exit(0);
   } else {
-    console.log('❌ SOME WEBHOOK TESTS FAILED!\n');
+    logger.error('SOME WEBHOOK TESTS FAILED!\n');
     process.exit(1);
   }
 }
 
 // Run tests
 testWebhook().catch((error) => {
-  console.error('❌ Error running webhook tests:', error);
+  logger.error('❌ Error running webhook tests:', error);
   process.exit(1);
 });

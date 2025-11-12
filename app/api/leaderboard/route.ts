@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../lib/db/prisma';
 import { withRateLimit } from '../../../lib/security/rate-limit-utils';
+import logger from '../../../lib/logger';
+
 
 export async function GET(request: NextRequest) {
   return withRateLimit(request, async () => {
@@ -209,7 +211,7 @@ export async function GET(request: NextRequest) {
         totalMembers
       });
     } catch (error) {
-      console.error('❌ Leaderboard error:', error);
+      logger.error('❌ Leaderboard error:', error);
       return NextResponse.json({ error: 'Failed to fetch leaderboard' }, { status: 500 });
     }
   }, 'STANDARD');

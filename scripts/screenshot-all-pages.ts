@@ -1,6 +1,8 @@
 import { chromium } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
+import logger from '../lib/logger';
+
 
 const SCREENSHOT_DIR = './screenshots/all-pages';
 const BASE_URL = 'http://localhost:3002';
@@ -87,9 +89,9 @@ async function takeScreenshot(
   const browserPage = await context.newPage();
 
   try {
-    console.log(`\n📸 Testing: ${page.name}`);
-    console.log(`   URL: ${BASE_URL}${page.url}`);
-    console.log(`   Description: ${page.description}`);
+    logger.debug(`\n📸 Testing: ${page.name}`);
+    logger.debug(`   URL: ${BASE_URL}${page.url}`);
+    logger.debug(`   Description: ${page.description}`);
 
     // Navigate to page
     const response = await browserPage.goto(`${BASE_URL}${page.url}`, {
@@ -100,7 +102,7 @@ async function takeScreenshot(
     // Check response status
     if (!response || response.status() >= 400) {
       const status = response?.status() || 'unknown';
-      console.log(`   ❌ Failed: HTTP ${status}`);
+      logger.debug(`   ❌ Failed: HTTP ${status}`);
       await context.close();
       return {
         success: false,
@@ -113,7 +115,7 @@ async function takeScreenshot(
       try {
         await browserPage.waitForSelector(page.waitFor, { timeout: 10000 });
       } catch (e) {
-        console.log(`   ⚠️  Warning: Selector "${page.waitFor}" not found`);
+        logger.debug(`   ⚠️  Warning: Selector "${page.waitFor}" not found`);
       }
     }
 
@@ -130,7 +132,7 @@ async function takeScreenshot(
       fullPage: true,
     });
 
-    console.log(`   ✅ Success: ${screenshotPath}`);
+    logger.debug(`   ✅ Success: ${screenshotPath}`);
 
     await context.close();
     return {
@@ -138,7 +140,7 @@ async function takeScreenshot(
       path: screenshotPath,
     };
   } catch (error: any) {
-    console.log(`   ❌ Error: ${error.message}`);
+    logger.debug(`   ❌ Error: ${error.message}`);
     await context.close();
     return {
       success: false,
@@ -148,16 +150,16 @@ async function takeScreenshot(
 }
 
 async function main() {
-  console.log('🚀 Starting comprehensive page screenshot test');
-  console.log(`   Base URL: ${BASE_URL}`);
-  console.log(`   Pages to test: ${pagesToTest.length}`);
-  console.log(`   Screenshot dir: ${SCREENSHOT_DIR}\n`);
+  logger.info(' Starting comprehensive page screenshot test');
+  logger.debug(`   Base URL: ${BASE_URL}`);
+  logger.debug(`   Pages to test: ${pagesToTest.length}`);
+  logger.debug(`   Screenshot dir: ${SCREENSHOT_DIR}\n`);
 
   // Ensure screenshot directory exists
   ensureDirectory(SCREENSHOT_DIR);
 
   // Launch browser
-  console.log('🌐 Launching browser...');
+  logger.info(' Launching browser...');
   const browser = await chromium.launch({ headless: false });
 
   const results: Array<{
@@ -174,20 +176,20 @@ async function main() {
   await browser.close();
 
   // Generate report
-  console.log('\n' + '='.repeat(60));
-  console.log('📊 RESULTS SUMMARY');
-  console.log('='.repeat(60) + '\n');
+  logger.debug('\n' + '='.repeat(60));
+  logger.info(' RESULTS SUMMARY');
+  logger.debug('='.repeat(60) + '\n');
 
   const successful = results.filter((r) => r.result.success);
   const failed = results.filter((r) => !r.result.success);
 
-  console.log(`✅ Successful: ${successful.length}/${results.length}`);
-  console.log(`❌ Failed: ${failed.length}/${results.length}\n`);
+  logger.info('Successful: ${successful.length}/${results.length}');
+  logger.error('Failed: ${failed.length}/${results.length}\n');
 
   if (failed.length > 0) {
-    console.log('Failed pages:');
+    logger.debug('Failed pages:');
     failed.forEach(({ page, result }) => {
-      console.log(`  - ${page.name}: ${result.error}`);
+      logger.debug(`  - ${page.name}: ${result.error}`);
     });
   }
 
@@ -195,7 +197,7 @@ async function main() {
   const report = generateMarkdownReport(results);
   const reportPath = path.join(SCREENSHOT_DIR, 'REPORT.md');
   fs.writeFileSync(reportPath, report);
-  console.log(`\n📝 Full report saved to: ${reportPath}`);
+  logger.debug(`\n📝 Full report saved to: ${reportPath}`);
 
   // Exit with error code if any failed
   if (failed.length > 0) {
@@ -309,6 +311,6 @@ function generateMarkdownReport(
 
 // Run the test
 main().catch((error) => {
-  console.error('Fatal error:', error);
+  logger.error('Fatal error:', error);
   process.exit(1);
 });

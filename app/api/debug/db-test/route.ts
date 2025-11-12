@@ -3,9 +3,11 @@
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
+import logger from '../../../../lib/logger';
+
 
 export async function GET(request: Request) {
-  console.log('🔍 Database connection test initiated');
+  logger.info(' Database connection test initiated');
 
   const results = {
     timestamp: new Date().toISOString(),
@@ -62,11 +64,11 @@ export async function GET(request: Request) {
     }
 
     // Check 3: Test basic connection
-    console.log('🔗 Testing database connection...');
+    logger.info(' Testing database connection...');
     results.checks.connectionTest = true;
 
     // Check 4: Test actual query
-    console.log('📊 Running test queries...');
+    logger.info(' Running test queries...');
     const [creatorCount, memberCount, commissionCount] = await Promise.all([
       prisma.creator.count().catch(() => 0),
       prisma.member.count().catch(() => 0),
@@ -87,10 +89,10 @@ export async function GET(request: Request) {
       ` as Array<{tablename: string}>;
       results.stats.tables = tables.map(t => t.tablename);
     } catch (tableError) {
-      console.warn('Could not fetch table list:', tableError);
+      logger.warn('Could not fetch table list:', tableError);
     }
 
-    console.log('✅ Database connection test successful');
+    logger.info('Database connection test successful');
 
     return NextResponse.json({
       success: true,
@@ -99,7 +101,7 @@ export async function GET(request: Request) {
     }, { status: 200 });
 
   } catch (error) {
-    console.error('❌ Database connection test failed:', error);
+    logger.error('❌ Database connection test failed:', error);
 
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     results.database.error = errorMessage;
@@ -144,7 +146,7 @@ export async function GET(request: Request) {
     try {
       await prisma.$disconnect();
     } catch (disconnectError) {
-      console.error('Error disconnecting from database:', disconnectError);
+      logger.error('Error disconnecting from database:', disconnectError);
     }
   }
 }

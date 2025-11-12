@@ -3,8 +3,9 @@
 
 import { useState, useEffect } from 'react';
 import { Card } from '../../../components/ui/card';
+import logger from '../../../lib/logger';
 import {
-  Search,
+Search,
   Filter,
   Download,
   UserCheck,
@@ -56,12 +57,16 @@ export default function AdminMembers() {
         risk: filterRisk,
       });
 
-      const response = await fetch(`/api/admin/members?${params}`);
+      const response = await fetch(`/api/admin/members?${params}`, {
+        headers: {
+          'x-admin-token': 'e2e9e2ae1a4a7755111668aa55a22b59502f46eadd95705b0ad9f3882ef1a18d'
+        }
+      });
       const data = await response.json();
       setMembers(data.members);
       setTotalPages(data.totalPages);
     } catch (error) {
-      console.error('Failed to fetch members:', error);
+      logger.error('Failed to fetch members:', error);
     } finally {
       setLoading(false);
     }
@@ -70,12 +75,16 @@ export default function AdminMembers() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     // Implement search logic
-    console.log('Searching for:', searchTerm);
+    logger.debug('Searching for:', searchTerm);
   };
 
   const exportData = async () => {
     try {
-      const response = await fetch('/api/admin/members/export');
+      const response = await fetch('/api/admin/members/export', {
+        headers: {
+          'x-admin-token': 'e2e9e2ae1a4a7755111668aa55a22b59502f46eadd95705b0ad9f3882ef1a18d'
+        }
+      });
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -83,7 +92,7 @@ export default function AdminMembers() {
       a.download = `members-export-${new Date().toISOString()}.csv`;
       a.click();
     } catch (error) {
-      console.error('Export failed:', error);
+      logger.error('Export failed:', error);
     }
   };
 
@@ -91,7 +100,10 @@ export default function AdminMembers() {
     try {
       const response = await fetch(`/api/admin/members/${memberId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-token': 'e2e9e2ae1a4a7755111668aa55a22b59502f46eadd95705b0ad9f3882ef1a18d'
+        },
         body: JSON.stringify({ action })
       });
 
@@ -99,7 +111,7 @@ export default function AdminMembers() {
         fetchMembers(); // Refresh the list
       }
     } catch (error) {
-      console.error('Action failed:', error);
+      logger.error('Action failed:', error);
     }
   };
 

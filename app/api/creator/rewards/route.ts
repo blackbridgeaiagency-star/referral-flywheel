@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '../../../../lib/db/prisma';
+import logger from '../../../../lib/logger';
+
 
 /**
  * Zod schema for updating reward tiers
@@ -150,7 +152,7 @@ export async function POST(request: NextRequest) {
     // Execute all tier updates
     if (tierUpdates.length > 0) {
       await Promise.all(tierUpdates);
-      console.log(`✅ Updated ${tierUpdates.length} member tiers based on new thresholds`);
+      logger.info(`Updated ${tierUpdates.length} member tiers based on new thresholds`);
     }
 
     return NextResponse.json(
@@ -162,7 +164,7 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('❌ Error updating reward tiers:', error);
+    logger.error('❌ Error updating reward tiers:', error);
 
     return NextResponse.json(
       {
@@ -222,7 +224,7 @@ export async function GET(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('❌ Error fetching reward settings:', error);
+    logger.error('❌ Error fetching reward settings:', error);
 
     return NextResponse.json(
       {

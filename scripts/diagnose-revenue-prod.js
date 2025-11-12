@@ -1,3 +1,5 @@
+import logger from '../lib/logger';
+
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
@@ -5,9 +7,9 @@ async function diagnoseRevenue() {
   try {
     const productId = 'prod_ImvAT3IIRbPBT';
 
-    console.log(`\n========================================`);
-    console.log(`DIAGNOSING REVENUE FOR: ${productId}`);
-    console.log(`========================================\n`);
+    logger.debug(`\n========================================`);
+    logger.debug(`DIAGNOSING REVENUE FOR: ${productId}`);
+    logger.debug(`========================================\n`);
 
     // Get the creator
     const creator = await prisma.creator.findFirst({
@@ -16,12 +18,12 @@ async function diagnoseRevenue() {
     });
 
     if (!creator) {
-      console.log('❌ Creator not found');
+      logger.error('Creator not found');
       return;
     }
 
-    console.log(`✅ Creator: ${creator.companyName}`);
-    console.log(`   ID: ${creator.id}\n`);
+    logger.info('Creator: ${creator.companyName}');
+    logger.debug(`   ID: ${creator.id}\n`);
 
     // Get total creator revenue
     const totalCommissions = await prisma.commission.findMany({
@@ -30,9 +32,9 @@ async function diagnoseRevenue() {
     });
     const totalRevenue = totalCommissions.reduce((sum, c) => sum + c.saleAmount, 0);
 
-    console.log(`📊 TOTAL CREATOR REVENUE:`);
-    console.log(`   Paid commissions: ${totalCommissions.length}`);
-    console.log(`   Total revenue: $${(totalRevenue / 100).toFixed(2)}\n`);
+    logger.info(' TOTAL CREATOR REVENUE:');
+    logger.debug(`   Paid commissions: ${totalCommissions.length}`);
+    logger.debug(`   Total revenue: $${(totalRevenue / 100).toFixed(2)}\n`);
 
     // Get top 3 referrers by total referrals
     const topReferrers = await prisma.member.findMany({
@@ -48,12 +50,12 @@ async function diagnoseRevenue() {
       take: 3
     });
 
-    console.log(`👥 TOP 3 REFERRERS:\n`);
+    logger.info(' TOP 3 REFERRERS:\n');
 
     for (const referrer of topReferrers) {
-      console.log(`${referrer.username} (${referrer.referralCode})`);
-      console.log(`   Total referrals: ${referrer.totalReferred}`);
-      console.log(`   MembershipId: ${referrer.membershipId}`);
+      logger.debug(`${referrer.username} (${referrer.referralCode})`);
+      logger.debug(`   Total referrals: ${referrer.totalReferred}`);
+      logger.debug(`   MembershipId: ${referrer.membershipId}`);
 
       // Get referred members
       const referredMembers = await prisma.member.findMany({
@@ -68,12 +70,12 @@ async function diagnoseRevenue() {
         }
       });
 
-      console.log(`   ✅ Referred members found: ${referredMembers.length}`);
+      logger.debug(`   ✅ Referred members found: ${referredMembers.length}`);
 
       if (referredMembers.length > 0) {
-        console.log(`   First 3 referred members:`);
+        logger.debug(`   First 3 referred members:`);
         referredMembers.slice(0, 3).forEach(rm => {
-          console.log(`     - ${rm.username} (membershipId: ${rm.membershipId})`);
+          logger.debug(`     - ${rm.username} (membershipId: ${rm.membershipId})`);
         });
 
         // Get all membershipIds
@@ -93,36 +95,36 @@ async function diagnoseRevenue() {
           }
         });
 
-        console.log(`   📦 Commissions found: ${commissions.length}`);
+        logger.debug(`   📦 Commissions found: ${commissions.length}`);
 
         if (commissions.length > 0) {
           const paidCommissions = commissions.filter(c => c.status === 'paid');
           const pendingCommissions = commissions.filter(c => c.status !== 'paid');
 
-          console.log(`     - Paid: ${paidCommissions.length}`);
-          console.log(`     - Other status: ${pendingCommissions.length}`);
+          logger.debug(`     - Paid: ${paidCommissions.length}`);
+          logger.debug(`     - Other status: ${pendingCommissions.length}`);
 
           if (paidCommissions.length > 0) {
             const revenueGenerated = paidCommissions.reduce((sum, c) => sum + c.saleAmount, 0);
-            console.log(`   💰 Revenue generated: $${(revenueGenerated / 100).toFixed(2)}`);
+            logger.debug(`   💰 Revenue generated: $${(revenueGenerated / 100).toFixed(2)}`);
           } else {
-            console.log(`   ❌ No paid commissions found`);
+            logger.debug(`   ❌ No paid commissions found`);
           }
 
           // Show commission statuses
           if (pendingCommissions.length > 0) {
-            console.log(`   Pending commission statuses:`);
+            logger.debug(`   Pending commission statuses:`);
             const statusCounts = {};
             pendingCommissions.forEach(c => {
               statusCounts[c.status] = (statusCounts[c.status] || 0) + 1;
             });
             Object.entries(statusCounts).forEach(([status, count]) => {
-              console.log(`     - ${status}: ${count}`);
+              logger.debug(`     - ${status}: ${count}`);
             });
           }
         } else {
-          console.log(`   ❌ No commissions found for referred members`);
-          console.log(`   Checking if membershipIds exist in Commission table...`);
+          logger.debug(`   ❌ No commissions found for referred members`);
+          logger.debug(`   Checking if membershipIds exist in Commission table...`);
 
           // Check each membershipId
           for (const membershipId of membershipIds.slice(0, 3)) {
@@ -130,32 +132,32 @@ async function diagnoseRevenue() {
               where: { whopMembershipId: membershipId }
             });
             if (anyCommission) {
-              console.log(`     ⚠️  ${membershipId} has commission but for different creator`);
+              logger.debug(`     ⚠️  ${membershipId} has commission but for different creator`);
             } else {
-              console.log(`     ❌ ${membershipId} has no commissions at all`);
+              logger.debug(`     ❌ ${membershipId} has no commissions at all`);
             }
           }
         }
       } else {
-        console.log(`   ⚠️  No referred members found (mismatch with totalReferred: ${referrer.totalReferred})`);
+        logger.debug(`   ⚠️  No referred members found (mismatch with totalReferred: ${referrer.totalReferred})`);
       }
 
-      console.log('');
+      logger.debug('');
     }
 
     // Summary
-    console.log(`\n========================================`);
-    console.log(`SUMMARY`);
-    console.log(`========================================`);
-    console.log(`Total Revenue: $${(totalRevenue / 100).toFixed(2)}`);
-    console.log(`Top 3 Referrers have: ${topReferrers.reduce((sum, r) => sum + r.totalReferred, 0)} total referrals`);
-    console.log(`\nIf percentage is 0%, it means:`);
-    console.log(`  1. Referred members don't have membershipIds that match Commission.whopMembershipId`);
-    console.log(`  2. Commissions exist but are not status='paid'`);
-    console.log(`  3. Commissions don't exist for referred members`);
+    logger.debug(`\n========================================`);
+    logger.debug(`SUMMARY`);
+    logger.debug(`========================================`);
+    logger.debug(`Total Revenue: $${(totalRevenue / 100).toFixed(2)}`);
+    logger.debug(`Top 3 Referrers have: ${topReferrers.reduce((sum, r) => sum + r.totalReferred, 0)} total referrals`);
+    logger.debug(`\nIf percentage is 0%, it means:`);
+    logger.debug(`  1. Referred members don't have membershipIds that match Commission.whopMembershipId`);
+    logger.debug(`  2. Commissions exist but are not status='paid'`);
+    logger.debug(`  3. Commissions don't exist for referred members`);
 
   } catch (error) {
-    console.error('Error:', error);
+    logger.error('Error:', error);
   } finally {
     await prisma.$disconnect();
   }

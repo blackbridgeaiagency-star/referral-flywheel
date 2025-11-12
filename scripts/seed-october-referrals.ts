@@ -1,19 +1,21 @@
 import { prisma } from '@/lib/db/prisma';
 import { generateReferralCode } from '@/lib/utils/referral-code';
 import { calculateCommission } from '@/lib/utils/commission';
+import logger from '../lib/logger';
+
 
 async function seedOctoberReferrals() {
-  console.log('🌱 SEEDING OCTOBER REFERRALS\n');
-  console.log('This script creates realistic October referral data for testing.\n');
+  logger.info(' SEEDING OCTOBER REFERRALS\n');
+  logger.debug('This script creates realistic October referral data for testing.\n');
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // VALIDATION: Ensure we're in October 2025
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const now = new Date();
   if (now.getMonth() !== 9) { // October = month 9 (0-indexed)
-    console.warn('⚠️  WARNING: Current month is not October');
-    console.warn(`   Current month: ${now.toLocaleString('en-US', { month: 'long' })}`);
-    console.warn('   This script creates October-dated referrals\n');
+    logger.warn('⚠️  WARNING: Current month is not October');
+    logger.warn(`   Current month: ${now.toLocaleString('en-US', { month: 'long' })}`);
+    logger.warn('   This script creates October-dated referrals\n');
   }
 
   // Get top 10 members to distribute referrals
@@ -24,12 +26,12 @@ async function seedOctoberReferrals() {
   });
 
   if (topMembers.length === 0) {
-    console.error('❌ No members found! Run main seed script first.');
+    logger.error('❌ No members found! Run main seed script first.');
     await prisma.$disconnect();
     process.exit(1);
   }
 
-  console.log(`Found ${topMembers.length} top members\n`);
+  logger.debug(`Found ${topMembers.length} top members\n`);
 
   // Distribution: [3, 2, 2, 1, 1, 1, 1, 0, 0, 0]
   // This gives us 11 total October referrals
@@ -42,11 +44,11 @@ async function seedOctoberReferrals() {
     const octoberReferrals = distribution[i];
 
     if (octoberReferrals === 0) {
-      console.log(`⏭️  Skipping ${referrer.username} (0 October referrals)`);
+      logger.debug(`⏭️  Skipping ${referrer.username} (0 October referrals)`);
       continue;
     }
 
-    console.log(`\n👤 Adding ${octoberReferrals} October referrals for ${referrer.username}...`);
+    logger.debug(`\n👤 Adding ${octoberReferrals} October referrals for ${referrer.username}...`);
 
     const beforeMonthly = referrer.monthlyReferred;
     const beforeTotal = referrer.totalReferred;
@@ -114,7 +116,7 @@ async function seedOctoberReferrals() {
       });
 
       totalCreated++;
-      console.log(`  ✅ Created referral ${j + 1}/${octoberReferrals} on Oct ${day} at ${hour}:${minute}`);
+      logger.debug(`  ✅ Created referral ${j + 1}/${octoberReferrals} on Oct ${day} at ${hour}:${minute}`);
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -137,14 +139,14 @@ async function seedOctoberReferrals() {
       },
     });
 
-    console.log(`\n  Validation for ${referrer.username}:`);
-    console.log(`    Before: total=${beforeTotal}, monthly=${beforeMonthly}, earnings=$${beforeEarnings.toFixed(2)}`);
-    console.log(`    After:  total=${afterUpdate!.totalReferred}, monthly=${afterUpdate!.monthlyReferred}, earnings=$${afterUpdate!.monthlyEarnings.toFixed(2)}`);
-    console.log(`    Expected increment: ${octoberReferrals}`);
-    console.log(`    ${monthlyMatch && totalMatch ? '✅ CORRECT' : '❌ MISMATCH!'}`);
+    logger.debug(`\n  Validation for ${referrer.username}:`);
+    logger.debug(`    Before: total=${beforeTotal}, monthly=${beforeMonthly}, earnings=$${beforeEarnings.toFixed(2)}`);
+    logger.debug(`    After:  total=${afterUpdate!.totalReferred}, monthly=${afterUpdate!.monthlyReferred}, earnings=$${afterUpdate!.monthlyEarnings.toFixed(2)}`);
+    logger.debug(`    Expected increment: ${octoberReferrals}`);
+    logger.debug(`    ${monthlyMatch && totalMatch ? '✅ CORRECT' : '❌ MISMATCH!'}`);
 
     if (!monthlyMatch || !totalMatch) {
-      console.error('    ❌ ERROR: Stats update failed! Rolling back...');
+      logger.error('    ❌ ERROR: Stats update failed! Rolling back...');
       // In production, implement proper transaction rollback
     }
   }
@@ -152,11 +154,11 @@ async function seedOctoberReferrals() {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // FINAL VALIDATION
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log('\n═══════════════════════════════════════');
-  console.log('📋 SEEDING SUMMARY:');
-  console.log('═══════════════════════════════════════');
-  console.log(`✅ Created ${totalCreated} October referrals`);
-  console.log(`✅ Distributed across ${distribution.filter(d => d > 0).length} top members`);
+  logger.debug('\n═══════════════════════════════════════');
+  logger.info(' SEEDING SUMMARY:');
+  logger.debug('═══════════════════════════════════════');
+  logger.info('Created ${totalCreated} October referrals');
+  logger.info('Distributed across ${distribution.filter(d => d > 0).length} top members');
 
   const sumMonthlyReferred = await prisma.member.aggregate({
     _sum: { monthlyReferred: true },
@@ -169,22 +171,22 @@ async function seedOctoberReferrals() {
     },
   });
 
-  console.log(`\n🔍 VERIFICATION:`);
-  console.log(`  Sum of monthlyReferred: ${sumMonthlyReferred._sum.monthlyReferred}`);
-  console.log(`  Actual October referrals: ${actualOctoberReferrals}`);
-  console.log(`  Match: ${sumMonthlyReferred._sum.monthlyReferred === actualOctoberReferrals ? '✅' : '❌'}`);
+  logger.debug(`\n🔍 VERIFICATION:`);
+  logger.debug(`  Sum of monthlyReferred: ${sumMonthlyReferred._sum.monthlyReferred}`);
+  logger.debug(`  Actual October referrals: ${actualOctoberReferrals}`);
+  logger.debug(`  Match: ${sumMonthlyReferred._sum.monthlyReferred === actualOctoberReferrals ? '✅' : '❌'}`);
 
-  console.log('\n📊 MEMBER UPDATES:');
+  logger.debug('\n📊 MEMBER UPDATES:');
   updates.forEach(({ username, before, after }) => {
-    console.log(`  ${username}:`);
-    console.log(`    Total: ${before.total} → ${after.total}`);
-    console.log(`    Monthly: ${before.monthly} → ${after.monthly}`);
-    console.log(`    Earnings: $${before.earnings.toFixed(2)} → $${after.earnings.toFixed(2)}`);
+    logger.debug(`  ${username}:`);
+    logger.debug(`    Total: ${before.total} → ${after.total}`);
+    logger.debug(`    Monthly: ${before.monthly} → ${after.monthly}`);
+    logger.debug(`    Earnings: $${before.earnings.toFixed(2)} → $${after.earnings.toFixed(2)}`);
   });
 
-  console.log('\n═══════════════════════════════════════');
-  console.log('✅ SEEDING COMPLETE');
-  console.log('═══════════════════════════════════════\n');
+  logger.debug('\n═══════════════════════════════════════');
+  logger.info('SEEDING COMPLETE');
+  logger.debug('═══════════════════════════════════════\n');
 
   await prisma.$disconnect();
 }

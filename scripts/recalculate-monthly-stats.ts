@@ -1,13 +1,15 @@
 import { prisma } from '@/lib/db/prisma';
 import { startOfMonth } from 'date-fns';
+import logger from '../lib/logger';
+
 
 async function recalculateMonthlyStats() {
-  console.log('🔧 RECALCULATING MONTHLY STATS FROM DATABASE\n');
-  console.log('This script recalculates monthlyReferred and monthlyEarnings from the database.');
-  console.log('Use this if data gets out of sync.\n');
+  logger.info(' RECALCULATING MONTHLY STATS FROM DATABASE\n');
+  logger.debug('This script recalculates monthlyReferred and monthlyEarnings from the database.');
+  logger.debug('Use this if data gets out of sync.\n');
 
   const currentMonthStart = startOfMonth(new Date());
-  console.log(`Current month start: ${currentMonthStart.toISOString()}\n`);
+  logger.debug(`Current month start: ${currentMonthStart.toISOString()}\n`);
 
   // Get all members
   const members = await prisma.member.findMany({
@@ -22,8 +24,8 @@ async function recalculateMonthlyStats() {
     },
   });
 
-  console.log(`Found ${members.length} members to recalculate.\n`);
-  console.log('Processing...\n');
+  logger.debug(`Found ${members.length} members to recalculate.\n`);
+  logger.debug('Processing...\n');
 
   let updated = 0;
   let unchanged = 0;
@@ -55,9 +57,9 @@ async function recalculateMonthlyStats() {
       const earningsMismatch = Math.abs(member.monthlyEarnings - actualMonthlyEarnings) > 0.01;
 
       if (referralsMismatch || earningsMismatch) {
-        console.log(`📝 Updating ${member.username}:`);
-        console.log(`   monthlyReferred: ${member.monthlyReferred} → ${actualMonthlyReferrals}`);
-        console.log(`   monthlyEarnings: $${member.monthlyEarnings.toFixed(2)} → $${actualMonthlyEarnings.toFixed(2)}`);
+        logger.info(' Updating ${member.username}:');
+        logger.debug(`   monthlyReferred: ${member.monthlyReferred} → ${actualMonthlyReferrals}`);
+        logger.debug(`   monthlyEarnings: $${member.monthlyEarnings.toFixed(2)} → $${actualMonthlyEarnings.toFixed(2)}`);
 
         // Validation: actualMonthlyReferrals should never exceed totalReferred
         if (actualMonthlyReferrals > member.totalReferred) {
@@ -65,7 +67,7 @@ async function recalculateMonthlyStats() {
             `${member.username}: actualMonthlyReferrals (${actualMonthlyReferrals}) > ` +
             `totalReferred (${member.totalReferred}). Skipping update.`
           );
-          console.log(`   ⚠️  SKIPPED: Monthly > Total (data integrity issue)`);
+          logger.debug(`   ⚠️  SKIPPED: Monthly > Total (data integrity issue)`);
           continue;
         }
 
@@ -83,25 +85,25 @@ async function recalculateMonthlyStats() {
       }
     } catch (error) {
       errors.push(`${member.username}: ${error}`);
-      console.log(`   ❌ ERROR: ${error}`);
+      logger.debug(`   ❌ ERROR: ${error}`);
     }
   }
 
-  console.log('\n═══════════════════════════════════════');
-  console.log('📋 RECALCULATION SUMMARY:');
-  console.log('═══════════════════════════════════════');
-  console.log(`Total members: ${members.length}`);
-  console.log(`Updated: ${updated}`);
-  console.log(`Unchanged: ${unchanged}`);
-  console.log(`Errors: ${errors.length}`);
+  logger.debug('\n═══════════════════════════════════════');
+  logger.info(' RECALCULATION SUMMARY:');
+  logger.debug('═══════════════════════════════════════');
+  logger.debug(`Total members: ${members.length}`);
+  logger.debug(`Updated: ${updated}`);
+  logger.debug(`Unchanged: ${unchanged}`);
+  logger.debug(`Errors: ${errors.length}`);
 
   if (errors.length > 0) {
-    console.log('\n❌ ERRORS:');
-    errors.forEach(e => console.log(`  - ${e}`));
+    logger.debug('\n❌ ERRORS:');
+    errors.forEach(e => logger.debug(`  - ${e}`));
   }
 
   // Verification: Check consistency
-  console.log('\n🔍 VERIFICATION:');
+  logger.debug('\n🔍 VERIFICATION:');
 
   const sumMonthlyReferred = await prisma.member.aggregate({
     _sum: { monthlyReferred: true },
@@ -115,12 +117,12 @@ async function recalculateMonthlyStats() {
   });
 
   const sumMatches = sumMonthlyReferred._sum.monthlyReferred === actualMonthlyReferrals;
-  console.log(`  Sum of monthlyReferred (${sumMonthlyReferred._sum.monthlyReferred}) = ` +
+  logger.debug(`  Sum of monthlyReferred (${sumMonthlyReferred._sum.monthlyReferred}) = ` +
     `Actual monthly referrals (${actualMonthlyReferrals})? ${sumMatches ? '✅' : '❌'}`);
 
-  console.log('\n═══════════════════════════════════════');
-  console.log(errors.length === 0 && sumMatches ? '✅ RECALCULATION COMPLETE' : '⚠️  RECALCULATION COMPLETE WITH WARNINGS');
-  console.log('═══════════════════════════════════════\n');
+  logger.debug('\n═══════════════════════════════════════');
+  logger.debug(errors.length === 0 && sumMatches ? '✅ RECALCULATION COMPLETE' : '⚠️  RECALCULATION COMPLETE WITH WARNINGS');
+  logger.debug('═══════════════════════════════════════\n');
 
   await prisma.$disconnect();
 }

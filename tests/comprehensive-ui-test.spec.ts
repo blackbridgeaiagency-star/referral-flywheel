@@ -1,4 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
+import logger from '../lib/logger';
+
 
 // Comprehensive UI and Feature Testing
 test.describe('🎯 COMPREHENSIVE FEATURE & UI TESTING', () => {
@@ -43,7 +45,7 @@ test.describe('🎯 COMPREHENSIVE FEATURE & UI TESTING', () => {
         // Check for success toast/message
         const successMessage = page.locator('text=/Copied/i');
         await expect(successMessage).toBeVisible({ timeout: 3000 }).catch(() => {
-          console.log('No copy confirmation message found');
+          logger.debug('No copy confirmation message found');
         });
       }
 
@@ -188,7 +190,7 @@ test.describe('🎯 COMPREHENSIVE FEATURE & UI TESTING', () => {
         }, {} as Record<string, string | null>);
       });
 
-      console.log('LocalStorage after referral:', localStorage);
+      logger.debug('LocalStorage after referral:', localStorage);
 
       // Check cookies
       const cookies = await page.context().cookies();
@@ -198,7 +200,7 @@ test.describe('🎯 COMPREHENSIVE FEATURE & UI TESTING', () => {
       );
 
       if (attributionCookie) {
-        console.log('Attribution cookie found:', attributionCookie);
+        logger.debug('Attribution cookie found:', attributionCookie);
       }
     });
   });
@@ -212,11 +214,11 @@ test.describe('🎯 COMPREHENSIVE FEATURE & UI TESTING', () => {
       const leaderboardResponse = await page.request.get('http://localhost:3002/api/leaderboard');
       expect(leaderboardResponse.ok()).toBeTruthy();
       const leaderboardData = await leaderboardResponse.json();
-      console.log('Leaderboard API:', leaderboardData);
+      logger.debug('Leaderboard API:', leaderboardData);
 
       // Test referral stats API
       const statsResponse = await page.request.get('http://localhost:3002/api/referrals/stats?memberId=mem_techwhop_1');
-      console.log('Stats API Response Status:', statsResponse.status());
+      logger.debug('Stats API Response Status:', statsResponse.status());
 
       // Test webhook endpoint (with test data)
       const webhookResponse = await page.request.post('http://localhost:3002/api/webhooks/whop', {
@@ -232,7 +234,7 @@ test.describe('🎯 COMPREHENSIVE FEATURE & UI TESTING', () => {
           'x-whop-signature': 'test-signature'
         }
       });
-      console.log('Webhook test response:', webhookResponse.status());
+      logger.debug('Webhook test response:', webhookResponse.status());
     });
   });
 
@@ -255,7 +257,7 @@ test.describe('🎯 COMPREHENSIVE FEATURE & UI TESTING', () => {
       );
 
       const cardCount = await communityCards.count();
-      console.log(`Found ${cardCount} community cards`);
+      logger.debug(`Found ${cardCount} community cards`);
 
       if (cardCount > 0) {
         expect(cardCount).toBeGreaterThan(0);
@@ -295,7 +297,7 @@ test.describe('🎯 COMPREHENSIVE FEATURE & UI TESTING', () => {
       await page.waitForLoadState('networkidle');
       metrics.discoverPageLoad = Date.now() - discoverStart;
 
-      console.log('Performance Metrics (ms):', metrics);
+      logger.debug('Performance Metrics (ms):', metrics);
 
       // Assert reasonable load times (under 3 seconds)
       Object.entries(metrics).forEach(([page, loadTime]) => {
@@ -337,7 +339,7 @@ test.describe('🎯 COMPREHENSIVE FEATURE & UI TESTING', () => {
       const bodyBg = await page.evaluate(() =>
         window.getComputedStyle(document.body).backgroundColor
       );
-      console.log('Body background color:', bodyBg);
+      logger.debug('Body background color:', bodyBg);
     });
   });
 
@@ -356,7 +358,7 @@ test.describe('🎯 COMPREHENSIVE FEATURE & UI TESTING', () => {
 
       // Should show 404 or redirect
       const pageContent = await page.textContent('body');
-      console.log('404 page content preview:', pageContent?.substring(0, 200));
+      logger.debug('404 page content preview:', pageContent?.substring(0, 200));
     });
 
     test('Invalid member ID handling', async () => {
@@ -369,7 +371,7 @@ test.describe('🎯 COMPREHENSIVE FEATURE & UI TESTING', () => {
       });
 
       const pageContent = await page.textContent('body');
-      console.log('Invalid member page content:', pageContent?.substring(0, 200));
+      logger.debug('Invalid member page content:', pageContent?.substring(0, 200));
     });
   });
 });

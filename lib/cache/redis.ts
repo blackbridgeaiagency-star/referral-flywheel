@@ -1,5 +1,7 @@
 // lib/cache/redis.ts
 import { Redis } from 'ioredis';
+import logger from '../logger';
+
 
 // Redis client singleton
 let redis: Redis | null = null;
@@ -33,7 +35,7 @@ const CACHE_CONFIG = {
     enableReadyCheck: true,
     lazyConnect: true,
     reconnectOnError: (err: Error) => {
-      console.error('Redis reconnect error:', err);
+      logger.error('Redis reconnect error:', err);
       return true; // Always reconnect
     },
   }
@@ -45,7 +47,7 @@ const CACHE_CONFIG = {
 export function initRedis(): Redis | null {
   // P1 FIX: Skip Redis if explicitly disabled or in development without Redis
   if (process.env.REDIS_DISABLED === 'true') {
-    console.log('⚠️ Redis caching disabled via environment variable');
+    logger.warn(' Redis caching disabled via environment variable');
     return null;
   }
 
@@ -58,7 +60,7 @@ export function initRedis(): Redis | null {
         // P1 FIX: Reduced retries for faster failure
         retryStrategy: (times) => {
           if (times > 3) {
-            console.error('❌ Redis: Max retry attempts reached, disabling cache');
+            logger.error('❌ Redis: Max retry attempts reached, disabling cache');
             return null; // Stop retrying after 3 attempts
           }
           const delay = Math.min(times * 100, 500);
@@ -67,27 +69,27 @@ export function initRedis(): Redis | null {
       });
 
       redis.on('connect', () => {
-        console.log('✅ Redis connected successfully');
+        logger.info('Redis connected successfully');
       });
 
       redis.on('error', (err) => {
         // P1 FIX: Silence ECONNREFUSED errors in development
         if (err.message.includes('ECONNREFUSED')) {
-          console.log('⚠️ Redis unavailable, caching disabled (app will work without it)');
+          logger.warn(' Redis unavailable, caching disabled (app will work without it)');
         } else {
-          console.error('❌ Redis error:', err.message);
+          logger.error('❌ Redis error:', err.message);
         }
       });
 
       redis.on('close', () => {
-        console.log('📴 Redis connection closed');
+        logger.info(' Redis connection closed');
       });
 
       redis.on('ready', () => {
-        console.log('🚀 Redis ready for caching');
+        logger.info(' Redis ready for caching');
       });
     } catch (error: any) {
-      console.log('⚠️ Failed to initialize Redis, proceeding without cache:', error.message);
+      logger.warn(' Failed to initialize Redis, proceeding without cache:', error.message);
       redis = null;
     }
   }
@@ -102,7 +104,7 @@ export function getRedis(): Redis | null {
   try {
     return initRedis();
   } catch (error) {
-    console.error('Failed to initialize Redis:', error);
+    logger.error('Failed to initialize Redis:', error);
     return null;
   }
 }
@@ -129,7 +131,7 @@ export class CacheManager {
 
       return JSON.parse(value) as T;
     } catch (error) {
-      console.error(`Cache get error for key ${key}:`, error);
+      logger.error(`Cache get error for key ${key}:`, error);
       return null;
     }
   }
@@ -144,7 +146,7 @@ export class CacheManager {
       const serialized = JSON.stringify(value);
       await this.redis.setex(key, ttl, serialized);
     } catch (error) {
-      console.error(`Cache set error for key ${key}:`, error);
+      logger.error(`Cache set error for key ${key}:`, error);
     }
   }
 
@@ -157,7 +159,7 @@ export class CacheManager {
     try {
       await this.redis.del(key);
     } catch (error) {
-      console.error(`Cache delete error for key ${key}:`, error);
+      logger.error(`Cache delete error for key ${key}:`, error);
     }
   }
 
@@ -173,7 +175,7 @@ export class CacheManager {
         await this.redis.del(...keys);
       }
     } catch (error) {
-      console.error(`Cache delete pattern error for ${pattern}:`, error);
+      logger.error(`Cache delete pattern error for ${pattern}:`, error);
     }
   }
 
@@ -232,7 +234,7 @@ export class CacheManager {
         connected: this.redis.status === 'ready',
       };
     } catch (error) {
-      console.error('Failed to get cache stats:', error);
+      logger.error('Failed to get cache stats:', error);
       return null;
     }
   }
@@ -302,7 +304,7 @@ export const CacheInvalidation = {
     const redis = getRedis();
     if (redis) {
       await redis.flushdb();
-      console.log('🗑️ Cache flushed');
+      logger.info('️ Cache flushed');
     }
   },
 };

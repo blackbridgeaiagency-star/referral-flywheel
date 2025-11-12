@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '../ui/card';
 import { Trophy, Clock, Award, Gift, ChevronDown, ChevronUp, Target } from 'lucide-react';
 import { Toast } from '../ui/toast';
+import logger from '../../lib/logger';
+
 
 interface CustomCompetitionBannerProps {
   isEnabled: boolean;
@@ -158,7 +160,7 @@ export function CustomCompetitionBanner({
         });
       }
     } catch (error) {
-      console.error('Error claiming reward:', error);
+      logger.error('Error claiming reward:', error);
       setToast({
         message: 'An error occurred. Please try again.',
         type: 'error',

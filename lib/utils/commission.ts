@@ -1,7 +1,15 @@
 // lib/utils/commission.ts
 
 /**
- * Calculate commission splits: 10% member, 70% creator, 20% platform
+ * Calculate commission and tracking metrics
+ *
+ * BUSINESS MODEL (V1 Launch):
+ * - Platform fee: 10% of referred sales (what we charge creators)
+ * - Member rewards: Creator decides (we suggest ~10%, tracked but not paid by us)
+ * - Creator keeps: 90% - whatever they choose to reward members
+ *
+ * NOTE: memberShare and creatorShare are tracked for analytics/suggestions,
+ * but actual member payments are handled by creators themselves.
  *
  * @throws {Error} If sale amount is negative or exceeds maximum allowed
  */
@@ -21,15 +29,20 @@ export function calculateCommission(saleAmount: number) {
     throw new Error('Sale amount must be a valid number');
   }
 
-  // Calculate splits with proper rounding
-  const memberShare = Number((saleAmount * 0.10).toFixed(2));   // 10%
-  const creatorShare = Number((saleAmount * 0.70).toFixed(2));  // 70%
-  const platformShare = Number((saleAmount * 0.20).toFixed(2)); // 20%
+  // Platform fee: 10% (what we actually charge)
+  const platformShare = Number((saleAmount * 0.10).toFixed(2)); // 10%
+
+  // Suggested member reward: 10% (tracked for analytics, not auto-paid)
+  const memberShare = Number((saleAmount * 0.10).toFixed(2));   // 10% (suggested)
+
+  // Creator keeps: 90% minus whatever they choose to reward
+  // We show 80% assuming they follow our 10% suggestion
+  const creatorShare = Number((saleAmount * 0.80).toFixed(2));  // 80%
 
   return {
-    memberShare,
-    creatorShare,
-    platformShare,
+    memberShare,      // Suggested member reward (for tracking/reports)
+    creatorShare,     // What creator keeps after both fees
+    platformShare,    // What we charge (10%)
     total: memberShare + creatorShare + platformShare,
   };
 }

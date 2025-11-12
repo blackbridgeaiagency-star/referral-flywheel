@@ -1,10 +1,12 @@
 import { prisma } from '@/lib/db/prisma';
 import { calculateCommission } from '@/lib/utils/commission';
+import logger from '../lib/logger';
+
 
 async function seedRecurringPayments() {
-  console.log('🔄 SEEDING RECURRING PAYMENTS\n');
-  console.log('This script creates recurring payment data for existing referrals.');
-  console.log('These should increment monthlyEarnings but NOT monthlyReferred.\n');
+  logger.info(' SEEDING RECURRING PAYMENTS\n');
+  logger.debug('This script creates recurring payment data for existing referrals.');
+  logger.debug('These should increment monthlyEarnings but NOT monthlyReferred.\n');
 
   // Get members created BEFORE October
   const oldReferrals = await prisma.member.findMany({
@@ -17,10 +19,10 @@ async function seedRecurringPayments() {
     },
   });
 
-  console.log(`Found ${oldReferrals.length} pre-October referrals\n`);
+  logger.debug(`Found ${oldReferrals.length} pre-October referrals\n`);
 
   if (oldReferrals.length === 0) {
-    console.log('⏭️  No pre-October referrals found. Skipping.');
+    logger.debug('⏭️  No pre-October referrals found. Skipping.');
     await prisma.$disconnect();
     return;
   }
@@ -32,14 +34,14 @@ async function seedRecurringPayments() {
     .sort(() => Math.random() - 0.5)
     .slice(0, sampleSize);
 
-  console.log(`Processing recurring payments for ${sampled.length} referrals...\n`);
+  logger.debug(`Processing recurring payments for ${sampled.length} referrals...\n`);
 
   let paymentsCreated = 0;
   const referrerUpdates = new Map<string, { before: number; after: number }>();
 
   for (const member of sampled) {
     if (!member.referrer) {
-      console.log(`⏭️  Skipping ${member.username} (no referrer)`);
+      logger.debug(`⏭️  Skipping ${member.username} (no referrer)`);
       continue;
     }
 
@@ -88,7 +90,7 @@ async function seedRecurringPayments() {
     paymentsCreated++;
 
     if (paymentsCreated % 10 === 0) {
-      console.log(`  ✅ Processed ${paymentsCreated}/${sampled.length} payments`);
+      logger.debug(`  ✅ Processed ${paymentsCreated}/${sampled.length} payments`);
     }
   }
 
@@ -103,14 +105,14 @@ async function seedRecurringPayments() {
     }
   }
 
-  console.log('\n═══════════════════════════════════════');
-  console.log('📋 RECURRING PAYMENTS SUMMARY:');
-  console.log('═══════════════════════════════════════');
-  console.log(`✅ Created ${paymentsCreated} recurring payments`);
-  console.log(`✅ Updated ${referrerUpdates.size} referrers`);
+  logger.debug('\n═══════════════════════════════════════');
+  logger.info(' RECURRING PAYMENTS SUMMARY:');
+  logger.debug('═══════════════════════════════════════');
+  logger.info('Created ${paymentsCreated} recurring payments');
+  logger.info('Updated ${referrerUpdates.size} referrers');
 
-  console.log('\n🔍 VERIFICATION:');
-  console.log('  Checking that monthlyReferred was NOT incremented...\n');
+  logger.debug('\n🔍 VERIFICATION:');
+  logger.debug('  Checking that monthlyReferred was NOT incremented...\n');
 
   // Verify no monthlyReferred changed
   let verificationPassed = true;
@@ -122,9 +124,9 @@ async function seedRecurringPayments() {
 
     if (referrer) {
       const earningsIncreased = referrer.monthlyEarnings > update.before;
-      console.log(`  ${referrer.username}:`);
-      console.log(`    monthlyReferred: unchanged ✅`);
-      console.log(`    monthlyEarnings: $${update.before.toFixed(2)} → $${referrer.monthlyEarnings.toFixed(2)} ${earningsIncreased ? '✅' : '❌'}`);
+      logger.debug(`  ${referrer.username}:`);
+      logger.debug(`    monthlyReferred: unchanged ✅`);
+      logger.debug(`    monthlyEarnings: $${update.before.toFixed(2)} → $${referrer.monthlyEarnings.toFixed(2)} ${earningsIncreased ? '✅' : '❌'}`);
 
       if (!earningsIncreased) {
         verificationPassed = false;
@@ -132,9 +134,9 @@ async function seedRecurringPayments() {
     }
   }
 
-  console.log('\n═══════════════════════════════════════');
-  console.log(verificationPassed ? '✅ ALL VERIFICATIONS PASSED' : '❌ SOME VERIFICATIONS FAILED');
-  console.log('═══════════════════════════════════════\n');
+  logger.debug('\n═══════════════════════════════════════');
+  logger.debug(verificationPassed ? '✅ ALL VERIFICATIONS PASSED' : '❌ SOME VERIFICATIONS FAILED');
+  logger.debug('═══════════════════════════════════════\n');
 
   await prisma.$disconnect();
 }

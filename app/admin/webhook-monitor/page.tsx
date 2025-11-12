@@ -3,8 +3,9 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
+import logger from '../../../lib/logger';
 import {
-  Activity,
+Activity,
   AlertCircle,
   CheckCircle2,
   Clock,
@@ -56,14 +57,18 @@ export default function WebhookMonitor() {
   // Fetch webhook stats
   const fetchStats = async () => {
     try {
-      const response = await fetch(`/api/admin/webhook-stats?range=${timeRange}`);
+      const response = await fetch(`/api/admin/webhook-stats?range=${timeRange}`, {
+        headers: {
+          'x-admin-token': 'e2e9e2ae1a4a7755111668aa55a22b59502f46eadd95705b0ad9f3882ef1a18d'
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         setStats(data.stats);
         setEvents(data.events);
       }
     } catch (error) {
-      console.error('Failed to fetch webhook stats:', error);
+      logger.error('Failed to fetch webhook stats:', error);
     } finally {
       setIsLoading(false);
     }

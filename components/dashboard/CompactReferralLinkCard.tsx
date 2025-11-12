@@ -5,6 +5,8 @@ import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Copy, Check, Share2, Edit2, X, Sparkles } from 'lucide-react';
 import { Input } from '../ui/input';
+import logger from '../../lib/logger';
+
 
 interface CompactReferralLinkCardProps {
   code: string;
@@ -33,9 +35,9 @@ export function CompactReferralLinkCard({ code, url, memberId }: CompactReferral
           shareType: 'link',
         }),
       });
-      console.log(`📤 Tracked share: ${platform}`);
+      logger.info(' Tracked share: ${platform}');
     } catch (error) {
-      console.error('Failed to track share:', error);
+      logger.error('Failed to track share:', error);
       // Don't block user action if tracking fails
     }
   };

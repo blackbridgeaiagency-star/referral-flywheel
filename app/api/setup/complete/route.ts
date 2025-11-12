@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
+import logger from '../../../../lib/logger';
+
 
 export async function POST(request: Request) {
   try {
@@ -32,7 +34,7 @@ export async function POST(request: Request) {
 
     // If creator doesn't exist, create it (for dev/testing)
     if (!creator) {
-      console.log(`⚠️ Creator not found for product ${productId}, creating...`);
+      logger.warn(` Creator not found for product ${productId}, creating...`);
 
       // In production, this would come from Whop API
       creator = await prisma.creator.create({
@@ -53,7 +55,7 @@ export async function POST(request: Request) {
         }
       });
 
-      console.log(`✅ Creator created: ${creator.id}`);
+      logger.info(`Creator created: ${creator.id}`);
     } else {
       // Update existing creator with setup data
       creator = await prisma.creator.update({
@@ -72,16 +74,16 @@ export async function POST(request: Request) {
         }
       });
 
-      console.log(`✅ Creator updated: ${creator.id}`);
+      logger.info(`Creator updated: ${creator.id}`);
     }
 
     // TODO: Trigger member import from Whop API
     // This will be implemented in Phase 1.4
-    console.log('📥 Member import will be triggered by install webhook');
+    logger.info(' Member import will be triggered by install webhook');
 
     // TODO: Send welcome messages to all members
     // This will be implemented in Phase 2
-    console.log('📧 Welcome messages will be sent via email service');
+    logger.info(' Welcome messages will be sent via email service');
 
     return NextResponse.json({
       success: true,
@@ -92,7 +94,7 @@ export async function POST(request: Request) {
       }
     });
   } catch (error) {
-    console.error('❌ Setup completion error:', error);
+    logger.error('❌ Setup completion error:', error);
     return NextResponse.json(
       {
         error: 'Failed to complete setup',

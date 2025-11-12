@@ -3,6 +3,8 @@ import crypto from 'crypto';
 import { prisma } from '../../../../../lib/db/prisma';
 import { generateReferralCode } from '../../../../../lib/utils/referral-code';
 import { getCompany } from '../../../../../lib/whop/api-client';
+import logger from '../../../../../lib/logger';
+
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -38,15 +40,15 @@ export async function POST(request: Request) {
         .digest('hex');
 
       if (signature !== expectedSignature) {
-        console.error('❌ Invalid webhook signature');
+        logger.error('❌ Invalid webhook signature');
         return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
       }
     } else {
-      console.log('⚠️  No signature (test webhook)');
+      logger.warn('  No signature (test webhook)');
     }
 
     const payload = JSON.parse(body);
-    console.log('📦 Install webhook received:', payload.action);
+    logger.webhook(' Install webhook received:', payload.action);
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // 2. HANDLE APP INSTALL EVENT
@@ -55,7 +57,7 @@ export async function POST(request: Request) {
       const { data } = payload;
 
       if (!data || !data.company_id || !data.product_id) {
-        console.error('❌ Missing required install webhook data:', { data });
+        logger.error('❌ Missing required install webhook data:', { data });
         return NextResponse.json(
           { error: 'Missing required install data' },
           { status: 400 }
@@ -72,16 +74,16 @@ export async function POST(request: Request) {
       };
 
       try {
-        console.log(`📡 Fetching company details from Whop API...`);
+        logger.info(' Fetching company details from Whop API...');
         const whopCompany = await getCompany(data.company_id);
         companyData = {
           name: whopCompany.name || companyData.name,
           logoUrl: whopCompany.image_url || null,
           description: whopCompany.description || null,
         };
-        console.log(`✅ Company data fetched: ${companyData.name}`);
+        logger.info(`Company data fetched: ${companyData.name}`);
       } catch (apiError) {
-        console.warn(`⚠️ Could not fetch company details from Whop:`, apiError);
+        logger.warn(`⚠️ Could not fetch company details from Whop:`, apiError);
         // Continue with default data
       }
 
@@ -93,7 +95,7 @@ export async function POST(request: Request) {
       });
 
       if (creator) {
-        console.log(`✅ Creator already exists: ${creator.companyName}`);
+        logger.info(`Creator already exists: ${creator.companyName}`);
         // Update with latest Whop data
         creator = await prisma.creator.update({
           where: { companyId: data.company_id },
@@ -103,7 +105,7 @@ export async function POST(request: Request) {
             description: companyData.description,
           }
         });
-        console.log(`✅ Creator updated with latest Whop data`);
+        logger.info('Creator updated with latest Whop data');
       } else {
         creator = await prisma.creator.create({
           data: {
@@ -116,7 +118,7 @@ export async function POST(request: Request) {
             isActive: true,
           }
         });
-        console.log(`✅ Creator created: ${creator.companyName}`);
+        logger.info(`Creator created: ${creator.companyName}`);
       }
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -124,7 +126,7 @@ export async function POST(request: Request) {
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       const whopApiKey = process.env.WHOP_API_KEY;
       if (!whopApiKey) {
-        console.error('❌ WHOP_API_KEY not configured');
+        logger.error('❌ WHOP_API_KEY not configured');
         return NextResponse.json(
           { error: 'Whop API not configured' },
           { status: 500 }
@@ -132,7 +134,7 @@ export async function POST(request: Request) {
       }
 
       try {
-        console.log('📥 Fetching existing members from Whop...');
+        logger.info(' Fetching existing members from Whop...');
 
         // Fetch members from Whop API
         const membersResponse = await fetch(
@@ -146,7 +148,7 @@ export async function POST(request: Request) {
         );
 
         if (!membersResponse.ok) {
-          console.error('❌ Failed to fetch members from Whop:', membersResponse.status);
+          logger.error('❌ Failed to fetch members from Whop:', membersResponse.status);
           // Continue without members import - creator can add them manually
           return NextResponse.json({
             ok: true,
@@ -158,20 +160,20 @@ export async function POST(request: Request) {
         const membersData = await membersResponse.json();
         const members: WhopMember[] = membersData.data || [];
 
-        console.log(`📊 Found ${members.length} existing members to import`);
+        logger.info(` Found ${members.length} existing members to import`);
 
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         // 5. IMPORT MEMBERS IN BATCH
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         const importedCount = await importMembers(members, creator.id);
 
-        console.log(`✅ Imported ${importedCount} members successfully`);
+        logger.info(`Imported ${importedCount} members successfully`);
 
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         // 6. SEND WELCOME MESSAGES TO ALL MEMBERS
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         // TODO: Phase 2 - Send welcome emails
-        console.log('📧 Welcome messages will be sent via email service (Phase 2)');
+        logger.info(' Welcome messages will be sent via email service (Phase 2)');
 
         return NextResponse.json({
           ok: true,
@@ -183,7 +185,7 @@ export async function POST(request: Request) {
         });
 
       } catch (apiError) {
-        console.error('❌ Error fetching members from Whop:', apiError);
+        logger.error('❌ Error fetching members from Whop:', apiError);
         // Return success for creator creation even if import fails
         return NextResponse.json({
           ok: true,
@@ -196,7 +198,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
 
   } catch (error) {
-    console.error('❌ Install webhook error:', error);
+    logger.error('❌ Install webhook error:', error);
     return NextResponse.json(
       {
         error: 'Internal server error',
@@ -222,7 +224,7 @@ async function importMembers(members: WhopMember[], creatorId: string): Promise<
       });
 
       if (existingMember) {
-        console.log(`⏭️  Skipping existing member: ${whopMember.id}`);
+        logger.debug(`⏭️  Skipping existing member: ${whopMember.id}`);
         continue;
       }
 
@@ -253,10 +255,10 @@ async function importMembers(members: WhopMember[], creatorId: string): Promise<
       });
 
       importedCount++;
-      console.log(`✅ Imported: ${username} → ${referralCode}`);
+      logger.info(`Imported: ${username} → ${referralCode}`);
 
     } catch (memberError) {
-      console.error(`❌ Failed to import member ${whopMember.id}:`, memberError);
+      logger.error(`❌ Failed to import member ${whopMember.id}:`, memberError);
       // Continue with next member instead of failing entire import
       continue;
     }

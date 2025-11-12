@@ -1,7 +1,11 @@
 // components/dashboard/TopPerformersTable.tsx
+'use client';
+
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { Users } from 'lucide-react';
+import { Button } from '../ui/button';
+import { Users, Download } from 'lucide-react';
+import { useState } from 'react';
 
 interface TopPerformer {
   id: string;
@@ -20,17 +24,58 @@ interface TopPerformer {
 interface TopPerformersTableProps {
   performers: TopPerformer[];
   totalRevenue?: number; // Total revenue for calculating percentages
+  creatorId: string; // For export functionality
 }
 
-export function TopPerformersTable({ performers, totalRevenue = 0 }: TopPerformersTableProps) {
+export function TopPerformersTable({ performers, totalRevenue = 0, creatorId }: TopPerformersTableProps) {
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+      const response = await fetch(`/api/creator/export-payout-report?creatorId=${creatorId}&months=1`);
+
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `payout-report-${new Date().toISOString().slice(0, 7)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Failed to export report. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   if (performers.length === 0) {
     return (
       <Card className="bg-[#1A1A1A] border-[#2A2A2A]">
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            Top Referrers
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-white flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Top Referrers
+            </CardTitle>
+            <Button
+              onClick={handleExport}
+              disabled={isExporting}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Export Report
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-gray-400">
@@ -44,17 +89,29 @@ export function TopPerformersTable({ performers, totalRevenue = 0 }: TopPerforme
   return (
     <Card className="bg-[#1A1A1A] border-[#2A2A2A]">
       <CardHeader>
-        <CardTitle className="text-white flex items-center gap-2">
-          <Users className="w-5 h-5" />
-          <span>
-            Top Referrers
-            {totalRevenue > 0 && (
-              <span className="text-purple-400 font-normal text-[0.7em]">
-                {' '}({((performers.slice(0, 10).reduce((sum, p) => sum + p.revenueGenerated, 0) / totalRevenue) * 100).toFixed(1)}% of total revenue)
-              </span>
-            )}
-          </span>
-        </CardTitle>
+        <div className="flex items-center justify-between mb-2">
+          <CardTitle className="text-white flex items-center gap-2">
+            <Users className="w-5 h-5" />
+            <span>
+              Top Referrers
+              {totalRevenue > 0 && (
+                <span className="text-purple-400 font-normal text-[0.7em]">
+                  {' '}({((performers.slice(0, 10).reduce((sum, p) => sum + p.revenueGenerated, 0) / totalRevenue) * 100).toFixed(1)}% of total revenue)
+                </span>
+              )}
+            </span>
+          </CardTitle>
+          <Button
+            onClick={handleExport}
+            disabled={isExporting}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            <Download className="w-4 h-4" />
+            {isExporting ? 'Exporting...' : 'Export Report'}
+          </Button>
+        </div>
         <p className="text-gray-400 text-sm">
           Top 10 members ranked by total referrals
         </p>

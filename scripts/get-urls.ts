@@ -1,10 +1,12 @@
 // Quick script to get dashboard URLs
 import { PrismaClient } from '@prisma/client';
+import logger from '../lib/logger';
+
 
 const prisma = new PrismaClient();
 
 async function getUrls() {
-  console.log('📋 Fetching dashboard URLs...\n');
+  logger.info(' Fetching dashboard URLs...\n');
 
   // Get creators
   const creators = await prisma.creator.findMany({
@@ -31,27 +33,27 @@ async function getUrls() {
     orderBy: { totalReferred: 'desc' }
   });
 
-  console.log('🏢 CREATOR DASHBOARDS:');
-  console.log('='.repeat(80));
+  logger.info(' CREATOR DASHBOARDS:');
+  logger.debug('='.repeat(80));
   creators.forEach(creator => {
-    console.log(`${creator.companyName}:`);
-    console.log(`  http://localhost:3000/seller-product/${creator.productId}`);
-    console.log();
+    logger.debug(`${creator.companyName}:`);
+    logger.debug(`  http://localhost:3000/seller-product/${creator.productId}`);
+    logger.debug();
   });
 
-  console.log('\n👥 MEMBER DASHBOARDS (Top 15 by Referrals):');
-  console.log('='.repeat(80));
+  logger.debug('\n👥 MEMBER DASHBOARDS (Top 15 by Referrals):');
+  logger.debug('='.repeat(80));
   members.forEach((member, i) => {
-    console.log(`${i + 1}. ${member.username} (${member.creator.companyName})`);
-    console.log(`   Referrals: ${member.totalReferred} | Earnings: $${member.lifetimeEarnings.toFixed(2)}`);
-    console.log(`   http://localhost:3000/customer/${member.membershipId}`);
-    console.log();
+    logger.debug(`${i + 1}. ${member.username} (${member.creator.companyName})`);
+    logger.debug(`   Referrals: ${member.totalReferred} | Earnings: $${member.lifetimeEarnings.toFixed(2)}`);
+    logger.debug(`   http://localhost:3000/customer/${member.membershipId}`);
+    logger.debug();
   });
 
-  console.log('\n🔗 REFERRAL LINKS (First 5 Members):');
-  console.log('='.repeat(80));
+  logger.debug('\n🔗 REFERRAL LINKS (First 5 Members):');
+  logger.debug('='.repeat(80));
   members.slice(0, 5).forEach(member => {
-    console.log(`${member.username}: http://localhost:3000/r/${member.referralCode}`);
+    logger.debug(`${member.username}: http://localhost:3000/r/${member.referralCode}`);
   });
 }
 
