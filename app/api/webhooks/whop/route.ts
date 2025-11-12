@@ -8,6 +8,7 @@ import { checkAttribution } from '../../../../lib/utils/attribution';
 import { sendWelcomeMessage } from '../../../../lib/whop/messaging';
 import { withRetry, shouldRetry } from '../../../../lib/utils/webhook-retry';
 import { withRateLimit } from '../../../../lib/security/rate-limit-utils';
+import { updateMemberRankings } from '../../../../lib/utils/rank-updater';
 import logger from '../../../../lib/logger';
 import {
   isSubscriptionPayment,
@@ -460,6 +461,11 @@ async function handlePaymentRefunded(data: any, webhookEventId: string) {
 
   logger.info('Refund processed successfully');
 
+  // 📊 Update referrer's rankings after refund (non-blocking)
+  updateMemberRankings(originalCommission.memberId).catch(err =>
+    logger.error('⚠️ Failed to update rankings after refund:', err)
+  );
+
   return {
     ok: true,
     refundAmount,
@@ -702,6 +708,11 @@ async function processCommission({
   if (isFirstReferral) {
     logger.info(` FIRST REFERRAL SUCCESS for ${referrerCode}!`);
   }
+
+  // 📊 Update referrer's rankings (non-blocking)
+  updateMemberRankings(referrer.id).catch(err =>
+    logger.error('⚠️ Failed to update rankings:', err)
+  );
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -801,6 +812,11 @@ async function handleRecurringPayment(
       ]);
 
       logger.info(` Recurring commission: $${memberShare} → ${referrer.referralCode}`);
+
+      // 📊 Update referrer's rankings (non-blocking)
+      updateMemberRankings(referrer.id).catch(err =>
+        logger.error('⚠️ Failed to update rankings:', err)
+      );
     }
   } else {
     logger.debug('✔️  Organic member recurring payment - no commission to process');
