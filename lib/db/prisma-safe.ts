@@ -1,4 +1,6 @@
-// lib/db/prisma.ts
+// lib/db/prisma-safe.ts
+// Build-safe Prisma client that prevents connection attempts during build
+
 import { PrismaClient } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 import logger from '../logger';
@@ -7,31 +9,40 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Check if we're in Vercel build environment
-export const isVercelBuild = process.env.VERCEL === '1' && process.env.CI === '1';
+// Check if we're in build environment
+const isBuildTime = process.env.VERCEL_ENV === 'production' && !process.env.DATABASE_URL;
+const isVercelBuild = process.env.VERCEL === '1' && process.env.CI === '1';
 
-// Configuration for connection pooling and retry - OPTIMIZED FOR VERCEL SERVERLESS
+// Configuration for connection pooling
 const prismaOptions: Prisma.PrismaClientOptions = {
-  log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'], // Reduced logging for performance
+  log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
   datasources: {
     db: {
-      // Use dummy URL during build to prevent connection attempts
-      url: isVercelBuild
-        ? 'postgresql://user:password@localhost:5432/db'
-        : (process.env.DATABASE_URL || 'postgresql://user:password@localhost:5432/db'),
+      url: process.env.DATABASE_URL || 'postgresql://placeholder',
     },
   },
-  // Error formatting
-  errorFormat: process.env.NODE_ENV === 'development' ? 'pretty' : 'minimal', // Minimal in production for performance
+  errorFormat: process.env.NODE_ENV === 'development' ? 'pretty' : 'minimal',
 };
 
-// Create PrismaClient with connection retry logic
+// Create PrismaClient that's safe during build
 function createPrismaClient() {
+  // During build, return a dummy client that won't connect
+  if (isBuildTime || isVercelBuild) {
+    logger.info('Build environment detected - using placeholder Prisma client');
+    return new PrismaClient({
+      ...prismaOptions,
+      datasources: {
+        db: {
+          url: 'postgresql://user:password@localhost:5432/db', // Dummy URL
+        },
+      },
+    });
+  }
+
   const client = new PrismaClient(prismaOptions);
 
-  // Skip middleware during build to prevent connection attempts
-  if (!isVercelBuild && process.env.DATABASE_URL) {
-    // Add middleware for retry logic on connection failures
+  // Only add middleware in runtime environment
+  if (process.env.DATABASE_URL) {
     client.$use(async (params, next) => {
       const maxRetries = 3;
       const retryDelay = (attempt: number) => Math.min(1000 * Math.pow(2, attempt), 5000);
@@ -40,10 +51,9 @@ function createPrismaClient() {
         try {
           return await next(params);
         } catch (error: any) {
-          // Check if it's a connection error
           const isConnectionError =
-            error.code === 'P1001' || // Can't reach database
-            error.code === 'P1002' || // Connection timeout
+            error.code === 'P1001' ||
+            error.code === 'P1002' ||
             error.message?.includes("Can't reach database server") ||
             error.message?.includes("Connection timeout");
 
@@ -54,7 +64,6 @@ function createPrismaClient() {
             continue;
           }
 
-          // If not a connection error or max retries reached, throw the error
           throw error;
         }
       }
@@ -64,14 +73,17 @@ function createPrismaClient() {
   return client;
 }
 
+// Export safe prisma instance
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
 
-// Helper function to test database connection
+// Safe database connection test
 export async function testDatabaseConnection(): Promise<{ success: boolean; error?: string }> {
   // Skip during build
-  if (isVercelBuild) {
+  if (isBuildTime || isVercelBuild) {
     return { success: true, error: 'Skipped during build' };
   }
 
@@ -87,10 +99,10 @@ export async function testDatabaseConnection(): Promise<{ success: boolean; erro
   }
 }
 
-// Graceful shutdown helper
+// Safe disconnect
 export async function disconnectDatabase() {
   // Skip during build
-  if (isVercelBuild) {
+  if (isBuildTime || isVercelBuild) {
     return;
   }
 
@@ -98,15 +110,5 @@ export async function disconnectDatabase() {
     await prisma.$disconnect();
   } catch (error) {
     logger.error('Error disconnecting from database:', error);
-    // Force exit if graceful disconnect fails
-    process.exit(1);
   }
-}
-
-// Handle process termination gracefully
-// Skip during build to prevent connection attempts
-if (process.env.NODE_ENV !== 'development' && !isVercelBuild) {
-  process.on('beforeExit', async () => {
-    await disconnectDatabase();
-  });
 }
