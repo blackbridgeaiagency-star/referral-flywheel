@@ -5,6 +5,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
 import { getConnectionInfo } from '../../../../lib/db/prisma-serverless';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const results: any = {
     timestamp: new Date().toISOString(),

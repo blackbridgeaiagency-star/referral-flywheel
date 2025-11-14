@@ -5,6 +5,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
 import logger from '../../../../lib/logger';
 
+export const dynamic = 'force-dynamic';
+
 // Store last alert time to prevent spam
 let lastAlertTime: { [key: string]: Date } = {};
 

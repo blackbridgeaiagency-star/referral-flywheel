@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import logger from '../../../../lib/logger';
 
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   logger.info(' Database connection test initiated');

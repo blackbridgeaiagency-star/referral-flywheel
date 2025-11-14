@@ -8,7 +8,11 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 // Check if we're in Vercel build environment
-export const isVercelBuild = process.env.VERCEL === '1' && process.env.CI === '1';
+// During build: No DATABASE_URL or building on Vercel
+export const isVercelBuild =
+  (process.env.VERCEL === '1' && process.env.CI === '1') ||
+  process.env.NEXT_PHASE === 'phase-production-build' ||
+  (!process.env.DATABASE_URL && process.env.NODE_ENV === 'production');
 
 // Configuration for connection pooling and retry - OPTIMIZED FOR VERCEL SERVERLESS
 const prismaOptions: Prisma.PrismaClientOptions = {
@@ -64,7 +68,28 @@ function createPrismaClient() {
   return client;
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+// During build, export a proxy that prevents any database operations
+export const prisma = isVercelBuild
+  ? new Proxy({} as PrismaClient, {
+      get(target, prop) {
+        if (prop === '$queryRaw' || prop === '$executeRaw' || prop === '$transaction') {
+          return async () => {
+            console.log(`[BUILD] Skipping database operation: ${String(prop)}`);
+            return [];
+          };
+        }
+        // Return a proxy for any model access (like prisma.user)
+        return new Proxy({}, {
+          get() {
+            return async () => {
+              console.log(`[BUILD] Skipping database query during build`);
+              return null;
+            };
+          }
+        });
+      }
+    })
+  : (globalForPrisma.prisma ?? createPrismaClient());
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
