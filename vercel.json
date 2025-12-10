@@ -44,13 +44,6 @@
       ]
     }
   ],
-  "redirects": [
-    {
-      "source": "/",
-      "destination": "/discover",
-      "permanent": false
-    }
-  ],
   "crons": [
     {
       "path": "/api/cron/reset-monthly-stats",

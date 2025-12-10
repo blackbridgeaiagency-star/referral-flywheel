@@ -1,22 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../lib/db/prisma';
-import { generateFingerprint } from '../../../lib/utils/fingerprint';
-import { hashIP, extractRealIP } from '../../../lib/utils/ip-hash';
 import { applyRateLimit } from '../../../lib/security/rate-limit-utils';
+import { extractRealIP } from '../../../lib/utils/ip-hash';
 import logger from '../../../lib/logger';
 
+// Whop API configuration for auto-fetching username
+const WHOP_API_KEY = process.env.WHOP_API_KEY;
+const WHOP_API_BASE = 'https://api.whop.com/api/v2';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * Referral Link Redirect Route (P1: Rate Limited)
+ * Referral Link Redirect Route (Strategy B: Whop-Native Attribution)
  *
  * Handles referral link clicks: /r/FIRSTNAME-ABC123
- * - Rate limiting: 30 requests per minute per IP (prevents click farming)
- * - Creates attribution click record
- * - Sets 30-day cookie
- * - Redirects to product page or discover
+ *
+ * NEW STRATEGY B FLOW:
+ * 1. Look up member by their referralCode (our vanity code)
+ * 2. Get their whopUsername
+ * 3. Redirect to Whop product page with ?a=whopUsername
+ * 4. Whop handles ALL attribution natively
+ * 5. We read affiliate_username from webhook
+ *
+ * NO MORE:
+ * - Cookies
+ * - Fingerprinting
+ * - AttributionClick records
+ * - 30-day windows (Whop handles this)
  */
 
 export async function GET(
@@ -24,9 +35,7 @@ export async function GET(
   { params }: { params: { code: string } }
 ) {
   try {
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // P1 FIX: RATE LIMITING (Prevent click farming & DoS)
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // Rate limiting (prevent click farming)
     const realIP = extractRealIP(request) || 'unknown';
     const rateLimitResult = await applyRateLimit(
       `referral-redirect:${realIP}`,
@@ -35,7 +44,7 @@ export async function GET(
     );
 
     if (!rateLimitResult.success) {
-      logger.warn(` Rate limit exceeded for IP: ${realIP}`);
+      logger.warn(`Rate limit exceeded for IP: ${realIP}`);
       const retryAfterSeconds = Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000);
       return NextResponse.json(
         {
@@ -45,9 +54,7 @@ export async function GET(
         },
         {
           status: 429,
-          headers: {
-            'Retry-After': retryAfterSeconds.toString(),
-          }
+          headers: { 'Retry-After': retryAfterSeconds.toString() }
         }
       );
     }
@@ -56,120 +63,124 @@ export async function GET(
 
     // Validate referral code format
     if (!code || code.length < 5) {
-      logger.error('❌ Invalid referral code format:', code);
+      logger.error('Invalid referral code format:', code);
       return redirectWithError('invalid_code');
     }
 
-    logger.info(' Referral click:', code);
+    logger.info(`Referral click: ${code}`);
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // 1. FIND MEMBER BY REFERRAL CODE
+    // 1. FIND MEMBER BY REFERRAL CODE (our vanity code)
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     const member = await prisma.member.findUnique({
       where: { referralCode: code },
-      include: { creator: true }
+      select: {
+        id: true,
+        membershipId: true,
+        whopUsername: true,
+        username: true,
+        creator: {
+          select: {
+            productId: true,
+            companyId: true,
+          }
+        }
+      }
     });
 
     if (!member) {
-      logger.error('❌ Member not found for code:', code);
+      logger.error('Member not found for code:', code);
       return redirectWithError('invalid_code');
     }
 
     if (!member.creator) {
-      logger.error('❌ Creator not found for member:', member.id);
+      logger.error('Creator not found for member');
       return redirectWithError('invalid_code');
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // 2. GENERATE FINGERPRINT & CHECK FOR DUPLICATE CLICKS
+    // 2. GET WHOP USERNAME FOR ?a= PARAMETER (auto-fetch if missing)
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    const fingerprint: string = generateFingerprint(request);
+    let affiliateUsername = member.whopUsername;
 
-    // Check if this fingerprint already has an active click
-    const existingClick = await prisma.attributionClick.findFirst({
-      where: {
-        memberId: member.id,
-        fingerprint,
-        expiresAt: { gte: new Date() },
-      }
-    });
+    // If whopUsername is not set, try to auto-fetch from Whop API
+    if (!affiliateUsername && member.membershipId && WHOP_API_KEY) {
+      logger.info(`Attempting to auto-fetch whopUsername for ${code}...`);
 
-    if (existingClick) {
-      logger.debug('⏭️  Duplicate click detected, using existing attribution');
-      // Still redirect - don't create duplicate
-      return redirectToProduct(member.creator.productId, code);
-    }
+      try {
+        const response = await fetch(
+          `${WHOP_API_BASE}/memberships/${member.membershipId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${WHOP_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
 
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // 3. CREATE ATTRIBUTION CLICK (30-day window)
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 30);
+        if (response.ok) {
+          const data = await response.json();
+          const fetchedUsername = data.user?.username || data.username;
 
-    try {
-      // Extract and hash IP for privacy
-      const realIP = extractRealIP(request);
-      const ipHash = hashIP(realIP);
+          if (fetchedUsername) {
+            // Update member with fetched username
+            await prisma.member.update({
+              where: { id: member.id },
+              data: { whopUsername: fetchedUsername.toLowerCase() },
+            });
 
-      await prisma.attributionClick.create({
-        data: {
-          referralCode: code,  // ✅ Fixed: Added missing referralCode
-          memberId: member.id,
-          fingerprint,
-          ipHash,  // ✅ Fixed: Using hashed IP instead of plain IP
-          userAgent: request.headers.get('user-agent') || '',
-          expiresAt,
+            affiliateUsername = fetchedUsername.toLowerCase();
+            logger.info(`Auto-fetched and saved whopUsername: ${affiliateUsername}`);
+          }
         }
-      });
+      } catch (fetchError) {
+        logger.error('Failed to auto-fetch whopUsername:', fetchError);
+      }
+    }
 
-      logger.info(`Attribution created for ${code} (expires in 30 days)`);
-    } catch (dbError) {
-      // Log error but continue with redirect (don't block user)
-      logger.error('❌ Failed to create attribution:', dbError);
+    if (!affiliateUsername) {
+      // Could not get whopUsername - show error page instead of losing the referral
+      logger.warn(`Member ${code} has no whopUsername - showing setup prompt`);
+      return redirectWithError('username_required');
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // 4. UPDATE MEMBER LAST ACTIVE
+    // 3. UPDATE MEMBER LAST ACTIVE (non-blocking)
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    try {
-      await prisma.member.update({
-        where: { id: member.id },
-        data: { lastActive: new Date() }
-      });
-    } catch (updateError) {
-      // Non-critical, just log
-      logger.error('⚠️ Failed to update lastActive:', updateError);
-    }
+    prisma.member.update({
+      where: { id: member.id },
+      data: { lastActive: new Date() }
+    }).catch(err => logger.error('Failed to update lastActive:', err));
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // 5. REDIRECT TO PRODUCT PAGE
+    // 4. REDIRECT TO WHOP WITH ?a=whopUsername
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    return redirectToProduct(member.creator.productId, code);
+    logger.info(`Redirecting to Whop with affiliate: ${affiliateUsername}`);
+    return redirectToProduct(member.creator.productId, affiliateUsername);
 
   } catch (error) {
-    logger.error('❌ Referral redirect error:', error);
+    logger.error('Referral redirect error:', error);
     return redirectWithError('server_error');
   }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// HELPER: Redirect to product page with referral cookie
+// HELPER: Redirect to Whop product page with ?a= affiliate parameter
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function redirectToProduct(productId: string, referralCode: string): NextResponse {
-  const whopProductUrl = `https://whop.com/products/${productId}`;
+function redirectToProduct(productId: string, whopUsername: string | null): NextResponse {
+  // Build Whop product URL
+  const baseUrl = `https://whop.com/products/${productId}`;
 
-  const response = NextResponse.redirect(whopProductUrl);
+  // If we have a whopUsername, add affiliate parameter
+  const redirectUrl = whopUsername
+    ? `${baseUrl}?a=${encodeURIComponent(whopUsername)}`
+    : baseUrl;
 
-  // Set referral cookie (30 days)
-  response.cookies.set('ref_code', referralCode, {
-    maxAge: 30 * 24 * 60 * 60, // 30 days in seconds
-    path: '/',
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax'
-  });
+  logger.info(`Redirecting to: ${redirectUrl}`);
 
-  return response;
+  // Simple redirect - no cookies, no fingerprinting
+  // Whop will handle all attribution via the ?a= parameter
+  return NextResponse.redirect(redirectUrl);
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -180,6 +191,7 @@ function redirectWithError(errorCode: string): NextResponse {
   const errorMessages: Record<string, string> = {
     invalid_code: 'This referral link is invalid or expired.',
     server_error: 'An error occurred. Please try again later.',
+    username_required: 'The referrer needs to complete their account setup. Ask them to connect their Whop username in their dashboard.',
   };
 
   const redirectUrl = new URL('/discover', appUrl);

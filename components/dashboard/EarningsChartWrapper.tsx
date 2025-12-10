@@ -23,15 +23,15 @@ export function EarningsChartWrapper({ memberId, initialData }: EarningsChartWra
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
 
-  // Fetch data when time range changes
+  // Fetch data when time range changes with real-time polling
   useEffect(() => {
     // Skip if custom range is selected but dates aren't set yet
     if (timeRange === 'custom' && (!customStartDate || !customEndDate)) {
       return;
     }
 
-    const fetchData = async () => {
-      setIsLoading(true);
+    const fetchData = async (showLoading = true) => {
+      if (showLoading) setIsLoading(true);
       try {
         let url = `/api/earnings/history?memberId=${memberId}&range=${timeRange}`;
 
@@ -43,17 +43,23 @@ export function EarningsChartWrapper({ memberId, initialData }: EarningsChartWra
         if (response.ok) {
           const newData = await response.json();
           setData(newData);
-        } else {
-          logger.error('Failed to fetch earnings data:', response.statusText);
         }
       } catch (error) {
         logger.error('Error fetching earnings data:', error);
       } finally {
-        setIsLoading(false);
+        if (showLoading) setIsLoading(false);
       }
     };
 
-    fetchData();
+    // Initial fetch with loading indicator
+    fetchData(true);
+
+    // Real-time polling every 30 seconds (no loading indicator for updates)
+    const pollInterval = setInterval(() => {
+      fetchData(false);
+    }, 30000);
+
+    return () => clearInterval(pollInterval);
   }, [timeRange, customStartDate, customEndDate, memberId]);
 
   return (

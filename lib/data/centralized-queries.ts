@@ -45,6 +45,7 @@ export async function getMemberStats(memberId: string) {
         referralCode: true,
         creatorId: true,
         totalReferred: true, // This is OK - it's a simple count
+        subscriptionPrice: true, // Member's subscription price for earnings calculator
         createdAt: true,
       },
     });
@@ -158,6 +159,7 @@ export async function getMemberStats(memberId: string) {
       email: member.email,
       referralCode: member.referralCode,
       creatorId: member.creatorId,
+      subscriptionPrice: member.subscriptionPrice, // For earnings calculator
       createdAt: member.createdAt,
 
       // Earnings (calculated from commissions)
@@ -1142,6 +1144,7 @@ export async function getCompleteMemberDashboardData(membershipId: string) {
       select: {
         id: true,
         creatorId: true,
+        whopUsername: true, // Strategy B: For affiliate link setup
       },
     });
 
@@ -1157,7 +1160,7 @@ export async function getCompleteMemberDashboardData(membershipId: string) {
       getMemberReferrals(member.id, 10),
     ]);
 
-    console.log('✅ Complete member dashboard data fetched:', {
+    console.log('Complete member dashboard data fetched:', {
       membershipId,
       memberId: member.id,
     });
@@ -1167,6 +1170,7 @@ export async function getCompleteMemberDashboardData(membershipId: string) {
       ...rankings,
       earningsHistory,
       referrals,
+      whopUsername: member.whopUsername, // Strategy B: Include for dashboard
     };
   } catch (error) {
     logger.error('❌ Error fetching complete member dashboard data:', error);

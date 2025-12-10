@@ -39,38 +39,38 @@ export function LeaderboardPanel({
   const userRowRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Fetch leaderboard data
+  // Fetch leaderboard data with real-time polling
   useEffect(() => {
     if (!isOpen) return;
 
-    const fetchLeaderboard = async () => {
-      setIsLoading(true);
+    const fetchLeaderboard = async (showLoading = true) => {
+      if (showLoading) setIsLoading(true);
       try {
         const scope = activeTab === 'community' ? 'community' : 'global';
         const url = `/api/leaderboard?type=${type}&scope=${scope}&creatorId=${creatorId}&limit=100&memberId=${currentMemberId}`;
 
-        logger.info(' Fetching leaderboard:', url);
         const response = await fetch(url);
         if (response.ok) {
           const data = await response.json();
-          console.log('✅ Leaderboard data received:', {
-            leaderboardCount: data.leaderboard?.length || 0,
-            userRank: data.userRank,
-            totalMembers: data.totalMembers
-          });
           setLeaderboard(data.leaderboard || []);
           setUserRank(data.userRank || null);
-        } else {
-          logger.error('❌ API response not OK:', response.status);
         }
       } catch (error) {
-        logger.error('❌ Error fetching leaderboard:', error);
+        logger.error('Error fetching leaderboard:', error);
       } finally {
-        setIsLoading(false);
+        if (showLoading) setIsLoading(false);
       }
     };
 
-    fetchLeaderboard();
+    // Initial fetch with loading indicator
+    fetchLeaderboard(true);
+
+    // Real-time polling every 30 seconds (no loading indicator for updates)
+    const pollInterval = setInterval(() => {
+      fetchLeaderboard(false);
+    }, 30000);
+
+    return () => clearInterval(pollInterval);
   }, [isOpen, activeTab, type, creatorId, currentMemberId]);
 
   // Auto-scroll to user's position

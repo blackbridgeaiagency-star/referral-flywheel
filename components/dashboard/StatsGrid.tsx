@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '../ui/card';
 import { formatCurrency } from '../../lib/utils/commission';
-import { DollarSign, TrendingUp, Users, Trophy, TrendingDown, ArrowDown, ArrowUp } from 'lucide-react';
+import { DollarSign, TrendingUp, Users, Trophy, TrendingDown, ArrowDown, ArrowUp, RefreshCw } from 'lucide-react';
 
 interface StatsGridProps {
   stats: {
@@ -16,11 +16,64 @@ interface StatsGridProps {
     globalReferralsRank?: number | null; // Rank by referrals across ALL creators
     communityRank?: number | null; // Rank by referrals within creator
   };
+  memberId?: string; // Optional memberId for real-time polling
   note?: string;  // Optional note about data source
 }
 
-export function StatsGrid({ stats }: StatsGridProps) {
+export function StatsGrid({ stats: initialStats, memberId }: StatsGridProps) {
+  const [stats, setStats] = useState(initialStats);
   const [showCommunityRank, setShowCommunityRank] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // Update stats when initialStats change (e.g., page navigation)
+  useEffect(() => {
+    setStats(initialStats);
+  }, [initialStats]);
+
+  // Fetch updated stats from API
+  const fetchStats = useCallback(async () => {
+    if (!memberId) return;
+
+    try {
+      const response = await fetch(`/api/member/stats?memberId=${memberId}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.ok && data.stats) {
+          // Check if stats changed - show update indicator
+          const hasChanged =
+            data.stats.lifetimeEarnings !== stats.lifetimeEarnings ||
+            data.stats.totalReferred !== stats.totalReferred ||
+            data.stats.monthlyEarnings !== stats.monthlyEarnings;
+
+          if (hasChanged) {
+            setIsUpdating(true);
+            setTimeout(() => setIsUpdating(false), 2000);
+          }
+
+          setStats(prev => ({
+            ...prev,
+            monthlyEarnings: data.stats.monthlyEarnings,
+            lifetimeEarnings: data.stats.lifetimeEarnings,
+            totalReferred: data.stats.totalReferred,
+            monthlyReferred: data.stats.monthlyReferred,
+            monthlyTrend: data.stats.monthlyTrend,
+          }));
+          setLastUpdated(new Date());
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  }, [memberId, stats.lifetimeEarnings, stats.totalReferred, stats.monthlyEarnings]);
+
+  // Real-time polling every 30 seconds
+  useEffect(() => {
+    if (!memberId) return;
+
+    const pollInterval = setInterval(fetchStats, 30000);
+    return () => clearInterval(pollInterval);
+  }, [memberId, fetchStats]);
 
   // Format trend with arrow
   const trendFormatted = stats.monthlyTrend !== undefined
@@ -31,43 +84,56 @@ export function StatsGrid({ stats }: StatsGridProps) {
     : undefined;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <StatCard
-        title="Monthly Earnings"
-        value={formatCurrency(stats.monthlyEarnings)}
-        subtitle="This month"
-        trend={trendFormatted}
-        icon={<DollarSign className="w-5 h-5" />}
-        iconColor="text-green-400"
-        iconBg="bg-green-900/20"
-      />
-      <StatCard
-        title="Lifetime Earnings"
-        value={formatCurrency(stats.lifetimeEarnings)}
-        subtitle="All time"
-        icon={<TrendingUp className="w-5 h-5" />}
-        iconColor="text-purple-400"
-        iconBg="bg-purple-900/20"
-      />
-      <StatCard
-        title="Total Referrals"
-        value={stats.totalReferred.toString()}
-        subtitle={`${stats.monthlyReferred} this month`}
-        icon={<Users className="w-5 h-5" />}
-        iconColor="text-blue-400"
-        iconBg="bg-blue-900/20"
-      />
-      <FlippableRankCard
-        globalRank={stats.globalEarningsRank}
-        communityRank={stats.communityRank}
-        isFlipped={showCommunityRank}
-        onFlip={() => setShowCommunityRank(!showCommunityRank)}
-      />
+    <div className="space-y-2">
+      <div className={`grid grid-cols-1 md:grid-cols-4 gap-4 transition-all duration-300 ${isUpdating ? 'ring-2 ring-green-500/50 rounded-lg' : ''}`}>
+        <StatCard
+          title="Monthly Earnings"
+          value={formatCurrency(stats.monthlyEarnings)}
+          subtitle="This month"
+          trend={trendFormatted}
+          icon={<DollarSign className="w-5 h-5" />}
+          iconColor="text-green-400"
+          iconBg="bg-green-900/20"
+          isUpdating={isUpdating}
+        />
+        <StatCard
+          title="Lifetime Earnings"
+          value={formatCurrency(stats.lifetimeEarnings)}
+          subtitle="All time"
+          icon={<TrendingUp className="w-5 h-5" />}
+          iconColor="text-purple-400"
+          iconBg="bg-purple-900/20"
+          isUpdating={isUpdating}
+        />
+        <StatCard
+          title="Total Referrals"
+          value={stats.totalReferred.toString()}
+          subtitle={`${stats.monthlyReferred} this month`}
+          icon={<Users className="w-5 h-5" />}
+          iconColor="text-blue-400"
+          iconBg="bg-blue-900/20"
+          isUpdating={isUpdating}
+        />
+        <FlippableRankCard
+          globalRank={stats.globalEarningsRank}
+          communityRank={stats.communityRank}
+          isFlipped={showCommunityRank}
+          onFlip={() => setShowCommunityRank(!showCommunityRank)}
+        />
+      </div>
+      {/* Real-time indicator */}
+      {memberId && (
+        <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
+          <div className={`w-2 h-2 rounded-full transition-colors ${isUpdating ? 'bg-green-500 animate-pulse' : 'bg-gray-600'}`} />
+          <span>Live updates every 30s</span>
+          {isUpdating && <RefreshCw className="w-3 h-3 animate-spin text-green-500" />}
+        </div>
+      )}
     </div>
   );
 }
 
-function StatCard({ title, value, subtitle, trend, icon, iconColor, iconBg }: {
+function StatCard({ title, value, subtitle, trend, icon, iconColor, iconBg, isUpdating }: {
   title: string;
   value: string;
   subtitle: string;
@@ -75,6 +141,7 @@ function StatCard({ title, value, subtitle, trend, icon, iconColor, iconBg }: {
   icon?: React.ReactNode;
   iconColor?: string;
   iconBg?: string;
+  isUpdating?: boolean;
 }) {
   return (
     <Card className="bg-[#1A1A1A] border-[#2A2A2A] hover:border-purple-500/30 transition-all duration-300 hover:shadow-xl hover:shadow-purple-900/10 group overflow-hidden relative">

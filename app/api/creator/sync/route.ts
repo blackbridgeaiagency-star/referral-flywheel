@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    logger.info(' Manual sync requested for creator: ${creatorId}');
+    logger.info(`Manual sync requested for creator: ${creatorId}`);
 
     // Sync with Whop
     const result = await syncCreatorWithWhop(creatorId);

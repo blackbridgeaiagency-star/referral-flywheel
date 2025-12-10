@@ -100,7 +100,9 @@ export default async function HomePage({
 
             <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-1 rounded-xl">
               <a
-                href={`https://whop.com/apps/${process.env.NEXT_PUBLIC_WHOP_APP_ID || 'referral-flywheel'}/install`}
+                href="https://whop.com/apps/app_xa1a8NaAKUVPuO/install/"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="block bg-black hover:bg-gray-900 text-white py-4 px-8 rounded-xl font-bold text-xl transition-colors"
               >
                 Install on Whop →

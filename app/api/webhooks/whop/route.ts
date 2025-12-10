@@ -1,12 +1,13 @@
 // app/api/webhooks/whop/route.ts
+// Strategy B: Whop-Native Attribution
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { prisma } from '../../../../lib/db/prisma';
 import { generateReferralCode } from '../../../../lib/utils/referral-code';
 import { calculateCommission } from '../../../../lib/utils/commission';
-import { checkAttribution } from '../../../../lib/utils/attribution';
+import { calculateTieredCommission } from '../../../../lib/utils/tiered-commission';
 import { sendWelcomeMessage } from '../../../../lib/whop/messaging';
-import { withRetry, shouldRetry } from '../../../../lib/utils/webhook-retry';
+import { withRetry } from '../../../../lib/utils/webhook-retry';
 import { withRateLimit } from '../../../../lib/security/rate-limit-utils';
 import { updateMemberRankings } from '../../../../lib/utils/rank-updater';
 import logger from '../../../../lib/logger';
@@ -14,14 +15,16 @@ import {
   isSubscriptionPayment,
   normalizeBillingPeriod,
   calculateMonthlyValue,
-  getBillingPeriodLabel,
 } from '../../../../lib/utils/billing';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+// Whop API configuration
+const WHOP_API_KEY = process.env.WHOP_API_KEY;
+const WHOP_API_BASE = 'https://api.whop.com/api/v2';
+
 export async function POST(request: NextRequest) {
-  // Apply rate limiting for webhook endpoint
   return withRateLimit(request, async () => {
     let webhookEvent: any = null;
 
@@ -33,9 +36,7 @@ export async function POST(request: NextRequest) {
       const signature = request.headers.get('whop-signature');
       const secret = process.env.WHOP_WEBHOOK_SECRET!;
 
-      // Require signature in production
       if (!signature) {
-        // Allow unsigned webhooks only in development
         if (process.env.NODE_ENV === 'production') {
           logger.error('Missing webhook signature in production');
           return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
@@ -43,7 +44,6 @@ export async function POST(request: NextRequest) {
           logger.warn('No signature (development mode)');
         }
       } else {
-        // Validate signature
         const expectedSignature = crypto
           .createHmac('sha256', secret)
           .update(body)
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       const payload = JSON.parse(body);
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      // 2. LOG EVERY WEBHOOK EVENT (even if we don't process yet)
+      // 2. LOG EVERY WEBHOOK EVENT
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       webhookEvent = await prisma.webhookEvent.create({
         data: {
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      logger.webhook(` Webhook received: ${payload.action} (ID: ${webhookEvent.id})`);
+      logger.webhook(`Webhook received: ${payload.action} (ID: ${webhookEvent.id})`);
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // 3. ROUTE TO APPROPRIATE HANDLER
@@ -77,9 +77,14 @@ export async function POST(request: NextRequest) {
       let result;
 
       switch (payload.action) {
+        case 'membership.went_valid':
+          // NEW: This is the key event for Strategy B
+          result = await handleMembershipWentValid(payload.data, webhookEvent.id);
+          break;
+
         case 'app_payment.succeeded':
         case 'payment.succeeded':
-          result = await handlePaymentSucceeded(payload.data, webhookEvent.id, request);
+          result = await handlePaymentSucceeded(payload.data, webhookEvent.id);
           break;
 
         case 'app_payment.failed':
@@ -119,7 +124,7 @@ export async function POST(request: NextRequest) {
           break;
 
         default:
-          logger.warn(`  Unhandled webhook type: ${payload.action}`);
+          logger.warn(`Unhandled webhook type: ${payload.action}`);
           result = { ok: true, message: 'Event logged but not processed' };
       }
 
@@ -137,9 +142,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(result);
 
     } catch (error: any) {
-      logger.error('❌ Webhook processing error:', error);
+      logger.error('Webhook processing error:', error);
 
-      // Log the error but don't block webhook
       if (webhookEvent) {
         await prisma.webhookEvent.update({
           where: { id: webhookEvent.id },
@@ -159,20 +163,241 @@ export async function POST(request: NextRequest) {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// HANDLER: Payment Succeeded (Initial & Recurring)
+// STRATEGY B: Fetch membership details from Whop API
+// Returns: { affiliateUsername, memberUsername } - both auto-fetched!
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function handlePaymentSucceeded(data: any, webhookEventId: string, request: NextRequest) {
-  logger.info(' Processing payment.succeeded...');
+interface MembershipDetails {
+  affiliateUsername: string | null;
+  memberUsername: string | null;
+  memberEmail: string | null;
+}
 
-  // Validate required fields
-  if (!data || !data.membership_id || !data.company_id || !data.id) {
-    logger.error('❌ Missing required webhook data:', { data });
-    return { ok: false, error: 'Missing required webhook data' };
+async function fetchMembershipDetails(membershipId: string): Promise<MembershipDetails> {
+  const result: MembershipDetails = {
+    affiliateUsername: null,
+    memberUsername: null,
+    memberEmail: null,
+  };
+
+  if (!WHOP_API_KEY) {
+    logger.error('WHOP_API_KEY not configured');
+    return result;
+  }
+
+  try {
+    const response = await fetch(
+      `${WHOP_API_BASE}/memberships/${membershipId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${WHOP_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      logger.error(`Failed to fetch membership ${membershipId}: ${response.status}`);
+      return result;
+    }
+
+    const data = await response.json();
+
+    // Get affiliate who referred this member
+    result.affiliateUsername = data.affiliate_username || null;
+
+    // Get the member's OWN Whop username (for their future affiliate links)
+    // Whop API returns user object with username
+    result.memberUsername = data.user?.username || data.username || null;
+    result.memberEmail = data.user?.email || data.email || null;
+
+    if (result.affiliateUsername) {
+      logger.info(`Found affiliate: ${result.affiliateUsername} for membership ${membershipId}`);
+    }
+    if (result.memberUsername) {
+      logger.info(`Found member username: ${result.memberUsername} (auto-fetched from Whop API)`);
+    }
+
+    return result;
+
+  } catch (error) {
+    logger.error('Error fetching membership details:', error);
+    return result;
+  }
+}
+
+// Legacy function for backward compatibility
+async function fetchAffiliateUsername(membershipId: string): Promise<string | null> {
+  const details = await fetchMembershipDetails(membershipId);
+  return details.affiliateUsername;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// NEW HANDLER: membership.went_valid (Strategy B key event)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function handleMembershipWentValid(data: any, webhookEventId: string) {
+  logger.info('Processing membership.went_valid (Strategy B)...');
+
+  const membershipId = data.id || data.membership_id;
+
+  if (!membershipId) {
+    logger.error('Missing membership_id in webhook data');
+    return { ok: false, error: 'Missing membership_id' };
+  }
+
+  // Check if member already exists
+  let member = await prisma.member.findUnique({
+    where: { membershipId },
+  });
+
+  if (member) {
+    // Member exists - might need to update affiliate info
+    logger.info(`Member already exists: ${member.referralCode}`);
+
+    // If member doesn't have affiliate attribution yet, try to fetch it
+    if (!member.whopAffiliateUsername) {
+      const affiliateUsername = await fetchAffiliateUsername(membershipId);
+      if (affiliateUsername) {
+        // Find the referrer by their whopUsername
+        const referrer = await prisma.member.findUnique({
+          where: { whopUsername: affiliateUsername },
+        });
+
+        if (referrer) {
+          await prisma.member.update({
+            where: { id: member.id },
+            data: {
+              whopAffiliateUsername: affiliateUsername,
+              referredBy: referrer.referralCode,
+              memberOrigin: 'whop_affiliate',
+            },
+          });
+          logger.info(`Updated member ${member.referralCode} with affiliate: ${affiliateUsername}`);
+        }
+      }
+    }
+
+    return { ok: true, message: 'Member already exists' };
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 🔒 SUBSCRIPTION-ONLY FILTER
+  // NEW MEMBER - Auto-fetch ALL details from Whop API
+  // This gets both: who referred them AND their own Whop username
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const membershipDetails = await fetchMembershipDetails(membershipId);
+  const affiliateUsername = membershipDetails.affiliateUsername;
+  const autoFetchedWhopUsername = membershipDetails.memberUsername;
+
+  // Find referrer if affiliate exists
+  let referrer = null;
+  let referredByCode = null;
+  let memberOrigin = 'organic';
+
+  if (affiliateUsername) {
+    referrer = await prisma.member.findUnique({
+      where: { whopUsername: affiliateUsername },
+    });
+
+    if (referrer) {
+      referredByCode = referrer.referralCode;
+      memberOrigin = 'whop_affiliate';
+      logger.info(`Attribution found: ${affiliateUsername} -> ${referredByCode}`);
+    } else {
+      // Affiliate username found but no matching member
+      // This could be a direct Whop affiliate (not through our app)
+      memberOrigin = 'whop_affiliate';
+      logger.warn(`Affiliate ${affiliateUsername} not found in our system`);
+    }
+  }
+
+  // Get or create creator
+  const companyId = data.company_id || data.company;
+  let creator = await prisma.creator.findUnique({
+    where: { companyId },
+  });
+
+  if (!creator) {
+    creator = await prisma.creator.create({
+      data: {
+        companyId,
+        companyName: data.company_name || 'Community',
+        productId: data.product_id || data.product || 'unknown',
+      },
+    });
+  }
+
+  // Generate referral code
+  const referralCode = generateReferralCode();
+
+  // Extract user info - prefer auto-fetched from API over webhook data
+  const userId = data.user_id || data.user || `user_${membershipId}`;
+  const email = membershipDetails.memberEmail || data.email || `${userId}@temp.whop.com`;
+  const username = autoFetchedWhopUsername || data.username || email.split('@')[0];
+
+  // whopUsername is CRITICAL for Strategy B - auto-fetched from Whop API!
+  const whopUsername = autoFetchedWhopUsername || data.username || null;
+
+  if (whopUsername) {
+    logger.info(`✅ Auto-captured Whop username: ${whopUsername} (no manual entry needed!)`);
+  } else {
+    logger.warn(`⚠️ Could not auto-fetch Whop username for ${membershipId}`);
+  }
+
+  // Create member
+  member = await prisma.member.create({
+    data: {
+      userId,
+      membershipId,
+      email,
+      username,
+      whopUsername, // AUTO-FETCHED from Whop API - no manual entry needed!
+      referralCode,
+      referredBy: referredByCode,
+      whopAffiliateUsername: affiliateUsername,
+      creatorId: creator.id,
+      memberOrigin,
+      subscriptionPrice: 49.99, // Will be updated on payment
+    },
+  });
+
+  logger.info(`Member created: ${referralCode} (${memberOrigin})`);
+
+  // Create lifecycle record
+  await prisma.memberLifecycle.create({
+    data: {
+      memberId: member.id,
+      convertedAt: new Date(),
+      currentStatus: 'active',
+    },
+  });
+
+  // Send welcome message
+  await sendWelcomeMessage(member, creator);
+  await prisma.member.update({
+    where: { id: member.id },
+    data: { welcomeMessageSent: true },
+  });
+
+  return {
+    ok: true,
+    memberId: member.id,
+    referralCode,
+    memberOrigin,
+    affiliateUsername,
+  };
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// HANDLER: Payment Succeeded
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function handlePaymentSucceeded(data: any, webhookEventId: string) {
+  logger.info('Processing payment.succeeded...');
+
+  if (!data || !data.membership_id || !data.company_id || !data.id) {
+    logger.error('Missing required webhook data:', { data });
+    return { ok: false, error: 'Missing required webhook data' };
+  }
+
+  // Subscription filter
   const isSubscription = isSubscriptionPayment(
     data.plan_type,
     data.membership_id,
@@ -180,67 +405,63 @@ async function handlePaymentSucceeded(data: any, webhookEventId: string, request
   );
 
   if (!isSubscription) {
-    logger.debug('⏭️  Skipping non-subscription payment');
-    return {
-      ok: true,
-      skipped: true,
-      reason: 'Not a subscription payment',
-    };
+    logger.debug('Skipping non-subscription payment');
+    return { ok: true, skipped: true, reason: 'Not a subscription payment' };
   }
 
-  // Normalize billing period
   const billingPeriod = normalizeBillingPeriod(data.billing_period);
 
-  // ✅ IDEMPOTENCY CHECK
+  // Idempotency check
   const existingCommission = await prisma.commission.findUnique({
-    where: { whopPaymentId: data.id }
+    where: { whopPaymentId: data.id },
   });
 
   if (existingCommission) {
-    logger.debug(`⏭️ Payment ${data.id} already processed (idempotent)`);
-    return {
-      ok: true,
-      message: 'Payment already processed',
-      commissionId: existingCommission.id
-    };
+    logger.debug(`Payment ${data.id} already processed (idempotent)`);
+    return { ok: true, message: 'Payment already processed', commissionId: existingCommission.id };
   }
 
-  // Check if member already exists
+  // Find existing member
   const existingMember = await prisma.member.findUnique({
-    where: { membershipId: data.membership_id }
+    where: { membershipId: data.membership_id },
+    include: { creator: true },
   });
 
   if (existingMember) {
-    // Handle recurring payment for existing member
-    logger.info(' Recurring payment for:', existingMember.username);
-    await handleRecurringPayment(
-      existingMember,
-      data,
-      billingPeriod,
-      data.plan_type || 'subscription'
-    );
+    // Existing member - process recurring or update initial payment
+    await handleMemberPayment(existingMember, data, billingPeriod);
     return { ok: true };
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // NEW MEMBER - Check for attribution
+  // NEW MEMBER from payment (fallback if membership.went_valid didn't fire)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const attribution = await checkAttribution(request);
+  logger.info('Creating member from payment webhook (fallback)...');
 
-  // Generate privacy-safe referral code (no PII exposure)
-  const referralCode = generateReferralCode();
+  // Fetch affiliate info from Whop API (Strategy B)
+  const affiliateUsername = await fetchAffiliateUsername(data.membership_id);
 
-  // Get username for display purposes (but not for the code)
-  let username = 'user';
-  if (data.username) {
-    username = data.username;
-  } else if (data.email) {
-    username = data.email.split('@')[0];
+  // Find referrer
+  let referrer = null;
+  let referredByCode: string | null = null;
+  let memberOrigin = 'organic';
+
+  if (affiliateUsername) {
+    referrer = await prisma.member.findUnique({
+      where: { whopUsername: affiliateUsername },
+    });
+
+    if (referrer) {
+      referredByCode = referrer.referralCode;
+      memberOrigin = 'whop_affiliate';
+    } else {
+      memberOrigin = 'whop_affiliate';
+    }
   }
 
   // Get or create creator
   let creator = await prisma.creator.findUnique({
-    where: { companyId: data.company_id }
+    where: { companyId: data.company_id },
   });
 
   if (!creator) {
@@ -249,23 +470,31 @@ async function handlePaymentSucceeded(data: any, webhookEventId: string, request
         companyId: data.company_id,
         companyName: data.company_name || 'Community',
         productId: data.product_id,
-      }
+      },
     });
   }
 
+  const referralCode = generateReferralCode();
   const subscriptionPrice = data.final_amount ? data.final_amount / 100 : 49.99;
-  const memberOrigin = attribution ? 'referred' : 'organic';
   const memberMonthlyValue = calculateMonthlyValue(subscriptionPrice, billingPeriod as any);
 
-  // Create member with lifecycle
-  const member = await prisma.member.create({
+  let username = 'user';
+  if (data.username) {
+    username = data.username;
+  } else if (data.email) {
+    username = data.email.split('@')[0];
+  }
+
+  const newMember = await prisma.member.create({
     data: {
-      userId: data.user_id || `test_${Date.now()}`,
+      userId: data.user_id || `user_${Date.now()}`,
       membershipId: data.membership_id,
-      email: data.email || 'test@example.com',
-      username: username,
+      email: data.email || 'temp@whop.com',
+      username,
+      whopUsername: data.username || null,
       referralCode,
-      referredBy: attribution?.referralCode || null,
+      referredBy: referredByCode,
+      whopAffiliateUsername: affiliateUsername,
       creatorId: creator.id,
       subscriptionPrice,
       memberOrigin,
@@ -274,10 +503,10 @@ async function handlePaymentSucceeded(data: any, webhookEventId: string, request
     },
   });
 
-  // Create lifecycle record
+  // Create lifecycle
   await prisma.memberLifecycle.create({
     data: {
-      memberId: member.id,
+      memberId: newMember.id,
       convertedAt: new Date(),
       currentStatus: 'active',
       lifetimeValue: subscriptionPrice,
@@ -285,65 +514,229 @@ async function handlePaymentSucceeded(data: any, webhookEventId: string, request
     },
   });
 
-  logger.info(`Member created: ${member.referralCode} (${memberOrigin})`);
+  logger.info(`Member created from payment: ${referralCode} (${memberOrigin})`);
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // PROCESS COMMISSION IF REFERRED
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  if (attribution && data.final_amount) {
-    logger.info(' Processing commission for referred member...');
-    await withRetry(
-      () => processCommission({
-        referrerCode: attribution.referralCode,
-        saleAmount: data.final_amount / 100,
-        paymentId: data.id,
-        membershipId: data.membership_id,
-        creatorId: creator.id,
-        attributionId: attribution.id,
-        billingPeriod: billingPeriod,
-        productType: data.plan_type || 'subscription',
-      }),
-      {
-        maxAttempts: 3,
-        baseDelay: 1000,
-        onRetry: (attempt, error) => {
-          logger.debug(`⏳ Retrying commission processing (attempt ${attempt}):`, error.message);
-        }
-      }
-    );
+  // Process commission if referred
+  if (referrer && data.final_amount) {
+    await processCommission({
+      referrer,
+      saleAmount: data.final_amount / 100,
+      paymentId: data.id,
+      membershipId: data.membership_id,
+      creatorId: creator.id,
+      billingPeriod,
+      productType: data.plan_type || 'subscription',
+      paymentType: 'initial',
+    });
   }
 
   // Send welcome message
-  await sendWelcomeMessage(member, creator);
+  await sendWelcomeMessage(newMember, creator);
   await prisma.member.update({
-    where: { id: member.id },
-    data: { welcomeMessageSent: true }
+    where: { id: newMember.id },
+    data: { welcomeMessageSent: true },
   });
 
   return { ok: true };
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// HANDLER: Payment Refunded (CRITICAL!)
+// HELPER: Process member payment (initial or recurring)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function handleMemberPayment(
+  member: any,
+  data: any,
+  billingPeriod: string | null
+) {
+  // Validate data
+  if (!data.final_amount || !data.id) {
+    logger.error('Missing required data in payment webhook');
+    return;
+  }
+
+  const saleAmount = data.final_amount / 100;
+
+  // Update member's subscription price if different
+  if (member.subscriptionPrice !== saleAmount) {
+    await prisma.member.update({
+      where: { id: member.id },
+      data: {
+        subscriptionPrice: saleAmount,
+        billingPeriod,
+      },
+    });
+  }
+
+  // Auto-update creator's default subscription price (from first payment or if changed)
+  if (member.creator && member.creator.defaultSubscriptionPrice !== saleAmount) {
+    await prisma.creator.update({
+      where: { id: member.creator.id },
+      data: {
+        defaultSubscriptionPrice: saleAmount,
+      },
+    });
+    logger.info(`Updated creator ${member.creator.companyName} default price to $${saleAmount}`);
+  }
+
+  // Update lifecycle
+  const lifecycle = await prisma.memberLifecycle.findUnique({
+    where: { memberId: member.id },
+  });
+
+  if (lifecycle) {
+    await prisma.memberLifecycle.update({
+      where: { memberId: member.id },
+      data: {
+        lifetimeValue: { increment: saleAmount },
+        netValue: { increment: saleAmount },
+      },
+    });
+  }
+
+  // Process commission if referred
+  if (member.referredBy) {
+    const referrer = await prisma.member.findUnique({
+      where: { referralCode: member.referredBy },
+    });
+
+    if (referrer) {
+      // Determine if initial or recurring
+      const existingCommissionsCount = await prisma.commission.count({
+        where: { whopMembershipId: data.membership_id },
+      });
+
+      const paymentType = existingCommissionsCount === 0 ? 'initial' : 'recurring';
+
+      await processCommission({
+        referrer,
+        saleAmount,
+        paymentId: data.id,
+        membershipId: data.membership_id,
+        creatorId: member.creatorId,
+        billingPeriod,
+        productType: data.plan_type || 'subscription',
+        paymentType,
+      });
+    }
+  } else {
+    logger.debug('Organic member payment - no commission to process');
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// HELPER: Process commission with TIERED RATES (10%/15%/18%)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function processCommission({
+  referrer,
+  saleAmount,
+  paymentId,
+  membershipId,
+  creatorId,
+  billingPeriod,
+  productType,
+  paymentType,
+}: {
+  referrer: any;
+  saleAmount: number;
+  paymentId: string;
+  membershipId: string;
+  creatorId: string;
+  billingPeriod: string | null;
+  productType: string;
+  paymentType: 'initial' | 'recurring';
+}) {
+  // Calculate TIERED splits based on referrer's total referrals
+  // Starter (0-49): 10% member / 70% creator / 20% platform
+  // Ambassador (50-99): 15% member / 70% creator / 15% platform
+  // Elite (100+): 18% member / 70% creator / 12% platform
+  const tieredResult = calculateTieredCommission(saleAmount, referrer.totalReferred || 0);
+  const { memberShare, creatorShare, platformShare, appliedTier, appliedMemberRate } = tieredResult;
+
+  // Calculate monthly value for MRR tracking
+  const monthlyValue = calculateMonthlyValue(saleAmount, billingPeriod as any);
+
+  // Check if first referral
+  const isFirstReferral = paymentType === 'initial' && referrer.totalReferred === 0;
+
+  // Create commission record with tier info
+  await prisma.commission.create({
+    data: {
+      whopPaymentId: paymentId,
+      whopMembershipId: membershipId,
+      saleAmount,
+      memberShare,
+      creatorShare,
+      platformShare,
+      paymentType,
+      status: 'paid',
+      paidAt: new Date(),
+      memberId: referrer.id,
+      creatorId,
+      productType,
+      billingPeriod,
+      monthlyValue,
+    },
+  });
+
+  // Update referrer stats and creator stats
+  const updateData: any = {
+    lifetimeEarnings: { increment: memberShare },
+    monthlyEarnings: { increment: memberShare },
+  };
+
+  // Only increment referral counts on initial payment
+  if (paymentType === 'initial') {
+    updateData.totalReferred = { increment: 1 };
+    updateData.monthlyReferred = { increment: 1 };
+  }
+
+  await Promise.all([
+    prisma.member.update({
+      where: { id: referrer.id },
+      data: updateData,
+    }),
+    prisma.creator.update({
+      where: { id: creatorId },
+      data: {
+        totalReferrals: paymentType === 'initial' ? { increment: 1 } : undefined,
+        totalRevenue: { increment: saleAmount },
+        monthlyRevenue: { increment: saleAmount },
+      },
+    }),
+  ]);
+
+  // Log with tier info
+  const tierEmoji = appliedTier === 'elite' ? '👑' : appliedTier === 'ambassador' ? '🌟' : '⭐';
+  logger.info(`${tierEmoji} Commission processed: $${memberShare.toFixed(2)} (${(appliedMemberRate * 100).toFixed(0)}% ${appliedTier}) -> ${referrer.referralCode} (${paymentType})`);
+
+  if (isFirstReferral) {
+    logger.info(`🎉 FIRST REFERRAL SUCCESS for ${referrer.referralCode}!`);
+  }
+
+  // Update rankings (non-blocking)
+  updateMemberRankings(referrer.id).catch(err =>
+    logger.error('Failed to update rankings:', err)
+  );
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// HANDLER: Payment Refunded
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function handlePaymentRefunded(data: any, webhookEventId: string) {
-  logger.info(' Processing refund...');
+  logger.info('Processing refund...');
 
   const { id: refundId, payment_id: paymentId, amount, reason } = data;
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // STEP 1: Find the original commission
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const originalCommission = await prisma.commission.findUnique({
     where: { whopPaymentId: paymentId },
     include: {
-      member: true, // The referrer
+      member: true,
       creator: true,
     },
   });
 
   if (!originalCommission) {
-    logger.error(`❌ Cannot refund - no commission found for payment ${paymentId}`);
+    logger.error(`Cannot refund - no commission found for payment ${paymentId}`);
     return { ok: false, error: 'Commission not found' };
   }
 
@@ -353,51 +746,29 @@ async function handlePaymentRefunded(data: any, webhookEventId: string) {
   });
 
   if (existingRefund) {
-    logger.debug('⏭️  Refund already processed');
+    logger.debug('Refund already processed');
     return { ok: true, message: 'Already refunded' };
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // STEP 2: Calculate reversed amounts
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const refundAmount = amount / 100; // Convert cents to dollars
+  // Calculate reversed amounts
+  const refundAmount = amount / 100;
   const isFullRefund = Math.abs(refundAmount - originalCommission.saleAmount) < 0.01;
 
   let memberShareReversed, creatorShareReversed, platformShareReversed;
 
   if (isFullRefund) {
-    // Full refund - reverse entire commission
     memberShareReversed = originalCommission.memberShare;
     creatorShareReversed = originalCommission.creatorShare;
     platformShareReversed = originalCommission.platformShare;
   } else {
-    // Partial refund - calculate proportional reversal
     const refundRatio = refundAmount / originalCommission.saleAmount;
     memberShareReversed = originalCommission.memberShare * refundRatio;
     creatorShareReversed = originalCommission.creatorShare * refundRatio;
     platformShareReversed = originalCommission.platformShare * refundRatio;
   }
 
-  logger.debug(`
-    ═══════════════════════════════════════
-    💸 REFUND PROCESSING
-    ───────────────────────────────────────
-    Original Sale: $${originalCommission.saleAmount}
-    Refund Amount: $${refundAmount}
-    Type: ${isFullRefund ? 'FULL' : 'PARTIAL'}
-    ───────────────────────────────────────
-    Reversing:
-    - Member (${originalCommission.member.username}): -$${memberShareReversed.toFixed(2)}
-    - Creator: -$${creatorShareReversed.toFixed(2)}
-    - Platform: -$${platformShareReversed.toFixed(2)}
-    ═══════════════════════════════════════
-  `);
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // STEP 3: Execute refund (atomic transaction)
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Execute refund
   await prisma.$transaction(async (tx) => {
-    // Create refund record
     await tx.refund.create({
       data: {
         commissionId: originalCommission.id,
@@ -414,17 +785,14 @@ async function handlePaymentRefunded(data: any, webhookEventId: string) {
       },
     });
 
-    // Deduct from referrer's earnings (EDGE CASE: Allow negative balance)
     await tx.member.update({
       where: { id: originalCommission.memberId },
       data: {
         lifetimeEarnings: { decrement: memberShareReversed },
         monthlyEarnings: { decrement: memberShareReversed },
-        // NOTE: Do NOT decrement totalReferred - they still made the referral
       },
     });
 
-    // Deduct from creator's revenue
     await tx.creator.update({
       where: { id: originalCommission.creatorId },
       data: {
@@ -433,24 +801,6 @@ async function handlePaymentRefunded(data: any, webhookEventId: string) {
       },
     });
 
-    // Update purchaser member lifecycle if found
-    const purchaserMember = await tx.member.findUnique({
-      where: { membershipId: data.membership_id },
-      include: { lifecycle: true },
-    });
-
-    if (purchaserMember && purchaserMember.lifecycle) {
-      await tx.memberLifecycle.update({
-        where: { memberId: purchaserMember.id },
-        data: {
-          totalRefunded: { increment: refundAmount },
-          netValue: { decrement: refundAmount },
-          currentStatus: isFullRefund ? 'refunded' : 'active',
-        },
-      });
-    }
-
-    // Update commission status
     await tx.commission.update({
       where: { id: originalCommission.id },
       data: {
@@ -461,33 +811,27 @@ async function handlePaymentRefunded(data: any, webhookEventId: string) {
 
   logger.info('Refund processed successfully');
 
-  // 📊 Update referrer's rankings after refund (non-blocking)
   updateMemberRankings(originalCommission.memberId).catch(err =>
-    logger.error('⚠️ Failed to update rankings after refund:', err)
+    logger.error('Failed to update rankings after refund:', err)
   );
 
-  return {
-    ok: true,
-    refundAmount,
-    memberShareReversed,
-    creatorShareReversed,
-  };
+  return { ok: true, refundAmount, memberShareReversed, creatorShareReversed };
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // HANDLER: Membership Created
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function handleMembershipCreated(data: any, webhookEventId: string) {
-  logger.info(' Membership created (event logged)');
-  // This is typically followed by payment.succeeded, so we just log it
+  logger.info('Membership created (event logged)');
+  // This is typically followed by membership.went_valid or payment.succeeded
   return { ok: true, message: 'Event logged' };
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// HANDLER: Membership Deleted (Cancellation)
+// HANDLER: Membership Deleted
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function handleMembershipDeleted(data: any, webhookEventId: string) {
-  logger.info(' Member cancelled...');
+  logger.info('Member cancelled...');
 
   const member = await prisma.member.findUnique({
     where: { membershipId: data.membership_id },
@@ -495,7 +839,6 @@ async function handleMembershipDeleted(data: any, webhookEventId: string) {
 
   if (!member) return { ok: false, error: 'Member not found' };
 
-  // Update lifecycle
   await prisma.memberLifecycle.upsert({
     where: { memberId: member.id },
     create: {
@@ -526,7 +869,6 @@ async function handlePaymentFailed(data: any, webhookEventId: string) {
 
   if (!member) return { ok: false, error: 'Member not found' };
 
-  // Record payment failure
   await prisma.paymentFailure.create({
     data: {
       memberId: member.id,
@@ -538,7 +880,7 @@ async function handlePaymentFailed(data: any, webhookEventId: string) {
     },
   });
 
-  logger.warn(`  Payment failure recorded for ${member.username}`);
+  logger.warn(`Payment failure recorded for ${member.username}`);
 
   return { ok: true };
 }
@@ -547,7 +889,7 @@ async function handlePaymentFailed(data: any, webhookEventId: string) {
 // HANDLER: Trial Started
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function handleTrialStarted(data: any, webhookEventId: string) {
-  logger.info(' Trial started...');
+  logger.info('Trial started...');
 
   const member = await prisma.member.findUnique({
     where: { membershipId: data.membership_id },
@@ -575,7 +917,7 @@ async function handleTrialStarted(data: any, webhookEventId: string) {
 // HANDLER: Trial Ended
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function handleTrialEnded(data: any, webhookEventId: string) {
-  logger.debug('⏰ Trial ended...');
+  logger.debug('Trial ended...');
 
   const member = await prisma.member.findUnique({
     where: { membershipId: data.membership_id },
@@ -585,249 +927,25 @@ async function handleTrialEnded(data: any, webhookEventId: string) {
 
   await prisma.memberLifecycle.update({
     where: { memberId: member.id },
-    data: {
-      trialEndedAt: new Date(),
-      // Status will be updated by next event (payment or cancellation)
-    },
+    data: { trialEndedAt: new Date() },
   });
 
   return { ok: true };
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// HANDLER: Subscription Cancelled (different from membership.deleted)
+// HANDLER: Subscription Cancelled
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function handleSubscriptionCancelled(data: any, webhookEventId: string) {
-  logger.info(' Subscription cancelled...');
-
-  // Similar to membership.deleted
+  logger.info('Subscription cancelled...');
   return handleMembershipDeleted(data, webhookEventId);
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// HELPER: Process commission (10/70/20 split)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function processCommission({
-  referrerCode,
-  saleAmount,
-  paymentId,
-  membershipId,
-  creatorId,
-  attributionId,
-  billingPeriod,
-  productType,
-}: {
-  referrerCode: string;
-  saleAmount: number;
-  paymentId: string;
-  membershipId: string;
-  creatorId: string;
-  attributionId: string;
-  billingPeriod: string | null;
-  productType: string;
-}) {
-  // Find referrer
-  const referrer = await prisma.member.findUnique({
-    where: { referralCode: referrerCode }
-  });
-
-  if (!referrer) {
-    logger.error('❌ Referrer not found:', referrerCode);
-    return;
-  }
-
-  // Calculate splits (10/70/20)
-  const { memberShare, creatorShare, platformShare } = calculateCommission(saleAmount);
-
-  // Calculate monthly value for MRR tracking
-  const monthlyValue = calculateMonthlyValue(saleAmount, billingPeriod as any);
-
-  // Create commission record
-  await prisma.commission.create({
-    data: {
-      whopPaymentId: paymentId,
-      whopMembershipId: membershipId,
-      saleAmount,
-      memberShare,
-      creatorShare,
-      platformShare,
-      paymentType: 'initial',
-      status: 'paid',
-      paidAt: new Date(),
-      memberId: referrer.id,
-      creatorId,
-      productType,
-      billingPeriod,
-      monthlyValue,
-      attributionClick: {
-        connect: { id: attributionId }
-      }
-    }
-  });
-
-  // Check if this is referrer's first successful referral
-  const isFirstReferral = referrer.totalReferred === 0;
-
-  // Update referrer stats AND creator cached stats in parallel
-  await Promise.all([
-    // Update referrer stats
-    prisma.member.update({
-      where: { id: referrer.id },
-      data: {
-        lifetimeEarnings: { increment: memberShare },
-        monthlyEarnings: { increment: memberShare },
-        totalReferred: { increment: 1 },
-        monthlyReferred: { increment: 1 },
-      }
-    }),
-
-    // Update creator cached stats
-    prisma.creator.update({
-      where: { id: creatorId },
-      data: {
-        totalReferrals: { increment: 1 },
-        totalRevenue: { increment: saleAmount },
-        monthlyRevenue: { increment: saleAmount },
-      }
-    }),
-
-    // Mark attribution as converted
-    prisma.attributionClick.update({
-      where: { id: attributionId },
-      data: {
-        converted: true,
-        conversionValue: saleAmount,
-        convertedAt: new Date(),
-      }
-    }),
-  ]);
-
-  logger.info(` Commission processed: $${memberShare} → ${referrerCode}`);
-
-  // 🎉 First referral success celebration
-  if (isFirstReferral) {
-    logger.info(` FIRST REFERRAL SUCCESS for ${referrerCode}!`);
-  }
-
-  // 📊 Update referrer's rankings (non-blocking)
-  updateMemberRankings(referrer.id).catch(err =>
-    logger.error('⚠️ Failed to update rankings:', err)
-  );
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// HELPER: Handle recurring payment (only process if referred)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function handleRecurringPayment(
-  member: any,
-  data: any,
-  billingPeriod: string | null,
-  productType: string
-) {
-  // Validate data
-  if (!data.final_amount || !data.id) {
-    logger.error('❌ Missing required data in recurring payment webhook');
-    return;
-  }
-
-  // ✅ IDEMPOTENCY CHECK for recurring payments
-  const existingCommission = await prisma.commission.findUnique({
-    where: { whopPaymentId: data.id }
-  });
-
-  if (existingCommission) {
-    logger.debug(`⏭️ Recurring payment ${data.id} already processed`);
-    return;
-  }
-
-  // Update lifecycle
-  const lifecycle = await prisma.memberLifecycle.findUnique({
-    where: { memberId: member.id },
-  });
-
-  if (lifecycle) {
-    const saleAmount = data.final_amount / 100;
-    await prisma.memberLifecycle.update({
-      where: { memberId: member.id },
-      data: {
-        lifetimeValue: { increment: saleAmount },
-        netValue: { increment: saleAmount },
-      },
-    });
-  }
-
-  // ONLY process commission if this member was referred (ignore organic members)
-  if (member.referredBy) {
-    logger.info(' Processing recurring commission for referred member...');
-    const referrer = await prisma.member.findUnique({
-      where: { referralCode: member.referredBy }
-    });
-
-    if (referrer) {
-      const saleAmount = data.final_amount / 100;
-      const { memberShare, creatorShare, platformShare } = calculateCommission(saleAmount);
-
-      // Calculate monthly value for MRR tracking
-      const monthlyValue = calculateMonthlyValue(saleAmount, billingPeriod as any);
-
-      // Create recurring commission and update stats in parallel
-      await Promise.all([
-        // Create recurring commission
-        prisma.commission.create({
-          data: {
-            whopPaymentId: data.id,
-            whopMembershipId: data.membership_id,
-            saleAmount,
-            memberShare,
-            creatorShare,
-            platformShare,
-            paymentType: 'recurring',
-            status: 'paid',
-            paidAt: new Date(),
-            memberId: referrer.id,
-            creatorId: member.creatorId,
-            productType,
-            billingPeriod,
-            monthlyValue,
-          }
-        }),
-
-        // Update referrer earnings
-        prisma.member.update({
-          where: { id: referrer.id },
-          data: {
-            lifetimeEarnings: { increment: memberShare },
-            monthlyEarnings: { increment: memberShare },
-          }
-        }),
-
-        // Update creator cached stats (recurring revenue)
-        prisma.creator.update({
-          where: { id: member.creatorId },
-          data: {
-            totalRevenue: { increment: saleAmount },
-            monthlyRevenue: { increment: saleAmount },
-          }
-        }),
-      ]);
-
-      logger.info(` Recurring commission: $${memberShare} → ${referrer.referralCode}`);
-
-      // 📊 Update referrer's rankings (non-blocking)
-      updateMemberRankings(referrer.id).catch(err =>
-        logger.error('⚠️ Failed to update rankings:', err)
-      );
-    }
-  } else {
-    logger.debug('✔️  Organic member recurring payment - no commission to process');
-  }
 }
 
 // GET endpoint for testing
 export async function GET() {
   return NextResponse.json({
     ok: true,
-    message: 'Webhook endpoint is alive',
-    timestamp: new Date().toISOString()
+    message: 'Webhook endpoint is alive (Strategy B)',
+    timestamp: new Date().toISOString(),
   });
 }

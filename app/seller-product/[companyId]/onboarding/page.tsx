@@ -148,23 +148,31 @@ Start sharing today and climb the leaderboard!`,
                 <div className="space-y-3">
                   <div className="flex justify-between items-center text-gray-300">
                     <div>
-                      <p className="font-medium text-white">Platform Fee (What We Charge)</p>
-                      <p className="text-sm text-gray-400">Only on referred sales</p>
+                      <p className="font-medium text-white">Member Commission</p>
+                      <p className="text-sm text-gray-400">Lifetime recurring to referrers</p>
                     </div>
-                    <span className="font-bold text-purple-400 text-2xl">10%</span>
+                    <span className="font-bold text-blue-400 text-2xl">10%</span>
                   </div>
                   <div className="h-px bg-gray-700"></div>
                   <div className="flex justify-between items-center text-gray-300">
                     <div>
                       <p className="font-medium text-white">You Keep</p>
-                      <p className="text-sm text-gray-400">90% minus whatever you reward members</p>
+                      <p className="text-sm text-gray-400">Your share of referred sales</p>
                     </div>
-                    <span className="font-bold text-green-400 text-2xl">90%</span>
+                    <span className="font-bold text-green-400 text-2xl">70%</span>
+                  </div>
+                  <div className="h-px bg-gray-700"></div>
+                  <div className="flex justify-between items-center text-gray-300">
+                    <div>
+                      <p className="font-medium text-white">Platform Fee</p>
+                      <p className="text-sm text-gray-400">Only on referred sales</p>
+                    </div>
+                    <span className="font-bold text-purple-400 text-2xl">20%</span>
                   </div>
                 </div>
-                <div className="mt-4 bg-blue-900/20 border border-blue-500/30 rounded-lg p-3">
-                  <p className="text-blue-300 text-sm">
-                    💡 <span className="font-semibold">You decide member rewards.</span> We suggest ~10% to keep them motivated, but it's entirely up to you. Export reports monthly and pay via Venmo, PayPal, etc.
+                <div className="mt-4 bg-green-900/20 border border-green-500/30 rounded-lg p-3">
+                  <p className="text-green-300 text-sm">
+                    💰 <span className="font-semibold">Organic sales = 100% yours.</span> We only charge on sales brought in by your members' referrals. No referral, no fee.
                   </p>
                 </div>
               </div>

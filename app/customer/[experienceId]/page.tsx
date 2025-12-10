@@ -7,8 +7,12 @@ import { RewardProgress } from '../../../components/dashboard/RewardProgress';
 import { EarningsChartWrapper } from '../../../components/dashboard/EarningsChartWrapper';
 import { LeaderboardButton } from '../../../components/dashboard/LeaderboardButton';
 import { MemberOnboardingModal } from '../../../components/dashboard/MemberOnboardingModal';
+import { WhopUsernameSetup } from '../../../components/dashboard/WhopUsernameSetup';
+import { EarningsCalculator } from '../../../components/dashboard/EarningsCalculator';
+import { CommissionTierBadge } from '../../../components/dashboard/TierProgressCard';
 import { formatCurrency } from '../../../lib/utils/commission';
 import { getCompleteMemberDashboardData } from '../../../lib/data/centralized-queries';
+import { getCommissionTier } from '../../../lib/utils/tiered-commission';
 import { notFound } from 'next/navigation';
 import { getWhopContext, canAccessMemberDashboard } from '../../../lib/whop/simple-auth';
 import logger from '../../../lib/logger';
@@ -93,6 +97,7 @@ export default async function MemberDashboard({
       where: { id: data.creatorId },
       select: {
         companyName: true,
+        defaultSubscriptionPrice: true,  // Creator's actual subscription price
         tier1Count: true,
         tier1Reward: true,
         tier2Count: true,
@@ -120,13 +125,23 @@ export default async function MemberDashboard({
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const referralUrl = `${appUrl}/r/${data.referralCode}`;
 
-    // Prepare reward tiers
+    // Prepare reward tiers (legacy creator-defined tiers)
     const rewardTiers = [
       { count: creator.tier1Count, reward: creator.tier1Reward },
       { count: creator.tier2Count, reward: creator.tier2Reward },
       { count: creator.tier3Count, reward: creator.tier3Reward },
       { count: creator.tier4Count, reward: creator.tier4Reward },
     ];
+
+    // ========================================
+    // TIERED COMMISSION SYSTEM
+    // Calculate member's current tier based on paid referrals
+    // ========================================
+    const tierConfig = getCommissionTier(data.totalReferred);
+
+    // Get actual subscription price - priority: creator's price > member's price > default
+    // Creator's defaultSubscriptionPrice is auto-captured from first payment webhook
+    const actualSubscriptionPrice = creator.defaultSubscriptionPrice || data.subscriptionPrice || 49.99;
 
     // ========================================
     // ✅ ALL DATA FROM CENTRALIZED SOURCE
@@ -170,6 +185,15 @@ export default async function MemberDashboard({
           memberId={data.memberId}
         />
 
+        {/* Whop Username Setup - Required for affiliate link to work (Strategy B) */}
+        {!data.whopUsername && (
+          <WhopUsernameSetup
+            memberId={data.memberId}
+            currentWhopUsername={data.whopUsername}
+            referralCode={data.referralCode}
+          />
+        )}
+
         {/* Compact Referral Link Card - MOVED TO TOP FOR PROMINENCE */}
         <CompactReferralLinkCard code={data.referralCode} url={referralUrl} memberId={data.memberId} />
 
@@ -189,8 +213,9 @@ export default async function MemberDashboard({
           creatorId={data.creatorId}
         />
 
-        {/* Stats Grid - ✅ USING CENTRALIZED DATA */}
+        {/* Stats Grid - ✅ USING CENTRALIZED DATA with REAL-TIME UPDATES */}
         <StatsGrid
+          memberId={data.memberId}
           stats={{
             monthlyEarnings: data.monthlyEarnings,
             lifetimeEarnings: data.lifetimeEarnings,
@@ -211,6 +236,14 @@ export default async function MemberDashboard({
             earnings: e.earnings,
             count: 1  // Default count for backwards compatibility
           }))}
+        />
+
+        {/* Earnings Calculator - Interactive slider */}
+        <EarningsCalculator
+          avgSubscriptionPrice={actualSubscriptionPrice}
+          userSubscriptionPrice={actualSubscriptionPrice}
+          currentReferrals={data.totalReferred}
+          communityName={creator.companyName}
         />
 
         {/* Reward Progress */}
@@ -261,6 +294,37 @@ export default async function MemberDashboard({
             </div>
           </div>
         )}
+
+        {/* Commission Tier - Compact badge at bottom */}
+        <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-gray-400 text-sm">Your Commission Tier:</span>
+              <CommissionTierBadge
+                tier={tierConfig.tierName}
+                rate={tierConfig.memberRate}
+                size="md"
+              />
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-gray-500">Earn per referral</div>
+              <div className="text-green-400 font-semibold">
+                {formatCurrency(actualSubscriptionPrice * tierConfig.memberRate)}/mo
+              </div>
+            </div>
+          </div>
+          <div className="mt-3 text-xs text-gray-500">
+            {tierConfig.tierName === 'starter' && (
+              <span>Reach 50 referrals to unlock Ambassador tier (15% commission)</span>
+            )}
+            {tierConfig.tierName === 'ambassador' && (
+              <span>Reach 100 referrals to unlock Elite tier (18% commission)</span>
+            )}
+            {tierConfig.tierName === 'elite' && (
+              <span>🏆 You've reached the highest tier! Maximum commission rate.</span>
+            )}
+          </div>
+        </div>
       </main>
     </div>
   );

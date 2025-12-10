@@ -97,7 +97,7 @@ export default function DiscoverPage() {
           {/* Primary CTA */}
           <div className="flex gap-4 justify-center animate-in fade-in duration-700 delay-700">
             <a
-              href="https://whop.com/apps"
+              href="https://whop.com/apps/app_xa1a8NaAKUVPuO/install/"
               target="_blank"
               rel="noopener noreferrer"
               className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-xl font-bold text-lg transition-all duration-300 shadow-2xl shadow-purple-600/50 hover:shadow-purple-600/70 hover:scale-105"
@@ -209,7 +209,7 @@ export default function DiscoverPage() {
           </p>
           <div className="flex gap-6 justify-center flex-wrap">
             <a
-              href="https://whop.com/apps"
+              href="https://whop.com/apps/app_xa1a8NaAKUVPuO/install/"
               target="_blank"
               rel="noopener noreferrer"
               className="px-10 py-5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-xl font-bold text-lg transition-all duration-300 shadow-2xl shadow-purple-600/50 hover:shadow-purple-600/70 hover:scale-105"

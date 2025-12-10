@@ -55,31 +55,20 @@ describe('Commission Calculations', () => {
   });
 
   describe('Commission Edge Cases', () => {
-    it('should handle negative amounts by returning zeros', () => {
-      const result = calculateCommission(-100);
-
-      expect(result.memberShare).toBe(0);
-      expect(result.creatorShare).toBe(0);
-      expect(result.platformShare).toBe(0);
-      expect(result.total).toBe(0);
+    it('should throw error for negative amounts', () => {
+      expect(() => calculateCommission(-100)).toThrow('Sale amount cannot be negative');
     });
 
-    it('should handle NaN by returning zeros', () => {
-      const result = calculateCommission(NaN);
-
-      expect(result.memberShare).toBe(0);
-      expect(result.creatorShare).toBe(0);
-      expect(result.platformShare).toBe(0);
-      expect(result.total).toBe(0);
+    it('should throw error for NaN', () => {
+      expect(() => calculateCommission(NaN)).toThrow('Sale amount must be a valid number');
     });
 
-    it('should handle Infinity by returning zeros', () => {
-      const result = calculateCommission(Infinity);
+    it('should throw error for Infinity', () => {
+      expect(() => calculateCommission(Infinity)).toThrow('Sale amount exceeds maximum allowed');
+    });
 
-      expect(result.memberShare).toBe(0);
-      expect(result.creatorShare).toBe(0);
-      expect(result.platformShare).toBe(0);
-      expect(result.total).toBe(0);
+    it('should throw error for amounts over $1,000,000', () => {
+      expect(() => calculateCommission(1000001)).toThrow('Sale amount exceeds maximum allowed');
     });
   });
 

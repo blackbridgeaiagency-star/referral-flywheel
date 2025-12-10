@@ -1,15 +1,14 @@
 // lib/utils/commission.ts
 
 /**
- * Calculate commission and tracking metrics
+ * Calculate commission splits (10/70/20 model)
  *
- * BUSINESS MODEL (V1 Launch):
- * - Platform fee: 10% of referred sales (what we charge creators)
- * - Member rewards: Creator decides (we suggest ~10%, tracked but not paid by us)
- * - Creator keeps: 90% - whatever they choose to reward members
+ * BUSINESS MODEL:
+ * - Member commission: 10% of sale (lifetime recurring to referrer)
+ * - Creator keeps: 70% of sale
+ * - Platform fee: 20% of sale (what we charge creators)
  *
- * NOTE: memberShare and creatorShare are tracked for analytics/suggestions,
- * but actual member payments are handled by creators themselves.
+ * Total: 10% + 70% + 20% = 100%
  *
  * @throws {Error} If sale amount is negative or exceeds maximum allowed
  */
@@ -29,20 +28,19 @@ export function calculateCommission(saleAmount: number) {
     throw new Error('Sale amount must be a valid number');
   }
 
-  // Platform fee: 10% (what we actually charge)
-  const platformShare = Number((saleAmount * 0.10).toFixed(2)); // 10%
+  // Member commission: 10% (lifetime recurring to referrer)
+  const memberShare = Number((saleAmount * 0.10).toFixed(2));   // 10%
 
-  // Suggested member reward: 10% (tracked for analytics, not auto-paid)
-  const memberShare = Number((saleAmount * 0.10).toFixed(2));   // 10% (suggested)
+  // Creator keeps: 70%
+  const creatorShare = Number((saleAmount * 0.70).toFixed(2));  // 70%
 
-  // Creator keeps: 90% minus whatever they choose to reward
-  // We show 80% assuming they follow our 10% suggestion
-  const creatorShare = Number((saleAmount * 0.80).toFixed(2));  // 80%
+  // Platform fee: 20% (what we charge)
+  const platformShare = Number((saleAmount * 0.20).toFixed(2)); // 20%
 
   return {
-    memberShare,      // Suggested member reward (for tracking/reports)
-    creatorShare,     // What creator keeps after both fees
-    platformShare,    // What we charge (10%)
+    memberShare,      // 10% to referring member
+    creatorShare,     // 70% to creator
+    platformShare,    // 20% to platform
     total: memberShare + creatorShare + platformShare,
   };
 }
