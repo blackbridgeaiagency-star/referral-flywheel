@@ -71,6 +71,7 @@ export async function POST(request: Request) {
         name: data.company_name || 'New Community',
         logoUrl: null as string | null,
         description: null as string | null,
+        whopUrl: null as string | null,
       };
 
       try {
@@ -80,8 +81,9 @@ export async function POST(request: Request) {
           name: whopCompany.name || companyData.name,
           logoUrl: whopCompany.image_url || null,
           description: whopCompany.description || null,
+          whopUrl: whopCompany.route ? `https://whop.com/${whopCompany.route}` : null,
         };
-        logger.info(`Company data fetched: ${companyData.name}`);
+        logger.info(`Company data fetched: ${companyData.name} (whopUrl: ${companyData.whopUrl})`);
       } catch (apiError) {
         logger.warn(`⚠️ Could not fetch company details from Whop:`, apiError);
         // Continue with default data
@@ -103,6 +105,7 @@ export async function POST(request: Request) {
             companyName: companyData.name,
             logoUrl: companyData.logoUrl,
             description: companyData.description,
+            whopUrl: companyData.whopUrl,
           }
         });
         logger.info('Creator updated with latest Whop data');
@@ -114,11 +117,12 @@ export async function POST(request: Request) {
             productId: data.product_id,
             logoUrl: companyData.logoUrl,
             description: companyData.description,
+            whopUrl: companyData.whopUrl,
             welcomeMessage: 'Welcome! You can now earn 10% commissions by referring friends.',
             isActive: true,
           }
         });
-        logger.info(`Creator created: ${creator.companyName}`);
+        logger.info(`Creator created: ${creator.companyName} (whopUrl: ${companyData.whopUrl})`);
       }
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

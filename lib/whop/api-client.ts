@@ -53,6 +53,7 @@ async function whopApiRequest<T>(
 export interface WhopCompany {
   id: string;
   name: string;
+  route?: string;  // Company slug for public URL (e.g., "blackbridgeagency" → whop.com/blackbridgeagency)
   image_url?: string;
   description?: string;
   website?: string;
