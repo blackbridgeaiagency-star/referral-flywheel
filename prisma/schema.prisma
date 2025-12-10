@@ -6,84 +6,84 @@ datasource db {
 }
 
 generator client {
-  provider = "prisma-client-js"
-previewFeatures = ["fullTextSearch"]
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch"]
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // CREATOR MODEL (Whop community owners)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model Creator {
-  id              String    @id @default(cuid())
-  companyId       String    @unique        // Whop company ID
-  companyName     String
-  productId       String                   // Whop product ID
-  
+  id          String @id @default(cuid())
+  companyId   String @unique // Whop company ID
+  companyName String
+  productId   String // Whop product ID
+
   // COMMISSION RATES (LOCKED - NEVER ALLOW CHANGES)
-  memberRate      Float     @default(10)   // 10% to referring member (lifetime recurring)
-  creatorRate     Float     @default(70)   // 70% to creator
-  platformRate    Float     @default(20)   // 20% platform fee
-  
+  memberRate   Float @default(10) // 10% to referring member (lifetime recurring)
+  creatorRate  Float @default(70) // 70% to creator
+  platformRate Float @default(20) // 20% platform fee
+
   // REWARD TIERS (Customizable by creator)
-  tier1Count      Int       @default(5)
-  tier1Reward     String    @default("1 month free")
-  tier2Count      Int       @default(10)
-  tier2Reward     String    @default("3 months free")
-  tier3Count      Int       @default(25)
-  tier3Reward     String    @default("6 months free")
-  tier4Count      Int       @default(100)
-  tier4Reward     String    @default("Lifetime access")
-  
+  tier1Count  Int    @default(5)
+  tier1Reward String @default("1 month free")
+  tier2Count  Int    @default(10)
+  tier2Reward String @default("3 months free")
+  tier3Count  Int    @default(25)
+  tier3Reward String @default("6 months free")
+  tier4Count  Int    @default(100)
+  tier4Reward String @default("Lifetime access")
+
   // SETTINGS
   autoApproveRewards Boolean @default(true)
-  welcomeMessage  String?                  // Custom welcome message
-  isActive        Boolean   @default(true)
+  welcomeMessage     String? // Custom welcome message
+  isActive           Boolean @default(true)
 
   // COMMUNITY METADATA (Auto-fetched from Whop)
-  logoUrl         String?                  // Community logo URL from Whop
-  description     String?                  // Community description
+  logoUrl     String? // Community logo URL from Whop
+  description String? // Community description
 
   // ONBOARDING TRACKING
-  onboardingCompleted Boolean @default(false)  // Has creator completed onboarding wizard?
-  onboardingStep      Int     @default(0)      // Current step in onboarding (0-5)
+  onboardingCompleted Boolean @default(false) // Has creator completed onboarding wizard?
+  onboardingStep      Int     @default(0) // Current step in onboarding (0-5)
 
   // CUSTOM REWARDS (Time-based competitions)
-  customRewardTimeframe String?  @default("monthly")  // monthly, weekly, daily
-  customRewardType      String?  @default("top3")     // top3, top5, top10
-  customReward1st       String?                       // 1st place prize
-  customReward2nd       String?                       // 2nd place prize
-  customReward3rd       String?                       // 3rd place prize
-  customReward4th       String?                       // 4th place prize (if top5 or top10)
-  customReward5th       String?                       // 5th place prize (if top5 or top10)
-  customReward6to10     String?                       // 6th-10th place prize (if top10)
-  customRewardEnabled   Boolean  @default(false)
-  
+  customRewardTimeframe String? @default("monthly") // monthly, weekly, daily
+  customRewardType      String? @default("top3") // top3, top5, top10
+  customReward1st       String? // 1st place prize
+  customReward2nd       String? // 2nd place prize
+  customReward3rd       String? // 3rd place prize
+  customReward4th       String? // 4th place prize (if top5 or top10)
+  customReward5th       String? // 5th place prize (if top5 or top10)
+  customReward6to10     String? // 6th-10th place prize (if top10)
+  customRewardEnabled   Boolean @default(false)
+
   // SUBSCRIPTION PRICING (Auto-captured from first payment)
-  defaultSubscriptionPrice Float @default(49.99)  // Default price for this community
+  defaultSubscriptionPrice Float @default(49.99) // Default price for this community
 
   // CACHED STATS (Updated via webhook)
-  totalReferrals  Int       @default(0)
-  totalRevenue    Float     @default(0)
-  monthlyRevenue  Float     @default(0)
-  lastMonthReset  DateTime?               // Track when monthly stats were last reset
+  totalReferrals Int       @default(0)
+  totalRevenue   Float     @default(0)
+  monthlyRevenue Float     @default(0)
+  lastMonthReset DateTime? // Track when monthly stats were last reset
 
   // INVOICE SYSTEM (Revenue Share Integration)
-  stripeCustomerId      String?  @unique
-  invoicingEnabled      Boolean  @default(true)
-  firstInvoiceDate      DateTime?
-  lifetimeInvoiced      Decimal   @default(0) // Total invoiced all time
-  lifetimeReferred      Decimal   @default(0) // Total referred revenue generated
-  pendingRefundCredit   Decimal   @default(0) // Credits from refunded invoiced sales
+  stripeCustomerId    String?   @unique
+  invoicingEnabled    Boolean   @default(true)
+  firstInvoiceDate    DateTime?
+  lifetimeInvoiced    Decimal   @default(0) // Total invoiced all time
+  lifetimeReferred    Decimal   @default(0) // Total referred revenue generated
+  pendingRefundCredit Decimal   @default(0) // Credits from refunded invoiced sales
 
   // RELATIONS
-  members         Member[]
-  commissions     Commission[]
+  members          Member[]
+  commissions      Commission[]
   monthlySnapshots MonthlySnapshot[]
-  invoices        Invoice[]
+  invoices         Invoice[]
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([companyId])
   @@index([productId])
 }
@@ -92,212 +92,212 @@ model Creator {
 // MEMBER MODEL (Customers with referral links)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model Member {
-  id              String    @id @default(cuid())
+  id String @id @default(cuid())
 
   // WHOP IDENTIFIERS
-  userId          String    @unique        // Whop user ID
-  membershipId    String    @unique        // Whop membership ID
-  email           String
-  username        String
-  whopUsername    String?   @unique        // Whop username for ?a= affiliate links (Strategy B)
+  userId       String  @unique // Whop user ID
+  membershipId String  @unique // Whop membership ID
+  email        String
+  username     String
+  whopUsername String? @unique // Whop username for ?a= affiliate links (Strategy B)
 
   // SUBSCRIPTION INFO
-  subscriptionPrice Float    @default(49.99) // Monthly subscription amount
-  memberOrigin    String    @default("organic") // "organic" | "referred" | "whop_affiliate"
-  billingPeriod   String?                     // "monthly" | "annual" | "lifetime" | null
-  monthlyValue    Float?                      // Normalized monthly value for MRR (annual/12, lifetime=null)
+  subscriptionPrice Float   @default(49.99) // Monthly subscription amount
+  memberOrigin      String  @default("organic") // "organic" | "referred" | "whop_affiliate"
+  billingPeriod     String? // "monthly" | "annual" | "lifetime" | null
+  monthlyValue      Float? // Normalized monthly value for MRR (annual/12, lifetime=null)
 
   // REFERRAL SYSTEM
-  referralCode    String    @unique        // Format: FIRSTNAME-ABC123 (our vanity code)
-  referredBy      String?                  // Referrer's code (nullable if organic)
-  whopAffiliateUsername String?            // Who referred via Whop's ?a= (from webhook)
+  referralCode          String  @unique // Format: FIRSTNAME-ABC123 (our vanity code)
+  referredBy            String? // Referrer's code (nullable if organic)
+  whopAffiliateUsername String? // Who referred via Whop's ?a= (from webhook)
 
   // EARNINGS (10% lifetime recurring)
-  lifetimeEarnings Float    @default(0)    // Total all-time earnings
-  monthlyEarnings  Float    @default(0)    // Current month earnings
-  totalReferred    Int       @default(0)    // Lifetime referral count
-  monthlyReferred  Int       @default(0)    // Current month referrals
-  lastMonthReset   DateTime?               // Track when monthly stats were last reset
+  lifetimeEarnings Float     @default(0) // Total all-time earnings
+  monthlyEarnings  Float     @default(0) // Current month earnings
+  totalReferred    Int       @default(0) // Lifetime referral count
+  monthlyReferred  Int       @default(0) // Current month referrals
+  lastMonthReset   DateTime? // Track when monthly stats were last reset
 
   // LEADERBOARD RANKINGS (Cached, updated hourly)
-  globalEarningsRank  Int?                 // Rank by $$ earned globally
-  globalReferralsRank Int?                 // Rank by # referred globally
-  communityRank       Int?                 // Rank within creator's community
+  globalEarningsRank  Int? // Rank by $$ earned globally
+  globalReferralsRank Int? // Rank by # referred globally
+  communityRank       Int? // Rank within creator's community
 
   // GAMIFICATION (Creator-defined reward tiers)
-  currentTier     String    @default("bronze")
-  rewardsClaimed  Json      @default("[]") // Array of claimed rewards
-  nextMilestone   Int?                     // Next reward threshold
+  currentTier    String @default("bronze")
+  rewardsClaimed Json   @default("[]") // Array of claimed rewards
+  nextMilestone  Int? // Next reward threshold
 
   // COMMISSION TIER (Dynamic - based on referrals, affects earnings %)
-  commissionTier      String    @default("bronze")  // bronze | silver | gold | platinum
-  commissionRate      Float     @default(0.10)      // Current member commission rate (0.10 = 10%)
-  tierUpdatedAt       DateTime?                      // When tier last changed
-  firstReferralBonusEarned Boolean @default(false)  // Has earned first referral bonus?
+  commissionTier           String    @default("bronze") // bronze | silver | gold | platinum
+  commissionRate           Float     @default(0.10) // Current member commission rate (0.10 = 10%)
+  tierUpdatedAt            DateTime? // When tier last changed
+  firstReferralBonusEarned Boolean   @default(false) // Has earned first referral bonus?
 
   // CUSTOM REWARDS TRACKING
-  customRewardEligible  Boolean @default(false)    // Currently eligible for custom reward
-  customRewardMessage   String?                    // e.g., "#3 This Week - iPhone 15 Pro!"
-  customRewardTimeframeRank Int?                   // Rank in current timeframe (1-10)
+  customRewardEligible      Boolean @default(false) // Currently eligible for custom reward
+  customRewardMessage       String? // e.g., "#3 This Week - iPhone 15 Pro!"
+  customRewardTimeframeRank Int? // Rank in current timeframe (1-10)
 
   // METADATA
-  welcomeMessageSent Boolean @default(false)
-  lastActive      DateTime?
+  welcomeMessageSent Boolean   @default(false)
+  lastActive         DateTime?
 
   // RELATIONS
-  creatorId       String
-  creator         Creator   @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creatorId String
+  creator   Creator @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 
-  referrer        Member?   @relation("Referrals", fields: [referredBy], references: [referralCode])
-  referrals       Member[]  @relation("Referrals")
+  referrer  Member?  @relation("Referrals", fields: [referredBy], references: [referralCode])
+  referrals Member[] @relation("Referrals")
 
-  commissions     Commission[]
-  attributions    AttributionClick[]
-  shareEvents     ShareEvent[]
-  monthlySnapshots MonthlySnapshot[]
-  lifecycle       MemberLifecycle?
-  paymentFailures PaymentFailure[]
-  tierHistory     MemberTierHistory[]
-  firstReferralBonus FirstReferralBonus?
-  referralBonusReceived ReferralBonus?  // Bonus received as new member
+  commissions           Commission[]
+  attributions          AttributionClick[]
+  shareEvents           ShareEvent[]
+  monthlySnapshots      MonthlySnapshot[]
+  lifecycle             MemberLifecycle?
+  paymentFailures       PaymentFailure[]
+  tierHistory           MemberTierHistory[]
+  firstReferralBonus    FirstReferralBonus?
+  referralBonusReceived ReferralBonus? // Bonus received as new member
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([referralCode])
   @@index([referredBy])
   @@index([whopUsername])
   @@index([whopAffiliateUsername])
-  @@index([referredBy, createdAt])        // Monthly referrals query (CRITICAL for performance)
+  @@index([referredBy, createdAt]) // Monthly referrals query (CRITICAL for performance)
   @@index([creatorId])
-  @@index([creatorId, lifetimeEarnings])  // For top earners in creator dashboard
-  @@index([creatorId, totalReferred])     // For top referrers in creator dashboard
-  @@index([creatorId, memberOrigin])      // Filter by referred/organic members
+  @@index([creatorId, lifetimeEarnings]) // For top earners in creator dashboard
+  @@index([creatorId, totalReferred]) // For top referrers in creator dashboard
+  @@index([creatorId, memberOrigin]) // Filter by referred/organic members
   @@index([globalEarningsRank])
   @@index([globalReferralsRank])
-  @@index([createdAt])                    // Time-series queries (member growth tracking)
+  @@index([createdAt]) // Time-series queries (member growth tracking)
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ATTRIBUTION CLICK (30-day tracking window)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model AttributionClick {
-  id              String    @id @default(cuid())
-  referralCode    String
-  
+  id           String @id @default(cuid())
+  referralCode String
+
   // VISITOR FINGERPRINTING (GDPR-safe)
-  fingerprint     String                   // Hashed browser signature
-  ipHash          String                   // SHA-256 hashed IP
-  userAgent       String?
-  
+  fingerprint String // Hashed browser signature
+  ipHash      String // SHA-256 hashed IP
+  userAgent   String?
+
   // CONVERSION TRACKING
   converted       Boolean   @default(false)
-  conversionValue Float?                   // Sale amount if converted
+  conversionValue Float? // Sale amount if converted
   convertedAt     DateTime?
-  
+
   // EXPIRY (30 days from click)
-  expiresAt       DateTime
-  
+  expiresAt DateTime
+
   // RELATIONS
-  memberId        String
-  member          Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  
-  commissionId    String?   @unique
-  commission      Commission? @relation(fields: [commissionId], references: [id])
-  
-  createdAt       DateTime  @default(now())
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  commissionId String?     @unique
+  commission   Commission? @relation(fields: [commissionId], references: [id])
+
+  createdAt DateTime @default(now())
 
   @@index([referralCode, fingerprint])
   @@index([expiresAt])
   @@index([converted])
-  @@index([referralCode, expiresAt])      // Active attribution lookup (non-expired clicks)
-  @@index([convertedAt])                  // Conversion tracking & analytics
+  @@index([referralCode, expiresAt]) // Active attribution lookup (non-expired clicks)
+  @@index([convertedAt]) // Conversion tracking & analytics
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // COMMISSION (10% / 70% / 20% split records)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model Commission {
-  id              String    @id @default(cuid())
+  id String @id @default(cuid())
 
   // PAYMENT DETAILS
-  whopPaymentId   String    @unique        // Whop payment ID
-  whopMembershipId String                  // Associated membership
-  saleAmount      Float                    // Total sale amount (e.g., $49.99)
+  whopPaymentId    String @unique // Whop payment ID
+  whopMembershipId String // Associated membership
+  saleAmount       Float // Total sale amount (e.g., $49.99)
 
   // CALCULATED SPLITS
-  memberShare     Float                    // 10% to referrer
-  creatorShare    Float                    // 70% to creator
-  platformShare   Float                    // 20% to platform
+  memberShare   Float // 10% to referrer
+  creatorShare  Float // 70% to creator
+  platformShare Float // 20% to platform
 
   // PAYMENT TYPE
-  paymentType     String                   // "initial" | "recurring"
-  subscriptionId  String?                  // If recurring
+  paymentType    String // "initial" | "recurring"
+  subscriptionId String? // If recurring
 
   // BILLING DETAILS (For subscription filtering & MRR calculation)
-  productType     String    @default("subscription")  // "subscription" | "one_time" | "course"
-  billingPeriod   String?                  // "monthly" | "annual" | "lifetime" | null (for one-time)
-  monthlyValue    Float?                   // Normalized monthly value (annual/12, monthly=same, lifetime=one-time)
+  productType   String  @default("subscription") // "subscription" | "one_time" | "course"
+  billingPeriod String? // "monthly" | "annual" | "lifetime" | null (for one-time)
+  monthlyValue  Float? // Normalized monthly value (annual/12, monthly=same, lifetime=one-time)
 
   // STATUS TRACKING
-  status          String    @default("pending")  // pending | paid | failed | refunded | partial_refund
-  paidAt          DateTime?
-  failureReason   String?
+  status        String    @default("pending") // pending | paid | failed | refunded | partial_refund
+  paidAt        DateTime?
+  failureReason String?
 
   // INVOICE TRACKING (Revenue Share System)
-  platformFeeInvoiced   Boolean  @default(false)  // Has this sale been invoiced?
-  invoiceId             String?                   // Which invoice includes this sale
+  platformFeeInvoiced Boolean @default(false) // Has this sale been invoiced?
+  invoiceId           String? // Which invoice includes this sale
 
   // TIERED COMMISSION SNAPSHOT (What rates were applied to THIS commission)
-  appliedMemberRate     Float     @default(0.10)    // Rate used for this commission
-  appliedPlatformRate   Float     @default(0.20)    // Platform rate at time of commission
-  appliedTier           String    @default("bronze") // Tier at time of commission
+  appliedMemberRate   Float  @default(0.10) // Rate used for this commission
+  appliedPlatformRate Float  @default(0.20) // Platform rate at time of commission
+  appliedTier         String @default("bronze") // Tier at time of commission
 
   // RELATIONS
-  memberId        String
-  member          Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
-  creatorId       String
-  creator         Creator   @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creatorId String
+  creator   Creator @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 
-  attributionClick AttributionClick?
-  refunds         Refund[]  // Track all refunds for this commission
-  invoice         Invoice?  @relation(fields: [invoiceId], references: [id])
-  firstReferralBonus FirstReferralBonus?  // If this commission triggered a first referral bonus
+  attributionClick   AttributionClick?
+  refunds            Refund[] // Track all refunds for this commission
+  invoice            Invoice?            @relation(fields: [invoiceId], references: [id])
+  firstReferralBonus FirstReferralBonus? // If this commission triggered a first referral bonus
 
-  createdAt       DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   @@index([memberId])
   @@index([memberId, status, createdAt]) // Monthly earnings calculation (CRITICAL)
   @@index([creatorId])
-  @@index([creatorId, status])        // Creator revenue queries with status filter
-  @@index([creatorId, createdAt])     // For creator dashboard time-based queries
+  @@index([creatorId, status]) // Creator revenue queries with status filter
+  @@index([creatorId, createdAt]) // For creator dashboard time-based queries
   @@index([status])
   @@index([paymentType])
   @@index([createdAt])
-  @@index([memberId, paidAt])         // Member earnings queries (paid commissions only)
-  @@index([createdAt, paymentType])   // Revenue analytics by payment type
+  @@index([memberId, paidAt]) // Member earnings queries (paid commissions only)
+  @@index([createdAt, paymentType]) // Revenue analytics by payment type
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // SHARE EVENT (Track member sharing activity)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model ShareEvent {
-  id          String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // MEMBER REFERENCE
-  memberId    String
-  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   // SHARE DETAILS
-  platform    String   // twitter, facebook, whatsapp, telegram, reddit, email, sms, clipboard, qr
-  shareType   String   @default("link") // link, qr, message
+  platform  String // twitter, facebook, whatsapp, telegram, reddit, email, sms, clipboard, qr
+  shareType String @default("link") // link, qr, message
 
   // OPTIONAL METADATA
-  metadata    Json?    // Additional tracking data (campaign, source, etc.)
+  metadata Json? // Additional tracking data (campaign, source, etc.)
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([memberId])
   @@index([platform])
@@ -309,73 +309,73 @@ model ShareEvent {
 // MONTHLY SNAPSHOT (Historical monthly data archives)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model MonthlySnapshot {
-  id              String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // PERIOD
-  month           String   // Format: "2025-10" (YYYY-MM)
+  month String // Format: "2025-10" (YYYY-MM)
 
   // REFERENCES
-  creatorId       String
-  creator         Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creatorId String
+  creator   Creator @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 
-  memberId        String?  // Null for creator-level snapshots
-  member          Member?  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId String? // Null for creator-level snapshots
+  member   Member? @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   // ARCHIVED STATS
-  monthlyReferrals Int     @default(0)  // Member's monthlyReferred OR creator's totalReferrals
-  monthlyEarnings  Float   @default(0)  // Member's monthlyEarnings
-  monthlyRevenue   Float   @default(0)  // Creator's monthlyRevenue
+  monthlyReferrals Int   @default(0) // Member's monthlyReferred OR creator's totalReferrals
+  monthlyEarnings  Float @default(0) // Member's monthlyEarnings
+  monthlyRevenue   Float @default(0) // Creator's monthlyRevenue
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  @@unique([month, creatorId, memberId])  // One snapshot per member per month
+  @@unique([month, creatorId, memberId]) // One snapshot per member per month
   @@index([month])
   @@index([creatorId])
   @@index([memberId])
-  @@index([creatorId, month])             // Creator monthly history
-  @@index([memberId, month])              // Member monthly history
+  @@index([creatorId, month]) // Creator monthly history
+  @@index([memberId, month]) // Member monthly history
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // AUDIT LOG (Track all changes to critical fields)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model AuditLog {
-  id          String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // WHAT CHANGED
-  entity      String   // "Member", "Commission", "Creator"
-  entityId    String   // ID of the changed entity
-  field       String   // "monthlyReferred", "monthlyEarnings", etc.
-  oldValue    String   // Previous value (as string)
-  newValue    String   // New value (as string)
+  entity   String // "Member", "Commission", "Creator"
+  entityId String // ID of the changed entity
+  field    String // "monthlyReferred", "monthlyEarnings", etc.
+  oldValue String // Previous value (as string)
+  newValue String // New value (as string)
 
   // WHY IT CHANGED
-  triggeredBy String   // "webhook", "cron", "manual", "recalculation"
-  metadata    Json?    // Additional context (e.g., { paymentId, source })
+  triggeredBy String // "webhook", "cron", "manual", "recalculation"
+  metadata    Json? // Additional context (e.g., { paymentId, source })
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([entity, entityId])
   @@index([createdAt])
-  @@index([field])                        // Query by specific field changes
-  @@index([triggeredBy])                  // Track automation sources
-  @@index([entity, entityId, field])      // Entity field history
+  @@index([field]) // Query by specific field changes
+  @@index([triggeredBy]) // Track automation sources
+  @@index([entity, entityId, field]) // Entity field history
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // WEBHOOK EVENT LOG (Track every webhook we receive)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model WebhookEvent {
-  id              String   @id @default(cuid())
-  eventType       String   // "payment.succeeded", "membership.deleted", etc.
-  whopEventId     String?  @unique // Whop's event ID (for idempotency)
-  payload         Json     // Full webhook payload
-  processed       Boolean  @default(false)
-  processedAt     DateTime?
-  errorMessage    String?  // If processing failed
-  retryCount      Int      @default(0)
+  id           String    @id @default(cuid())
+  eventType    String // "payment.succeeded", "membership.deleted", etc.
+  whopEventId  String?   @unique // Whop's event ID (for idempotency)
+  payload      Json // Full webhook payload
+  processed    Boolean   @default(false)
+  processedAt  DateTime?
+  errorMessage String? // If processing failed
+  retryCount   Int       @default(0)
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([eventType])
   @@index([processed])
@@ -386,28 +386,28 @@ model WebhookEvent {
 // MEMBER LIFECYCLE TRACKING
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model MemberLifecycle {
-  id              String   @id @default(cuid())
-  memberId        String   @unique
-  member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  id       String @id @default(cuid())
+  memberId String @unique
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   // Lifecycle stage tracking
-  accountCreatedAt   DateTime?  // When Whop account created (if webhook available)
-  firstVisitAt       DateTime?  // First time visited product page (if trackable)
-  trialStartedAt     DateTime?  // If they started trial
-  trialEndedAt       DateTime?  // When trial ended
-  convertedAt        DateTime?  // When they purchased (payment.succeeded)
-  cancelledAt        DateTime?  // When they cancelled (membership.deleted)
+  accountCreatedAt DateTime? // When Whop account created (if webhook available)
+  firstVisitAt     DateTime? // First time visited product page (if trackable)
+  trialStartedAt   DateTime? // If they started trial
+  trialEndedAt     DateTime? // When trial ended
+  convertedAt      DateTime? // When they purchased (payment.succeeded)
+  cancelledAt      DateTime? // When they cancelled (membership.deleted)
 
   // Status
-  currentStatus   String   @default("active") // active, cancelled, trial, suspended, refunded
+  currentStatus String @default("active") // active, cancelled, trial, suspended, refunded
 
   // Financial tracking
-  lifetimeValue   Float    @default(0)  // Total paid over lifetime
-  totalRefunded   Float    @default(0)  // Total refunded
-  netValue        Float    @default(0)  // LTV - refunds
+  lifetimeValue Float @default(0) // Total paid over lifetime
+  totalRefunded Float @default(0) // Total refunded
+  netValue      Float @default(0) // LTV - refunds
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([currentStatus])
   @@index([convertedAt])
@@ -418,31 +418,31 @@ model MemberLifecycle {
 // REFUND TRACKING (CRITICAL!)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model Refund {
-  id              String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // Link to original commission
-  commissionId    String
-  commission      Commission @relation(fields: [commissionId], references: [id], onDelete: Cascade)
+  commissionId String
+  commission   Commission @relation(fields: [commissionId], references: [id], onDelete: Cascade)
 
   // Whop refund details
-  whopRefundId    String   @unique
-  whopPaymentId   String   // Original payment that was refunded
-  refundAmount    Float    // Amount refunded (could be partial)
+  whopRefundId  String @unique
+  whopPaymentId String // Original payment that was refunded
+  refundAmount  Float // Amount refunded (could be partial)
 
   // Reversed commission splits
-  memberShareReversed   Float  // Amount deducted from referrer
-  creatorShareReversed  Float  // Amount deducted from creator
-  platformShareReversed Float  // Amount deducted from platform
+  memberShareReversed   Float // Amount deducted from referrer
+  creatorShareReversed  Float // Amount deducted from creator
+  platformShareReversed Float // Amount deducted from platform
 
   // Reason & status
-  reason          String?  // "requested", "chargeback", "fraudulent", etc.
-  status          String   @default("pending") // pending, processed, failed
+  reason String? // "requested", "chargeback", "fraudulent", etc.
+  status String  @default("pending") // pending, processed, failed
 
   // Tracking
-  refundedAt      DateTime
-  processedAt     DateTime?
+  refundedAt  DateTime
+  processedAt DateTime?
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([whopPaymentId])
   @@index([status])
@@ -453,23 +453,23 @@ model Refund {
 // PAYMENT FAILURE TRACKING
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model PaymentFailure {
-  id              String   @id @default(cuid())
-  memberId        String
-  member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  id       String @id @default(cuid())
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
-  whopPaymentId   String
-  failureReason   String   // "insufficient_funds", "expired_card", etc.
-  attemptNumber   Int      @default(1)
+  whopPaymentId String
+  failureReason String // "insufficient_funds", "expired_card", etc.
+  attemptNumber Int    @default(1)
 
   // Revenue at risk
-  expectedAmount  Float
+  expectedAmount Float
 
   // Status
-  resolved        Boolean  @default(false)
-  resolvedAt      DateTime?
+  resolved   Boolean   @default(false)
+  resolvedAt DateTime?
 
-  failedAt        DateTime
-  createdAt       DateTime @default(now())
+  failedAt  DateTime
+  createdAt DateTime @default(now())
 
   @@index([memberId])
   @@index([resolved])
@@ -480,38 +480,38 @@ model PaymentFailure {
 // INVOICE MODEL (Revenue Share System)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model Invoice {
-  id                    String   @id @default(cuid())
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Invoice basics
-  creatorId             String
-  periodStart           DateTime
-  periodEnd             DateTime
-  status                String   @default("pending") // "pending" | "sent" | "paid" | "overdue" | "cancelled"
+  creatorId   String
+  periodStart DateTime
+  periodEnd   DateTime
+  status      String   @default("pending") // "pending" | "sent" | "paid" | "overdue" | "cancelled"
 
   // Financial details
-  totalAmount           Decimal  // 20% of referred sales
-  salesCount            Int      // Number of referred sales
-  referredSalesTotal    Decimal  // Total referred sales amount
-  organicSalesTotal     Decimal  // Total organic sales (for comparison)
+  totalAmount        Decimal // 20% of referred sales
+  salesCount         Int // Number of referred sales
+  referredSalesTotal Decimal // Total referred sales amount
+  organicSalesTotal  Decimal // Total organic sales (for comparison)
 
   // Value proposition metrics (what creator gained)
-  creatorGainFromReferrals  Decimal  // 70% of referred sales (what they kept)
-  totalRevenueWithApp       Decimal  // Organic + 70% referred
-  totalRevenueWithoutApp    Decimal  // Just organic (baseline)
-  additionalRevenue         Decimal  // Gain from our partnership
-  percentageGrowth          Decimal  // % increase
+  creatorGainFromReferrals Decimal // 70% of referred sales (what they kept)
+  totalRevenueWithApp      Decimal // Organic + 70% referred
+  totalRevenueWithoutApp   Decimal // Just organic (baseline)
+  additionalRevenue        Decimal // Gain from our partnership
+  percentageGrowth         Decimal // % increase
 
   // Stripe details
-  stripeInvoiceId       String?  @unique
-  stripeInvoiceUrl      String?
-  dueDate               DateTime?
-  paidAt                DateTime?
+  stripeInvoiceId  String?   @unique
+  stripeInvoiceUrl String?
+  dueDate          DateTime?
+  paidAt           DateTime?
 
   // Relations
-  creator               Creator  @relation(fields: [creatorId], references: [id])
-  commissions           Commission[]   // Sales included in this invoice
+  creator     Creator      @relation(fields: [creatorId], references: [id])
+  commissions Commission[] // Sales included in this invoice
 
   @@index([creatorId])
   @@index([status])
@@ -522,22 +522,22 @@ model Invoice {
 // MEMBER TIER HISTORY (Track commission tier changes over time)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model MemberTierHistory {
-  id              String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  memberId        String
-  member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   // Tier change details
-  previousTier    String?  // null if first tier assignment
-  newTier         String   // bronze | silver | gold | platinum
-  previousRate    Float?   // Previous member commission rate
-  newRate         Float    // New member commission rate
+  previousTier String? // null if first tier assignment
+  newTier      String // bronze | silver | gold | platinum
+  previousRate Float? // Previous member commission rate
+  newRate      Float // New member commission rate
 
   // What triggered the change
-  triggerType     String   // referral | manual | recalculation
-  referralCount   Int      // Total referrals at time of change
+  triggerType   String // referral | manual | recalculation
+  referralCount Int // Total referrals at time of change
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([memberId])
   @@index([createdAt])
@@ -548,32 +548,32 @@ model MemberTierHistory {
 // FIRST REFERRAL BONUS (Extra bonus for first successful referral)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model FirstReferralBonus {
-  id              String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // Who earned it
-  memberId        String   @unique  // One bonus per member ever
-  member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId String @unique // One bonus per member ever
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   // Which referral triggered it
-  triggeringCommissionId  String?   @unique
-  triggeringCommission    Commission? @relation(fields: [triggeringCommissionId], references: [id])
+  triggeringCommissionId String?     @unique
+  triggeringCommission   Commission? @relation(fields: [triggeringCommissionId], references: [id])
 
   // Bonus details
-  bonusAmount     Float     // $5 or matched commission
-  bonusType       String    @default("fixed") // fixed | matched | percentage
+  bonusAmount Float // $5 or matched commission
+  bonusType   String @default("fixed") // fixed | matched | percentage
 
   // Status workflow: pending_confirmation -> confirmed -> paid | revoked
-  status          String    @default("pending_confirmation")
+  status String @default("pending_confirmation")
 
   // Timing
-  eligibleAt      DateTime  // When they became eligible (first referral converted)
-  confirmAt       DateTime  // 30 days after eligibleAt (when bonus confirms)
-  paidAt          DateTime? // When bonus was actually paid
-  revokedAt       DateTime? // If revoked due to refund
-  revokeReason    String?   // Why revoked
+  eligibleAt   DateTime // When they became eligible (first referral converted)
+  confirmAt    DateTime // 30 days after eligibleAt (when bonus confirms)
+  paidAt       DateTime? // When bonus was actually paid
+  revokedAt    DateTime? // If revoked due to refund
+  revokeReason String? // Why revoked
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([status])
   @@index([confirmAt])
@@ -584,32 +584,32 @@ model FirstReferralBonus {
 // REFERRAL BONUS (Double-sided reward - new member gets discount)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model ReferralBonus {
-  id              String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // Who gets the bonus (the NEW member who signed up)
-  memberId        String   @unique
-  member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId String @unique
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   // Who referred them
-  referrerCode    String
+  referrerCode String
 
   // Bonus details
-  bonusType       String   @default("first_month_discount") // first_month_discount | credit
-  bonusValue      Float    @default(0)  // Dollar amount of discount/credit
-  bonusPercent    Float    @default(10) // Percentage discount (10 = 10%)
+  bonusType    String @default("first_month_discount") // first_month_discount | credit
+  bonusValue   Float  @default(0) // Dollar amount of discount/credit
+  bonusPercent Float  @default(10) // Percentage discount (10 = 10%)
 
   // Status
-  status          String   @default("pending") // pending | applied | expired | ineligible
-  appliedAt       DateTime?
-  expiresAt       DateTime // 30 days from signup
+  status    String    @default("pending") // pending | applied | expired | ineligible
+  appliedAt DateTime?
+  expiresAt DateTime // 30 days from signup
 
   // Original payment this bonus was applied to
-  whopPaymentId   String?  @unique
-  originalAmount  Float?   // What they would have paid
-  discountedAmount Float?  // What they actually paid
+  whopPaymentId    String? @unique
+  originalAmount   Float? // What they would have paid
+  discountedAmount Float? // What they actually paid
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([referrerCode])
   @@index([status])
