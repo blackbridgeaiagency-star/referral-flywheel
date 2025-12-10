@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '../ui/card';
 import { formatCurrency } from '../../lib/utils/commission';
-import { DollarSign, TrendingUp, Users, Trophy, TrendingDown, ArrowDown, ArrowUp, RefreshCw } from 'lucide-react';
+import { DollarSign, TrendingUp, Users, Trophy, TrendingDown, ArrowDown, ArrowUp } from 'lucide-react';
 
 interface StatsGridProps {
   stats: {
@@ -121,14 +121,6 @@ export function StatsGrid({ stats: initialStats, memberId }: StatsGridProps) {
           onFlip={() => setShowCommunityRank(!showCommunityRank)}
         />
       </div>
-      {/* Real-time indicator */}
-      {memberId && (
-        <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
-          <div className={`w-2 h-2 rounded-full transition-colors ${isUpdating ? 'bg-green-500 animate-pulse' : 'bg-gray-600'}`} />
-          <span>Live updates every 30s</span>
-          {isUpdating && <RefreshCw className="w-3 h-3 animate-spin text-green-500" />}
-        </div>
-      )}
     </div>
   );
 }

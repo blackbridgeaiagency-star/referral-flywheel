@@ -3,9 +3,7 @@ import { Suspense } from 'react';
 import { prisma } from '../../../lib/db/prisma';
 import { getCompleteCreatorDashboardData } from '../../../lib/data/centralized-queries';
 import { createCreatorWithWhopData } from '../../../lib/whop/sync-creator';
-import { RevenueMetrics } from '../../../components/dashboard/RevenueMetrics';
-import { TopPerformersTable } from '../../../components/dashboard/TopPerformersTable';
-import { CommunityStatsGrid } from '../../../components/dashboard/CommunityStatsGrid';
+import { CreatorDashboardClient } from '../../../components/dashboard/CreatorDashboardClient';
 import { RewardManagementForm } from '../../../components/dashboard/RewardManagementForm';
 import { CreatorOnboardingBanner } from '../../../components/dashboard/CreatorOnboardingBanner';
 import { PartnershipImpactCard } from '../../../components/creator/PartnershipImpactCard';
@@ -245,67 +243,14 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
             <PartnershipImpactCard creatorId={creator.id} />
           </Suspense>
 
-          {/* Revenue Metrics - ✅ USING CENTRALIZED DATA */}
+          {/* Real-time Dashboard Stats - Revenue, Community Stats, Top Referrers */}
           <Suspense fallback={<LoadingCard />}>
-            <RevenueMetrics
-              revenueBreakdown={{
-                totalRevenue: dashboardData.revenueStats.totalRevenue,
-                totalMonthlyRevenue: dashboardData.revenueStats.monthlyRecurringRevenue,
-                referralContribution: dashboardData.revenueStats.referralContribution,
-                activeSubscriptions: dashboardData.revenueStats.referredCount, // Use referred count as active subscriptions
-                totalActiveClicks: dashboardData.revenueStats.totalActiveClicks,
-                convertedActiveClicks: dashboardData.revenueStats.convertedClicks,
-                organicCount: dashboardData.revenueStats.organicCount,
-                referredCount: dashboardData.revenueStats.referredCount,
-                totalMembers: dashboardData.revenueStats.totalMembers,
-              }}
-            />
-          </Suspense>
-
-          {/* Community Stats - ✅ USING CENTRALIZED DATA + TOP 10 FIX */}
-          <Suspense fallback={<LoadingCard />}>
-            <CommunityStatsGrid
-              stats={{
-                totalMembers: dashboardData.revenueStats.totalMembers,
-                avgReferralsPerMember: dashboardData.revenueStats.totalMembers > 0
-                  ? (dashboardData.revenueStats.referredCount / dashboardData.revenueStats.totalMembers)
-                  : 0,
-                avgEarningsPerMember: dashboardData.revenueStats.totalRevenue / Math.max(dashboardData.revenueStats.totalMembers, 1),
-                totalClicks: dashboardData.revenueStats.totalActiveClicks,
-                convertedClicks: dashboardData.revenueStats.convertedClicks,
-                organicSignups: dashboardData.revenueStats.organicCount,
-                attributionRate: dashboardData.revenueStats.totalMembers > 0
-                  ? (dashboardData.revenueStats.referredCount / dashboardData.revenueStats.totalMembers) * 100
-                  : 0,
-                totalReferrals: dashboardData.revenueStats.referredCount,
-                totalRevenue: dashboardData.revenueStats.totalRevenue,
-                monthlyRevenue: dashboardData.revenueStats.monthlyRevenue,
-                totalSharesSent: dashboardData.revenueStats.totalShares,
-                topPerformerContribution: dashboardData.topPerformerContribution.topPerformerContribution,
-                topPerformerTotal: dashboardData.topPerformerContribution.topEarnersTotal,
-                // 🎮 GAMIFICATION METRICS
-                globalRevenueRank: dashboardData.revenueStats.globalRevenueRank,
-                globalReferralRank: dashboardData.revenueStats.globalReferralRank,
-                totalCreators: dashboardData.revenueStats.totalCreators,
-                referralMomentum: dashboardData.revenueStats.referralMomentum,
-                membersWithReferrals: dashboardData.revenueStats.membersWithReferrals,
-                // ✅ NEW GAMIFICATION METRICS
-                shareToConversionRate: dashboardData.revenueStats.shareToConversionRate,
-                monthlyGrowthRate: dashboardData.revenueStats.monthlyGrowthRate,
-                thisMonthReferrals: dashboardData.revenueStats.thisMonthReferrals,
-                lastMonthReferrals: dashboardData.revenueStats.lastMonthReferrals,
-              }}
-              organicCount={dashboardData.revenueStats.organicCount}
-              referredCount={dashboardData.revenueStats.referredCount}
-            />
-          </Suspense>
-
-          {/* Top Referrers - ✅ USING CENTRALIZED DATA */}
-          <Suspense fallback={<LoadingCard />}>
-            <TopPerformersTable
-              performers={dashboardData.topReferrers}
-              totalRevenue={dashboardData.revenueStats.totalRevenue}
+            <CreatorDashboardClient
+              companyId={experienceId}
               creatorId={creator.id}
+              initialRevenueStats={dashboardData.revenueStats}
+              initialTopReferrers={dashboardData.topReferrers}
+              initialTopPerformerContribution={dashboardData.topPerformerContribution}
             />
           </Suspense>
 
