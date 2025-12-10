@@ -46,6 +46,7 @@ export async function GET() {
         id: creator.id,
         name: creator.companyName,
         productId: creator.productId,
+        whopUrl: creator.whopUrl || `https://whop.com/checkout/${creator.productId}`,
         memberCount: creator._count.members,
         totalReferrals: creator.totalReferrals,
         totalRevenue: creator.totalRevenue,

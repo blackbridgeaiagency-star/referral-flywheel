@@ -42,6 +42,7 @@ model Creator {
   // COMMUNITY METADATA (Auto-fetched from Whop)
   logoUrl     String? // Community logo URL from Whop
   description String? // Community description
+  whopUrl     String? // Public Whop page URL (e.g., https://whop.com/blackbridgeagency/)
 
   // ONBOARDING TRACKING
   onboardingCompleted Boolean @default(false) // Has creator completed onboarding wizard?

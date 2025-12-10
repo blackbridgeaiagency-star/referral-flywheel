@@ -6,6 +6,7 @@ import { Users, TrendingUp, DollarSign } from 'lucide-react';
 interface CommunityCardProps {
   name: string;
   productId: string;
+  whopUrl?: string;
   memberCount: number;
   totalReferrals: number;
   avgEarnings: number;
@@ -15,6 +16,7 @@ interface CommunityCardProps {
 export function CommunityCard({
   name,
   productId,
+  whopUrl,
   memberCount,
   totalReferrals,
   avgEarnings,
@@ -64,7 +66,7 @@ export function CommunityCard({
 
         {/* CTA */}
         <Button
-          onClick={() => window.open(`https://whop.com/products/${productId}`, '_blank')}
+          onClick={() => window.open(whopUrl || `https://whop.com/checkout/${productId}`, '_blank')}
           className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold"
         >
           Join & Start Earning →
