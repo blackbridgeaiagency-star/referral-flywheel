@@ -1,5 +1,5 @@
 {
-  "buildCommand": "next build",
+  "buildCommand": "prisma generate && next build",
   "installCommand": "npm install",
   "framework": "nextjs",
   "outputDirectory": ".next",
@@ -42,6 +42,13 @@
           "value": "strict-origin-when-cross-origin"
         }
       ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/discover",
+      "permanent": false
     }
   ],
   "crons": [
