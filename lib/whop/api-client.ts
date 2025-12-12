@@ -115,6 +115,123 @@ export async function getMembership(membershipId: string): Promise<WhopMembershi
   return response.data;
 }
 
+/**
+ * Get memberships by experience ID and optionally user ID
+ * Uses API v5 which supports experience_id filtering
+ *
+ * NOTE: This uses the APP API key - for user-specific lookups,
+ * use getCurrentUserMemberships() with the user token instead.
+ */
+export async function getMembershipsByExperience(
+  experienceId: string,
+  userId?: string
+): Promise<WhopMembership[]> {
+  logger.info(`[API] Fetching memberships for experience: ${experienceId}${userId ? `, user: ${userId}` : ''}`);
+
+  // Build query string
+  const params = new URLSearchParams();
+  params.append('experience_id', experienceId);
+  if (userId) {
+    params.append('user_id', userId);
+  }
+  params.append('valid', 'true');  // Only get valid memberships
+
+  try {
+    // Use v5 API with app API key
+    const response = await fetch(`https://api.whop.com/api/v5/app/memberships?${params.toString()}`, {
+      headers: {
+        'Authorization': `Bearer ${process.env.WHOP_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error(`[API] Whop API v5 /app/memberships error (${response.status}):`, errorText);
+      return [];
+    }
+
+    const result = await response.json();
+    logger.info(`[API] Found ${result.data?.length || 0} memberships via /app/memberships`);
+    return result.data || [];
+  } catch (error) {
+    logger.error('[API] Error fetching memberships by experience:', error);
+    return [];
+  }
+}
+
+/**
+ * Get current user's memberships using their token
+ *
+ * This is the CORRECT way to get a user's membership from the Whop iframe.
+ * Uses /v5/me/memberships with the user's JWT token from the whop_user_token cookie.
+ *
+ * @param userToken - The JWT token from whop_user_token cookie (extracted via getToken)
+ * @returns Array of user's memberships
+ */
+export async function getCurrentUserMemberships(userToken: string): Promise<WhopMembership[]> {
+  logger.info(`[API] Fetching current user memberships via /v5/me/memberships`);
+
+  try {
+    const response = await fetch('https://api.whop.com/api/v5/me/memberships?valid=true', {
+      headers: {
+        'Authorization': `Bearer ${userToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error(`[API] Whop API v5 /me/memberships error (${response.status}):`, errorText);
+      return [];
+    }
+
+    const result = await response.json();
+    logger.info(`[API] Found ${result.data?.length || 0} memberships via /me/memberships`);
+    return result.data || [];
+  } catch (error) {
+    logger.error('[API] Error fetching current user memberships:', error);
+    return [];
+  }
+}
+
+/**
+ * Get experience details by experience ID
+ *
+ * @param experienceId - The experience ID (exp_*)
+ * @returns Experience details including product_id and company_id
+ */
+export async function getExperience(experienceId: string): Promise<{
+  id: string;
+  product_id?: string;
+  company_id?: string;
+  name?: string;
+} | null> {
+  logger.info(`[API] Fetching experience: ${experienceId}`);
+
+  try {
+    const response = await fetch(`https://api.whop.com/api/v5/app/experiences/${experienceId}`, {
+      headers: {
+        'Authorization': `Bearer ${process.env.WHOP_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error(`[API] Whop API v5 /experiences error (${response.status}):`, errorText);
+      return null;
+    }
+
+    const result = await response.json();
+    logger.info(`[API] Experience found:`, { id: result.id, product_id: result.product_id });
+    return result;
+  } catch (error) {
+    logger.error('[API] Error fetching experience:', error);
+    return null;
+  }
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // USER & MESSAGING OPERATIONS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -242,6 +359,9 @@ export const WhopAPI = {
   getCompany,
   getCompanyMemberships,
   getMembership,
+  getMembershipsByExperience,
+  getCurrentUserMemberships,
+  getExperience,
   getUser,
   sendDirectMessage,
   getProduct,

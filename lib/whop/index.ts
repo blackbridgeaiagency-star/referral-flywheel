@@ -9,11 +9,14 @@
  * - Checkout Sessions (checkout.ts) - Affiliate attribution
  */
 
-// REST API v2 Client
+// REST API v2/v5 Client
 export {
   getCompany,
   getCompanyMemberships,
   getMembership,
+  getMembershipsByExperience,
+  getCurrentUserMemberships,
+  getExperience,
   getUser,
   sendDirectMessage,
   getProduct,
