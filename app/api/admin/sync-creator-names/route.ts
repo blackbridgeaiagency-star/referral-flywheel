@@ -1,8 +1,21 @@
 // app/api/admin/sync-creator-names/route.ts
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
+import { isAdmin } from '../../../../lib/whop/simple-auth';
+import logger from '../../../../lib/logger';
 
+/**
+ * Sync Creator Names API
+ *
+ * SECURITY: Requires admin authentication
+ */
 export async function POST() {
+  // SECURITY: Verify admin access
+  if (!await isAdmin()) {
+    logger.warn('[ADMIN] Unauthorized access attempt to /api/admin/sync-creator-names POST');
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     // Find all creators that are using their ID as the name
     const creators = await prisma.creator.findMany({
@@ -50,6 +63,12 @@ export async function POST() {
 
 // GET to check current creators
 export async function GET() {
+  // SECURITY: Verify admin access
+  if (!await isAdmin()) {
+    logger.warn('[ADMIN] Unauthorized access attempt to /api/admin/sync-creator-names GET');
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     const creators = await prisma.creator.findMany({
       select: {

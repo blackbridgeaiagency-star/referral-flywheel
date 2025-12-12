@@ -407,8 +407,7 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
       troubleshootingSteps = [
         "Check Vercel function logs for more details",
         "Verify all environment variables are set",
-        "Try accessing /api/health for system status",
-        "Test database connection at /api/debug/db-test"
+        "Try accessing /api/health for system status"
       ];
     }
 
@@ -460,13 +459,6 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
               className="inline-block px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors text-sm"
             >
               Check System Health
-            </a>
-            <a
-              href="/api/debug/db-test"
-              target="_blank"
-              className="inline-block px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors text-sm"
-            >
-              Test Database
             </a>
             <a
               href="https://whop.com/dashboard"

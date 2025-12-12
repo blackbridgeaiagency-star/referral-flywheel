@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '../../../../lib/db/prisma';
 import logger from '../../../../lib/logger';
+import { canAccessCreatorById } from '../../../../lib/whop/simple-auth';
+import { rateLimitMiddleware } from '../../../../lib/security/rate-limit-utils';
+import { checkOrigin } from '../../../../lib/security/origin-validation';
 
 
 /**
@@ -25,8 +28,18 @@ const updateRewardTiersSchema = z.object({
 /**
  * POST /api/creator/rewards
  * Update reward tiers and settings for a creator
+ *
+ * SECURITY: Requires authorization - user must own the creator resource
  */
 export async function POST(request: NextRequest) {
+  // SECURITY: Origin validation for CSRF protection
+  const originError = checkOrigin(request);
+  if (originError) return originError;
+
+  // SECURITY: Rate limiting (10 requests per minute)
+  const rateLimitResponse = await rateLimitMiddleware(request, { maxRequests: 10, windowMs: 60000 });
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const body = await request.json();
 
@@ -44,6 +57,16 @@ export async function POST(request: NextRequest) {
     }
 
     const data = validationResult.data;
+
+    // SECURITY: Verify user is authorized to modify this creator
+    const isAuthorized = await canAccessCreatorById(data.creatorId);
+    if (!isAuthorized) {
+      logger.warn(`[SECURITY] Unauthorized rewards update attempt for creator: ${data.creatorId}`);
+      return NextResponse.json(
+        { error: 'Unauthorized - you do not have permission to modify this resource' },
+        { status: 403 }
+      );
+    }
 
     // Verify creator exists
     const creator = await prisma.creator.findUnique({
@@ -179,8 +202,14 @@ export async function POST(request: NextRequest) {
 /**
  * GET /api/creator/rewards?creatorId={id}
  * Get current reward settings for a creator
+ *
+ * SECURITY: Requires authorization - user must own the creator resource
  */
 export async function GET(request: NextRequest) {
+  // SECURITY: Rate limiting (30 requests per minute for reads)
+  const rateLimitResponse = await rateLimitMiddleware(request, { maxRequests: 30, windowMs: 60000 });
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const { searchParams } = new URL(request.url);
     const creatorId = searchParams.get('creatorId');
@@ -189,6 +218,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: 'creatorId query parameter is required' },
         { status: 400 }
+      );
+    }
+
+    // SECURITY: Verify user is authorized to access this creator's data
+    const isAuthorized = await canAccessCreatorById(creatorId);
+    if (!isAuthorized) {
+      logger.warn(`[SECURITY] Unauthorized rewards read attempt for creator: ${creatorId}`);
+      return NextResponse.json(
+        { error: 'Unauthorized - you do not have permission to access this resource' },
+        { status: 403 }
       );
     }
 

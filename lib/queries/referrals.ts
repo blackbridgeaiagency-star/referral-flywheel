@@ -1,3 +1,14 @@
+/**
+ * @deprecated This file is DEPRECATED. Use lib/data/centralized-queries.ts instead.
+ *
+ * Migration guide:
+ * - getMonthlyReferralStats() -> Use getMemberStats() from lib/data/centralized-queries.ts
+ * - getReferralList() -> Use getMemberReferrals() from lib/data/centralized-queries.ts
+ * - getMonthlyGrowth() -> Use getMemberEarningsHistory() from lib/data/centralized-queries.ts
+ *
+ * This file will be removed in a future release once all usages are migrated.
+ */
+
 // lib/queries/referrals.ts
 import { prisma } from '../db/prisma';
 import { startOfMonth } from 'date-fns';

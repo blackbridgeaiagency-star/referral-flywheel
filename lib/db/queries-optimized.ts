@@ -1,4 +1,19 @@
 /**
+ * @deprecated This file is DEPRECATED. Use lib/data/centralized-queries.ts instead.
+ *
+ * This file was designed for materialized views (member_stats_mv, creator_analytics_mv)
+ * which are not yet implemented. All queries should now use the centralized query layer.
+ *
+ * Migration guide:
+ * - getMemberStats() -> Use getMemberStats() from lib/data/centralized-queries.ts
+ * - getCreatorAnalytics() -> Use getCreatorRevenueStats() from lib/data/centralized-queries.ts
+ * - getTopEarners() -> Use getCreatorTopPerformers(creatorId, 'earnings') from lib/data/centralized-queries.ts
+ * - getTopReferrers() -> Use getCreatorTopPerformers(creatorId, 'referrals') from lib/data/centralized-queries.ts
+ *
+ * This file will be removed in a future release once all usages are migrated.
+ *
+ * ---
+ * Original description:
  * Optimized database queries with connection pooling
  * Uses materialized views for expensive queries
  * Implements batching and caching strategies

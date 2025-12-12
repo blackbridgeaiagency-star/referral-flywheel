@@ -1,8 +1,21 @@
 // app/api/admin/remove-test-data/route.ts
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
+import { isAdmin } from '../../../../lib/whop/simple-auth';
+import logger from '../../../../lib/logger';
 
+/**
+ * Remove Test Data API
+ *
+ * SECURITY: Requires admin authentication
+ */
 export async function DELETE() {
+  // SECURITY: Verify admin access
+  if (!await isAdmin()) {
+    logger.warn('[ADMIN] Unauthorized access attempt to /api/admin/remove-test-data DELETE');
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     console.log('🧹 Removing test data via API...\n');
 
@@ -87,6 +100,12 @@ export async function DELETE() {
 
 // Also add GET method to check what test data exists
 export async function GET() {
+  // SECURITY: Verify admin access
+  if (!await isAdmin()) {
+    logger.warn('[ADMIN] Unauthorized access attempt to /api/admin/remove-test-data GET');
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     const testCreators = await prisma.creator.findMany({
       where: {

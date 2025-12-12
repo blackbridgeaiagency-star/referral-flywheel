@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { DollarSign, TrendingUp, Users, Calendar } from 'lucide-react';
+import { formatCurrency } from '@/lib/constants/metrics';
 
 interface RealTimeStatsWrapperProps {
   memberId: string;
@@ -49,14 +50,6 @@ export function RealTimeStatsWrapper({
     const pollInterval = setInterval(fetchStats, 30000);
     return () => clearInterval(pollInterval);
   }, [fetchStats]);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(amount);
-  };
 
   const statsItems = [
     {

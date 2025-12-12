@@ -1,3 +1,14 @@
+/**
+ * @deprecated This file is DEPRECATED. Use lib/data/centralized-queries.ts instead.
+ *
+ * Migration guide:
+ * - getMemberEarnings() -> Use getMemberEarningsHistory() from lib/data/centralized-queries.ts
+ * - getMemberEarningsByDateRange() -> Use getMemberEarningsHistory() from lib/data/centralized-queries.ts
+ * - getMemberEarningsByRange() -> Use getMemberEarningsHistory() from lib/data/centralized-queries.ts
+ *
+ * This file will be removed in a future release once all usages are migrated.
+ */
+
 import { prisma } from '../db/prisma';
 import { subDays, subMonths, format, startOfMonth, endOfMonth } from 'date-fns';
 

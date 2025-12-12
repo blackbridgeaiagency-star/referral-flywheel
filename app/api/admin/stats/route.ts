@@ -2,11 +2,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
 import { withRateLimit } from '../../../../lib/security/rate-limit-utils';
+import { isAdmin } from '../../../../lib/whop/simple-auth';
 import { cache } from '../../../../lib/cache/redis';
 import logger from '../../../../lib/logger';
 
-
+/**
+ * Admin Stats API
+ *
+ * SECURITY: Requires admin authentication
+ */
 export async function GET(request: NextRequest) {
+  // SECURITY: Verify admin access
+  if (!await isAdmin()) {
+    logger.warn('[ADMIN] Unauthorized access attempt to /api/admin/stats');
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   return withRateLimit(request, async () => {
     const { searchParams } = new URL(request.url);
     const range = searchParams.get('range') || '30d';

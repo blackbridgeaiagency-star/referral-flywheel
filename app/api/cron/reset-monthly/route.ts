@@ -17,15 +17,25 @@ export const runtime = 'nodejs';
  * Protected by Vercel's cron secret to prevent unauthorized access
  */
 export async function GET(request: Request) {
+  // SECURITY: Verify this is a legitimate cron request from Vercel
+  // Deny-first approach: reject if CRON_SECRET is not configured
+  const authHeader = request.headers.get('authorization');
+  const cronSecret = process.env.CRON_SECRET;
+
+  if (!cronSecret) {
+    logger.error('[SECURITY] CRON_SECRET not configured - rejecting cron request');
+    return NextResponse.json(
+      { error: 'Cron secret not configured' },
+      { status: 500 }
+    );
+  }
+
+  if (authHeader !== `Bearer ${cronSecret}`) {
+    logger.error('[SECURITY] Unauthorized cron request - invalid or missing authorization');
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
-    // Verify this is a legitimate cron request from Vercel
-    const authHeader = request.headers.get('authorization');
-    if (process.env.CRON_SECRET) {
-      if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-        logger.error('❌ Unauthorized cron request');
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-    }
 
     logger.info(' Starting monthly reset...');
     const startTime = Date.now();

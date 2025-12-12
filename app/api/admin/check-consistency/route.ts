@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
+import { isAdmin } from '../../../../lib/whop/simple-auth';
 import { startOfMonth } from 'date-fns';
 import logger from '../../../../lib/logger';
 
@@ -17,9 +18,16 @@ export const runtime = 'nodejs';
  * 3. Commission splits add to 100%
  * 4. No negative values
  * 5. Logical consistency across the board
+ *
+ * SECURITY: Requires admin authentication
  */
 
 export async function GET() {
+  // SECURITY: Verify admin access
+  if (!await isAdmin()) {
+    logger.warn('[ADMIN] Unauthorized access attempt to /api/admin/check-consistency');
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
   const errors: string[] = [];
   const warnings: string[] = [];
   const startTime = Date.now();

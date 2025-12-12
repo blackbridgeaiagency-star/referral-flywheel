@@ -135,19 +135,11 @@ export function DatabaseErrorBoundary({ children }: { children: ReactNode }) {
                   </a>
                   <span className="text-gray-600">•</span>
                   <a
-                    href="/api/debug/db-test"
+                    href="https://whop.com/dashboard"
                     target="_blank"
                     className="text-purple-400 hover:text-purple-300 text-sm underline"
                   >
-                    Database Test
-                  </a>
-                  <span className="text-gray-600">•</span>
-                  <a
-                    href="https://supabase.com/dashboard"
-                    target="_blank"
-                    className="text-purple-400 hover:text-purple-300 text-sm underline"
-                  >
-                    Supabase Dashboard
+                    Whop Dashboard
                   </a>
                 </div>
               </div>

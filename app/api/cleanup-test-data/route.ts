@@ -1,9 +1,17 @@
 // app/api/cleanup-test-data/route.ts
-// Temporary endpoint to clean up test data - remove this file after cleanup
+// Admin endpoint to clean up test data
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../lib/db/prisma';
+import logger from '../../../lib/logger';
+import { isAdmin } from '../../../lib/whop/simple-auth';
 
 export async function GET() {
+  // SECURITY: Require admin access
+  if (!await isAdmin()) {
+    logger.warn('[SECURITY] Unauthorized access attempt to /api/cleanup-test-data');
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     const testCreators = await prisma.creator.findMany({
       where: {
@@ -51,7 +59,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('Error checking test data:', error);
+    logger.error('Error checking test data:', error);
     return NextResponse.json({
       error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
@@ -59,8 +67,14 @@ export async function GET() {
 }
 
 export async function DELETE() {
+  // SECURITY: Require admin access
+  if (!await isAdmin()) {
+    logger.warn('[SECURITY] Unauthorized DELETE attempt to /api/cleanup-test-data');
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
-    console.log('🧹 Removing test data via API...\n');
+    logger.info('Removing test data via API...');
 
     // Find and remove test creators
     const testCreators = await prisma.creator.findMany({
@@ -75,10 +89,10 @@ export async function DELETE() {
       }
     });
 
-    const removedCreators = [];
+    const removedCreators: { id: string; companyName: string; companyId: string }[] = [];
 
     if (testCreators.length > 0) {
-      console.log(`Found ${testCreators.length} test creators to remove`);
+      logger.info(`Found ${testCreators.length} test creators to remove`);
 
       // Delete test creators (cascades to members, commissions, etc.)
       for (const creator of testCreators) {
@@ -90,7 +104,7 @@ export async function DELETE() {
           companyName: creator.companyName,
           companyId: creator.companyId
         });
-        console.log(`  ✅ Removed: ${creator.companyName} (${creator.companyId})`);
+        logger.debug(`Removed: ${creator.companyName} (${creator.companyId})`);
       }
     }
 
@@ -105,10 +119,10 @@ export async function DELETE() {
       }
     });
 
-    const removedMembers = [];
+    const removedMembers: { id: string; username: string; email: string }[] = [];
 
     if (testMembers.length > 0) {
-      console.log(`Found ${testMembers.length} test members to remove`);
+      logger.info(`Found ${testMembers.length} test members to remove`);
 
       for (const member of testMembers) {
         await prisma.member.delete({
@@ -119,7 +133,7 @@ export async function DELETE() {
           username: member.username,
           email: member.email
         });
-        console.log(`  ✅ Removed: ${member.username} (${member.email})`);
+        logger.debug(`Removed: ${member.username} (${member.email})`);
       }
     }
 
@@ -137,7 +151,7 @@ export async function DELETE() {
     });
 
   } catch (error) {
-    console.error('❌ Error removing test data:', error);
+    logger.error('Error removing test data:', error);
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'

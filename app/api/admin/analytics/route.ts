@@ -1,6 +1,7 @@
 // app/api/admin/analytics/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
+import { isAdmin } from '../../../../lib/whop/simple-auth';
 import logger from '../../../../lib/logger';
 
 
@@ -16,8 +17,16 @@ export const dynamic = 'force-dynamic';
  * - Member lifecycle (active, trial, cancelled)
  * - Payment health (failures, revenue at risk)
  * - Webhook processing health
+ *
+ * SECURITY: Requires admin authentication
  */
 export async function GET(request: NextRequest) {
+  // SECURITY: Verify admin access
+  if (!await isAdmin()) {
+    logger.warn('[ADMIN] Unauthorized access attempt to /api/admin/analytics');
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     // Calculate webhook success rate
     const totalWebhooks = await prisma.webhookEvent.count();

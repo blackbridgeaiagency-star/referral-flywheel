@@ -1,11 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+import { isAdmin } from '../../../../lib/whop/simple-auth';
 import logger from '../../../../lib/logger';
 
 
 const prisma = new PrismaClient()
 
+/**
+ * Data Consistency Validation API
+ *
+ * SECURITY: Requires admin authentication
+ */
 export async function POST(request: NextRequest) {
+  // SECURITY: Verify admin access
+  if (!await isAdmin()) {
+    logger.warn('[ADMIN] Unauthorized access attempt to /api/admin/validate-consistency');
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     // Parse request body for options
     const { dryRun = true, autoFix = false } = await request.json().catch(() => ({}))
@@ -281,6 +293,12 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  // SECURITY: Verify admin access
+  if (!await isAdmin()) {
+    logger.warn('[ADMIN] Unauthorized access attempt to /api/admin/validate-consistency');
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   // Quick validation check (read-only)
   return POST(new NextRequest(request.url, {
     method: 'POST',

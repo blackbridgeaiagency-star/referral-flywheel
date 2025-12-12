@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
 import { withRateLimit } from '../../../../lib/middleware/rate-limit';
+import { isAdmin } from '../../../../lib/whop/simple-auth';
 import { subHours, subDays, startOfHour, format } from 'date-fns';
 import logger from '../../../../lib/logger';
 
@@ -11,8 +12,16 @@ import logger from '../../../../lib/logger';
  *
  * Provides real-time monitoring data for webhook processing
  * Used by the admin webhook monitoring dashboard
+ *
+ * SECURITY: Requires admin authentication
  */
 export async function GET(request: NextRequest) {
+  // SECURITY: Verify admin access
+  if (!await isAdmin()) {
+    logger.warn('[ADMIN] Unauthorized access attempt to /api/admin/webhook-stats');
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   return withRateLimit(request, async (request) => {
     try {
       // Parse query parameters
@@ -213,15 +222,17 @@ async function getHourlyStats(startDate: Date) {
 
 /**
  * Webhook health check endpoint
+ *
+ * SECURITY: Requires admin authentication
  */
 export async function POST(request: NextRequest) {
-  try {
-    // Verify admin authorization
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  // SECURITY: Verify admin access
+  if (!await isAdmin()) {
+    logger.warn('[ADMIN] Unauthorized access attempt to /api/admin/webhook-stats POST');
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
 
+  try {
     // Test webhook processing
     const testPayload = {
       action: 'health_check',

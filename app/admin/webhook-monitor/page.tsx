@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import logger from '../../../lib/logger';
+import { fetchWebhookStats } from '../actions';
 import {
 Activity,
   AlertCircle,
@@ -54,18 +55,13 @@ export default function WebhookMonitor() {
   const [filter, setFilter] = useState<'all' | 'success' | 'failed' | 'pending'>('all');
   const [timeRange, setTimeRange] = useState<'1h' | '24h' | '7d' | '30d'>('24h');
 
-  // Fetch webhook stats
-  const fetchStats = async () => {
+  // Fetch webhook stats using server action
+  const loadStats = async () => {
     try {
-      const response = await fetch(`/api/admin/webhook-stats?range=${timeRange}`, {
-        headers: {
-          'x-admin-token': 'e2e9e2ae1a4a7755111668aa55a22b59502f46eadd95705b0ad9f3882ef1a18d'
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
+      const data = await fetchWebhookStats(timeRange);
+      if (data.stats) {
         setStats(data.stats);
-        setEvents(data.events);
+        setEvents(data.events || []);
       }
     } catch (error) {
       logger.error('Failed to fetch webhook stats:', error);
@@ -76,10 +72,10 @@ export default function WebhookMonitor() {
 
   // Auto-refresh every 5 seconds
   useEffect(() => {
-    fetchStats();
+    loadStats();
 
     if (autoRefresh) {
-      const interval = setInterval(fetchStats, 5000);
+      const interval = setInterval(loadStats, 5000);
       return () => clearInterval(interval);
     }
   }, [autoRefresh, timeRange]);
@@ -138,7 +134,7 @@ export default function WebhookMonitor() {
           </button>
 
           <button
-            onClick={fetchStats}
+            onClick={loadStats}
             className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700"
           >
             Refresh Now

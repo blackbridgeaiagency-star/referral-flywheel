@@ -16,6 +16,41 @@ import {
   normalizeBillingPeriod,
   calculateMonthlyValue,
 } from '../../../../lib/utils/billing';
+import type {
+  WhopWebhookPayload,
+  WhopPaymentData,
+  WhopMembershipData,
+  WhopRefundData,
+  WebhookHandlerResult,
+} from '../../../../types/whop-webhooks';
+
+// Type for webhook event from database
+interface WebhookEventRecord {
+  id: string;
+  eventType: string;
+  whopEventId: string | null;
+  payload: unknown;
+  processed: boolean;
+}
+
+// Type for member with creator relation
+interface MemberWithCreator {
+  id: string;
+  userId: string;
+  username: string;
+  referralCode: string;
+  referredBy: string | null;
+  whopAffiliateUsername: string | null;
+  creatorId: string;
+  subscriptionPrice: number;
+  totalReferred: number;
+  creator: {
+    id: string;
+    companyId: string;
+    companyName: string;
+    defaultSubscriptionPrice: number;
+  } | null;
+}
 // NEW: Push notifications for key events
 import {
   notifyWelcome,
@@ -45,36 +80,62 @@ const WHOP_API_BASE = 'https://api.whop.com/api/v2';
 
 export async function POST(request: NextRequest) {
   return withRateLimit(request, async () => {
-    let webhookEvent: any = null;
+    let webhookEvent: WebhookEventRecord | null = null;
 
     try {
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // 1. VALIDATE WEBHOOK SIGNATURE
+      // SECURITY: Always require signature verification - no bypass allowed
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       const body = await request.text();
       const signature = request.headers.get('whop-signature');
-      const secret = process.env.WHOP_WEBHOOK_SECRET!;
+      const secret = process.env.WHOP_WEBHOOK_SECRET;
 
+      // SECURITY: Reject if webhook secret is not configured
+      if (!secret) {
+        logger.error('[SECURITY] WHOP_WEBHOOK_SECRET not configured - rejecting webhook');
+        return NextResponse.json(
+          { error: 'Webhook secret not configured' },
+          { status: 500 }
+        );
+      }
+
+      // SECURITY: Reject if signature is missing
       if (!signature) {
-        if (process.env.NODE_ENV === 'production') {
-          logger.error('Missing webhook signature in production');
-          return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
-        } else {
-          logger.warn('No signature (development mode)');
-        }
-      } else {
-        const expectedSignature = crypto
-          .createHmac('sha256', secret)
-          .update(body)
-          .digest('hex');
+        logger.error('[SECURITY] Missing webhook signature - rejecting request');
+        return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
+      }
 
-        if (signature !== expectedSignature) {
-          logger.error('Invalid webhook signature');
-          return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-        }
+      // Verify signature
+      const expectedSignature = crypto
+        .createHmac('sha256', secret)
+        .update(body)
+        .digest('hex');
+
+      if (signature !== expectedSignature) {
+        logger.error('[SECURITY] Invalid webhook signature - rejecting request');
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
       }
 
       const payload = JSON.parse(body);
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // 1.5. REPLAY ATTACK PREVENTION - Check webhook timestamp
+      // SECURITY: Reject webhooks older than 5 minutes to prevent replay attacks
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      const eventTimestamp = payload.created_at || payload.timestamp;
+      if (eventTimestamp) {
+        const eventTime = new Date(eventTimestamp);
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
+        if (eventTime < fiveMinutesAgo) {
+          logger.warn(`[SECURITY] Webhook timestamp too old: ${eventTimestamp} - possible replay attack`);
+          return NextResponse.json(
+            { error: 'Event too old' },
+            { status: 400 }
+          );
+        }
+      }
 
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // 2. LOG EVERY WEBHOOK EVENT
@@ -160,14 +221,15 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json(result);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('Webhook processing error:', error);
 
       if (webhookEvent) {
         await prisma.webhookEvent.update({
           where: { id: webhookEvent.id },
           data: {
-            errorMessage: error.message,
+            errorMessage: errorMessage,
             retryCount: { increment: 1 },
           },
         }).catch(err => logger.error('Failed to log error:', err));
@@ -253,7 +315,7 @@ async function fetchAffiliateUsername(membershipId: string): Promise<string | nu
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // NEW HANDLER: membership.went_valid (Strategy B key event)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function handleMembershipWentValid(data: any, webhookEventId: string) {
+async function handleMembershipWentValid(data: WhopMembershipData, webhookEventId: string): Promise<WebhookHandlerResult> {
   logger.info('Processing membership.went_valid (Strategy B)...');
 
   const membershipId = data.id || data.membership_id;
@@ -329,7 +391,16 @@ async function handleMembershipWentValid(data: any, webhookEventId: string) {
   }
 
   // Get or create creator
-  const companyId = data.company_id || data.company;
+  const rawCompanyId = data.company_id || data.company;
+
+  if (!rawCompanyId) {
+    logger.error('Missing company_id in webhook data');
+    return { ok: false, error: 'Missing company_id' };
+  }
+
+  // TypeScript narrowing: companyId is now guaranteed to be string
+  const companyId: string = rawCompanyId;
+
   let creator = await prisma.creator.findUnique({
     where: { companyId },
   });
@@ -349,7 +420,9 @@ async function handleMembershipWentValid(data: any, webhookEventId: string) {
 
   // Extract user info - prefer auto-fetched from API over webhook data
   const userId = data.user_id || data.user || `user_${membershipId}`;
-  const email = membershipDetails.memberEmail || data.email || `${userId}@temp.whop.com`;
+  // SECURITY FIX (M4-SEC): Use crypto-random temp email instead of predictable pattern
+  const tempEmailId = crypto.randomBytes(16).toString('hex');
+  const email = membershipDetails.memberEmail || data.email || `pending-${tempEmailId}@temp.referralflywheel.com`;
   const username = autoFetchedWhopUsername || data.username || email.split('@')[0];
 
   // whopUsername is CRITICAL for Strategy B - auto-fetched from Whop API!
@@ -413,13 +486,18 @@ async function handleMembershipWentValid(data: any, webhookEventId: string) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // HANDLER: Payment Succeeded
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function handlePaymentSucceeded(data: any, webhookEventId: string) {
+async function handlePaymentSucceeded(data: WhopPaymentData, webhookEventId: string): Promise<WebhookHandlerResult> {
   logger.info('Processing payment.succeeded...');
 
   if (!data || !data.membership_id || !data.company_id || !data.id) {
     logger.error('Missing required webhook data:', { data });
     return { ok: false, error: 'Missing required webhook data' };
   }
+
+  // TypeScript narrowing: Extract validated fields
+  const validatedCompanyId: string = data.company_id;
+  const validatedPaymentId: string = data.id;
+  const validatedMembershipId: string = data.membership_id;
 
   // Subscription filter
   const isSubscription = isSubscriptionPayment(
@@ -489,15 +567,15 @@ async function handlePaymentSucceeded(data: any, webhookEventId: string) {
 
   // Get or create creator
   let creator = await prisma.creator.findUnique({
-    where: { companyId: data.company_id },
+    where: { companyId: validatedCompanyId },
   });
 
   if (!creator) {
     creator = await prisma.creator.create({
       data: {
-        companyId: data.company_id,
+        companyId: validatedCompanyId,
         companyName: data.company_name || 'Community',
-        productId: data.product_id,
+        productId: data.product_id || 'unknown',
       },
     });
   }
@@ -525,11 +603,15 @@ async function handlePaymentSucceeded(data: any, webhookEventId: string) {
     logger.warn(`Could not auto-fetch Whop username for ${data.membership_id}`);
   }
 
+  // SECURITY FIX (M4-SEC): Use crypto-random temp email instead of predictable pattern
+  const fallbackTempEmailId = crypto.randomBytes(16).toString('hex');
+  const fallbackEmail = membershipDetails.memberEmail || data.email || `pending-${fallbackTempEmailId}@temp.referralflywheel.com`;
+
   const newMember = await prisma.member.create({
     data: {
       userId: data.user_id || `user_${Date.now()}`,
       membershipId: data.membership_id,
-      email: membershipDetails.memberEmail || data.email || 'temp@whop.com',
+      email: fallbackEmail,
       username,
       whopUsername, // AUTO-FETCHED from Whop API - no manual entry needed!
       referralCode,
@@ -584,10 +666,10 @@ async function handlePaymentSucceeded(data: any, webhookEventId: string) {
 // HELPER: Process member payment (initial or recurring)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function handleMemberPayment(
-  member: any,
-  data: any,
+  member: MemberWithCreator,
+  data: WhopPaymentData,
   billingPeriod: string | null
-) {
+): Promise<void> {
   // Validate data
   if (!data.final_amount || !data.id) {
     logger.error('Missing required data in payment webhook');
@@ -929,7 +1011,7 @@ async function processCommission({
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // HANDLER: Payment Refunded
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function handlePaymentRefunded(data: any, webhookEventId: string) {
+async function handlePaymentRefunded(data: WhopRefundData, webhookEventId: string): Promise<WebhookHandlerResult> {
   logger.info('Processing refund...');
 
   const { id: refundId, payment_id: paymentId, amount, reason } = data;

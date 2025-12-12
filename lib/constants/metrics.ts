@@ -143,6 +143,9 @@ export function calculatePotentialEarnings(referralCount: number): number {
 
 /**
  * Format currency consistently
+ *
+ * NOTE: This is the SINGLE SOURCE OF TRUTH for currency formatting.
+ * The duplicate in lib/utils/commission.ts re-exports this function.
  */
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat(DISPLAY_FORMATS.DEFAULT_LOCALE, {

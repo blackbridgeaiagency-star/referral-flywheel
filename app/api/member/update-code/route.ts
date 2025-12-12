@@ -3,9 +3,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
 import { withRateLimit } from '../../../../lib/security/rate-limit-utils';
 import logger from '../../../../lib/logger';
+import { canAccessMemberById } from '../../../../lib/whop/simple-auth';
+import { checkOrigin } from '../../../../lib/security/origin-validation';
 
 
+/**
+ * POST /api/member/update-code
+ * Update a member's referral code
+ *
+ * SECURITY: Requires authorization - user must own the member resource
+ */
 export async function POST(request: NextRequest) {
+  // SECURITY: Origin validation for CSRF protection
+  const originError = checkOrigin(request);
+  if (originError) return originError;
+
   return withRateLimit(request, async () => {
     try {
       const { memberId, newCode } = await request.json();
@@ -14,6 +26,16 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { error: 'Missing required fields' },
           { status: 400 }
+        );
+      }
+
+      // SECURITY: Verify user is authorized to modify this member's data
+      const isAuthorized = await canAccessMemberById(memberId);
+      if (!isAuthorized) {
+        logger.warn(`[SECURITY] Unauthorized referral code update attempt for member: ${memberId}`);
+        return NextResponse.json(
+          { error: 'Unauthorized - you do not have permission to modify this resource' },
+          { status: 403 }
         );
       }
 

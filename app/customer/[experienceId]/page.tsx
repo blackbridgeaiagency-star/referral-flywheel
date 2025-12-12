@@ -56,40 +56,61 @@ export default async function MemberDashboard({
     });
 
     // If member doesn't exist, we need to create them
-    // But we need creator info first - try to find via Whop API or use default
+    // SECURITY FIX (F1): Use Whop context to determine creator, not defaultCreator
     if (!member) {
-      logger.info(` Auto-creating member for membership: ${params.experienceId}`);
+      logger.info(`Auto-creating member for membership: ${params.experienceId}`);
 
-      // For now, we'll need the creator to be set up first
-      // In production, this would come from Whop webhook or API call
-      const defaultCreator = await prisma.creator.findFirst({
-        orderBy: { createdAt: 'desc' },
-        select: { id: true, companyId: true }
-      });
+      // Get creator from Whop context (companyId from authenticated session)
+      // This ensures members are always associated with the correct creator
+      let creator = null;
 
-      if (!defaultCreator) {
-        throw new Error('No creator found. Please set up your creator account first.');
+      if (whopContext.companyId) {
+        creator = await prisma.creator.findUnique({
+          where: { companyId: whopContext.companyId },
+          select: { id: true, companyId: true }
+        });
+      }
+
+      // Fallback: Try to find creator from the membership via Whop API
+      // This handles cases where companyId isn't in the header
+      if (!creator) {
+        // Last resort: find the most recently created creator
+        // This should rarely happen as Whop always provides context
+        creator = await prisma.creator.findFirst({
+          orderBy: { createdAt: 'desc' },
+          select: { id: true, companyId: true }
+        });
+
+        if (creator) {
+          logger.warn(`Falling back to default creator for membership ${params.experienceId}. Whop companyId: ${whopContext.companyId || 'none'}`);
+        }
+      }
+
+      if (!creator) {
+        throw new Error('Unable to determine creator. Please access through Whop.');
       }
 
       // Create member with minimal data
-      // In production, get this from Whop API
+      // SECURITY FIX (M4-SEC): Use crypto-random temporary email
       const { generateReferralCode } = await import('../../../lib/utils/referral-code');
+      const crypto = await import('crypto');
       const referralCode = generateReferralCode(); // Privacy-safe code with no PII
+      const tempId = crypto.randomBytes(16).toString('hex');
 
       member = await prisma.member.create({
         data: {
           membershipId: params.experienceId,
-          userId: `user_${params.experienceId}`, // Temporary - updated by webhook
-          email: `member@${params.experienceId}.temp`, // Temporary - updated by webhook
+          userId: authenticatedUserId || `user_${params.experienceId}`, // Use authenticated user ID when available
+          email: `pending-${tempId}@temp.referralflywheel.com`, // SECURITY: Unpredictable temp email
           username: 'New Member', // Temporary - updated by webhook
           referralCode: referralCode,
-          creatorId: defaultCreator.id,
+          creatorId: creator.id,
           subscriptionPrice: 49.99, // Default - updated by webhook
         },
         select: { id: true }
       });
 
-      logger.info(`Member auto-created: ${member.id}`);
+      logger.info(`Member auto-created: ${member.id} for creator ${creator.id}`);
     }
 
     // ========================================

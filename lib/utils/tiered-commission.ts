@@ -16,7 +16,16 @@
  *
  * Creator manually upgrades affiliate rate in Whop when notified.
  * Platform fee is reduced to compensate for higher affiliate payout.
+ *
+ * NOTE: Commission rates are imported from lib/constants/commission.ts (SSOT)
  */
+
+import {
+  COMMISSION_RATES,
+  BASE_RATES,
+  DEFAULT_TIER_THRESHOLDS,
+  COMMISSION_LIMITS,
+} from '../constants/commission';
 
 export type CommissionTierName = 'starter' | 'ambassador' | 'elite';
 
@@ -29,32 +38,41 @@ export interface CommissionTierConfig {
   requiresPaidReferrals: boolean;  // Whether referrals must have paid 1+ month
 }
 
+/**
+ * Creator-customizable tier thresholds
+ * Can be stored in Creator model and passed to getCommissionTier()
+ */
+export interface CreatorTierThresholds {
+  ambassadorThreshold?: number;
+  eliteThreshold?: number;
+}
+
 // ========================================
-// TIER CONFIGURATION (Source of Truth)
+// TIER CONFIGURATION (Uses constants from SSOT)
 // ========================================
 export const COMMISSION_TIERS: CommissionTierConfig[] = [
   {
     tierName: 'starter',
     minReferrals: 0,
-    memberRate: 0.10,              // 10%
-    platformRate: 0.20,            // 20%
-    creatorRate: 0.70,             // 70%
+    memberRate: COMMISSION_RATES.STARTER.member,
+    platformRate: COMMISSION_RATES.STARTER.platform,
+    creatorRate: COMMISSION_RATES.STARTER.creator,
     requiresPaidReferrals: false,
   },
   {
     tierName: 'ambassador',
-    minReferrals: 50,
-    memberRate: 0.15,              // 15% (+5%)
-    platformRate: 0.15,            // 15% (-5%)
-    creatorRate: 0.70,             // 70%
+    minReferrals: DEFAULT_TIER_THRESHOLDS.AMBASSADOR_MIN_REFERRALS,
+    memberRate: COMMISSION_RATES.AMBASSADOR.member,
+    platformRate: COMMISSION_RATES.AMBASSADOR.platform,
+    creatorRate: COMMISSION_RATES.AMBASSADOR.creator,
     requiresPaidReferrals: true,   // Must be 50 PAID referrals
   },
   {
     tierName: 'elite',
-    minReferrals: 100,
-    memberRate: 0.18,              // 18% (+8%)
-    platformRate: 0.12,            // 12% (-8%)
-    creatorRate: 0.70,             // 70%
+    minReferrals: DEFAULT_TIER_THRESHOLDS.ELITE_MIN_REFERRALS,
+    memberRate: COMMISSION_RATES.ELITE.member,
+    platformRate: COMMISSION_RATES.ELITE.platform,
+    creatorRate: COMMISSION_RATES.ELITE.creator,
     requiresPaidReferrals: true,   // Must be 100 PAID referrals
   },
 ];
@@ -64,12 +82,58 @@ export const COMMISSION_TIERS: CommissionTierConfig[] = [
 // ========================================
 
 /**
+ * Build tier configs with custom thresholds
+ * Used internally for creator-customizable tier thresholds
+ */
+function buildTierConfigs(creatorConfig?: CreatorTierThresholds): CommissionTierConfig[] {
+  const ambassadorMin = creatorConfig?.ambassadorThreshold ?? DEFAULT_TIER_THRESHOLDS.AMBASSADOR_MIN_REFERRALS;
+  const eliteMin = creatorConfig?.eliteThreshold ?? DEFAULT_TIER_THRESHOLDS.ELITE_MIN_REFERRALS;
+
+  return [
+    {
+      tierName: 'starter',
+      minReferrals: 0,
+      memberRate: COMMISSION_RATES.STARTER.member,
+      platformRate: COMMISSION_RATES.STARTER.platform,
+      creatorRate: COMMISSION_RATES.STARTER.creator,
+      requiresPaidReferrals: false,
+    },
+    {
+      tierName: 'ambassador',
+      minReferrals: ambassadorMin,
+      memberRate: COMMISSION_RATES.AMBASSADOR.member,
+      platformRate: COMMISSION_RATES.AMBASSADOR.platform,
+      creatorRate: COMMISSION_RATES.AMBASSADOR.creator,
+      requiresPaidReferrals: true,
+    },
+    {
+      tierName: 'elite',
+      minReferrals: eliteMin,
+      memberRate: COMMISSION_RATES.ELITE.member,
+      platformRate: COMMISSION_RATES.ELITE.platform,
+      creatorRate: COMMISSION_RATES.ELITE.creator,
+      requiresPaidReferrals: true,
+    },
+  ];
+}
+
+/**
  * Get commission tier based on total referral count
  * Returns the highest tier the member qualifies for
+ *
+ * @param totalReferrals - Total paid referrals by the member
+ * @param creatorConfig - Optional creator-specific tier thresholds
+ * @returns The commission tier configuration
  */
-export function getCommissionTier(totalReferrals: number): CommissionTierConfig {
+export function getCommissionTier(
+  totalReferrals: number,
+  creatorConfig?: CreatorTierThresholds
+): CommissionTierConfig {
+  // Use custom thresholds if provided, otherwise use defaults
+  const tiers = creatorConfig ? buildTierConfigs(creatorConfig) : COMMISSION_TIERS;
+
   // Sort descending by minReferrals to find highest qualifying tier
-  const sortedTiers = [...COMMISSION_TIERS].sort(
+  const sortedTiers = [...tiers].sort(
     (a, b) => b.minReferrals - a.minReferrals
   );
 
@@ -79,8 +143,8 @@ export function getCommissionTier(totalReferrals: number): CommissionTierConfig 
     }
   }
 
-  // Default to bronze (should never reach here since bronze minReferrals is 0)
-  return COMMISSION_TIERS[0];
+  // Default to starter (should never reach here since starter minReferrals is 0)
+  return tiers[0];
 }
 
 /**
@@ -149,25 +213,27 @@ export interface TieredCommissionResult {
  *
  * @param saleAmount - Total sale amount
  * @param memberReferralCount - Total referrals by the REFERRER (determines their tier)
+ * @param creatorConfig - Optional creator-specific tier thresholds
  * @returns Commission split with tier info
  */
 export function calculateTieredCommission(
   saleAmount: number,
-  memberReferralCount: number
+  memberReferralCount: number,
+  creatorConfig?: CreatorTierThresholds
 ): TieredCommissionResult {
-  // Input validation
+  // Input validation using constants from SSOT
   if (saleAmount < 0) {
     throw new Error('Sale amount cannot be negative');
   }
-  if (saleAmount > 1000000) {
-    throw new Error('Sale amount exceeds maximum allowed ($1,000,000)');
+  if (saleAmount > COMMISSION_LIMITS.MAX_SALE_AMOUNT) {
+    throw new Error(`Sale amount exceeds maximum allowed ($${COMMISSION_LIMITS.MAX_SALE_AMOUNT.toLocaleString()})`);
   }
   if (!Number.isFinite(saleAmount)) {
     throw new Error('Sale amount must be a valid number');
   }
 
-  // Get tier based on referrer's total referrals
-  const tier = getCommissionTier(memberReferralCount);
+  // Get tier based on referrer's total referrals (with optional custom thresholds)
+  const tier = getCommissionTier(memberReferralCount, creatorConfig);
 
   // Calculate shares
   const memberShare = Number((saleAmount * tier.memberRate).toFixed(2));

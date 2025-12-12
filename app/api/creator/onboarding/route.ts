@@ -2,14 +2,27 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
 import logger from '../../../../lib/logger';
 import { sendProgramLaunchDM, notifyProgramLaunch } from '../../../../lib/whop/graphql-messaging';
+import { canAccessCreatorById } from '../../../../lib/whop/simple-auth';
+import { rateLimitMiddleware } from '../../../../lib/security/rate-limit-utils';
+import { checkOrigin } from '../../../../lib/security/origin-validation';
 
 
 /**
  * POST /api/creator/onboarding
  *
  * Complete creator onboarding and save all settings
+ *
+ * SECURITY: Requires authorization - user must own the creator resource
  */
 export async function POST(request: NextRequest) {
+  // SECURITY: Origin validation for CSRF protection
+  const originError = checkOrigin(request);
+  if (originError) return originError;
+
+  // SECURITY: Rate limiting (10 requests per minute)
+  const rateLimitResponse = await rateLimitMiddleware(request, { maxRequests: 10, windowMs: 60000 });
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const body = await request.json();
     const {
@@ -38,6 +51,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'creatorId is required' },
         { status: 400 }
+      );
+    }
+
+    // SECURITY: Verify user is authorized to modify this creator
+    const isAuthorized = await canAccessCreatorById(creatorId);
+    if (!isAuthorized) {
+      logger.warn(`[SECURITY] Unauthorized onboarding attempt for creator: ${creatorId}`);
+      return NextResponse.json(
+        { error: 'Unauthorized - you do not have permission to modify this resource' },
+        { status: 403 }
       );
     }
 
@@ -186,8 +209,18 @@ export async function POST(request: NextRequest) {
  * PUT /api/creator/onboarding
  *
  * Skip onboarding (mark as completed without changes)
+ *
+ * SECURITY: Requires authorization - user must own the creator resource
  */
 export async function PUT(request: NextRequest) {
+  // SECURITY: Origin validation for CSRF protection
+  const originError = checkOrigin(request);
+  if (originError) return originError;
+
+  // SECURITY: Rate limiting (10 requests per minute)
+  const rateLimitResponse = await rateLimitMiddleware(request, { maxRequests: 10, windowMs: 60000 });
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const body = await request.json();
     const { creatorId } = body;
@@ -199,7 +232,17 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    logger.debug(`⏭️  Skipping onboarding for creator: ${creatorId}`);
+    // SECURITY: Verify user is authorized to modify this creator
+    const isAuthorized = await canAccessCreatorById(creatorId);
+    if (!isAuthorized) {
+      logger.warn(`[SECURITY] Unauthorized skip onboarding attempt for creator: ${creatorId}`);
+      return NextResponse.json(
+        { error: 'Unauthorized - you do not have permission to modify this resource' },
+        { status: 403 }
+      );
+    }
+
+    logger.debug(`Skipping onboarding for creator: ${creatorId}`);
 
     // Mark onboarding as completed
     const updatedCreator = await prisma.creator.update({

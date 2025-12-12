@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Card } from '../../../components/ui/card';
 import logger from '../../../lib/logger';
+import { fetchMembers, exportMembersData, updateMemberStatus } from '../actions';
 import {
 Search,
   Filter,
@@ -44,27 +45,20 @@ export default function AdminMembers() {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
 
   useEffect(() => {
-    fetchMembers();
+    loadMembers();
   }, [page, filterStatus, filterRisk]);
 
-  const fetchMembers = async () => {
+  const loadMembers = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: '20',
+      const data = await fetchMembers({
+        page,
+        limit: 20,
         status: filterStatus,
         risk: filterRisk,
       });
-
-      const response = await fetch(`/api/admin/members?${params}`, {
-        headers: {
-          'x-admin-token': 'e2e9e2ae1a4a7755111668aa55a22b59502f46eadd95705b0ad9f3882ef1a18d'
-        }
-      });
-      const data = await response.json();
-      setMembers(data.members);
-      setTotalPages(data.totalPages);
+      setMembers(data.members || []);
+      setTotalPages(data.totalPages || 1);
     } catch (error) {
       logger.error('Failed to fetch members:', error);
     } finally {
@@ -80,17 +74,25 @@ export default function AdminMembers() {
 
   const exportData = async () => {
     try {
-      const response = await fetch('/api/admin/members/export', {
-        headers: {
-          'x-admin-token': 'e2e9e2ae1a4a7755111668aa55a22b59502f46eadd95705b0ad9f3882ef1a18d'
+      const result = await exportMembersData();
+      if (result.success && result.data) {
+        // Convert base64 to blob and download
+        const byteCharacters = atob(result.data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
         }
-      });
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `members-export-${new Date().toISOString()}.csv`;
-      a.click();
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `members-export-${new Date().toISOString()}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      } else {
+        logger.error('Export failed:', result.error);
+      }
     } catch (error) {
       logger.error('Export failed:', error);
     }
@@ -98,17 +100,11 @@ export default function AdminMembers() {
 
   const handleMemberAction = async (memberId: string, action: 'suspend' | 'ban' | 'activate') => {
     try {
-      const response = await fetch(`/api/admin/members/${memberId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-token': 'e2e9e2ae1a4a7755111668aa55a22b59502f46eadd95705b0ad9f3882ef1a18d'
-        },
-        body: JSON.stringify({ action })
-      });
-
-      if (response.ok) {
-        fetchMembers(); // Refresh the list
+      const result = await updateMemberStatus(memberId, action);
+      if (result.success) {
+        loadMembers(); // Refresh the list
+      } else {
+        logger.error('Action failed:', result.error);
       }
     } catch (error) {
       logger.error('Action failed:', error);

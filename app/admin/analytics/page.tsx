@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Line, Bar, Pie, Funnel } from 'recharts';
 import logger from '../../../lib/logger';
+import { fetchAnalytics, exportAnalyticsReport } from '../actions';
 import {
   LineChart,
   BarChart,
@@ -75,22 +76,17 @@ export default function AnalyticsPage() {
   const [autoRefresh, setAutoRefresh] = useState(false);
 
   useEffect(() => {
-    fetchAnalytics();
+    loadAnalytics();
 
     if (autoRefresh) {
-      const interval = setInterval(fetchAnalytics, 30000); // Refresh every 30 seconds
+      const interval = setInterval(loadAnalytics, 30000); // Refresh every 30 seconds
       return () => clearInterval(interval);
     }
   }, [period, autoRefresh]);
 
-  const fetchAnalytics = async () => {
+  const loadAnalytics = async () => {
     try {
-      const response = await fetch(`/api/admin/analytics/comprehensive?period=${period}`, {
-        headers: {
-          'x-admin-token': 'e2e9e2ae1a4a7755111668aa55a22b59502f46eadd95705b0ad9f3882ef1a18d'
-        }
-      });
-      const data = await response.json();
+      const data = await fetchAnalytics(period);
       setAnalytics(data);
     } catch (error) {
       logger.error('Failed to fetch analytics:', error);
@@ -99,19 +95,27 @@ export default function AnalyticsPage() {
     }
   };
 
-  const exportReport = async () => {
+  const handleExportReport = async () => {
     try {
-      const response = await fetch(`/api/admin/analytics/export?period=${period}`, {
-        headers: {
-          'x-admin-token': 'e2e9e2ae1a4a7755111668aa55a22b59502f46eadd95705b0ad9f3882ef1a18d'
+      const result = await exportAnalyticsReport(period);
+      if (result.success && result.data) {
+        // Convert base64 to blob and download
+        const byteCharacters = atob(result.data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
         }
-      });
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `analytics-report-${period}-${new Date().toISOString()}.pdf`;
-      a.click();
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `analytics-report-${period}-${new Date().toISOString()}.pdf`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      } else {
+        logger.error('Export failed:', result.error);
+      }
     } catch (error) {
       logger.error('Export failed:', error);
     }
@@ -162,7 +166,7 @@ export default function AnalyticsPage() {
 
           {/* Export Button */}
           <button
-            onClick={exportReport}
+            onClick={handleExportReport}
             className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-white transition"
           >
             <Download className="w-4 h-4" />

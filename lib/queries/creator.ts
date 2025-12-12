@@ -1,3 +1,17 @@
+/**
+ * @deprecated This file is DEPRECATED. Use lib/data/centralized-queries.ts instead.
+ *
+ * Migration guide:
+ * - getCreatorRevenueMetrics() -> Use getCreatorRevenueStats() from lib/data/centralized-queries.ts
+ * - getTopPerformers() -> Use getCreatorTopPerformers() from lib/data/centralized-queries.ts
+ * - getCommunityStats() -> Use getCreatorRevenueStats() from lib/data/centralized-queries.ts
+ * - getMonthlyRevenueBreakdown() -> Use getCreatorRevenueStats() from lib/data/centralized-queries.ts
+ * - getCreatorDashboardData() -> Use getCompleteCreatorDashboardData() from lib/data/centralized-queries.ts
+ * - getTodayStats() -> Included in getCreatorRevenueStats() from lib/data/centralized-queries.ts
+ *
+ * This file will be removed in a future release once all usages are migrated.
+ */
+
 // lib/queries/creator.ts
 import { prisma } from '../db/prisma';
 import { subDays, startOfMonth, startOfYear, startOfDay } from 'date-fns';

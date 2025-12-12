@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Card } from '../../components/ui/card';
 import logger from '../../lib/logger';
+import { fetchAdminStats, fetchAdminActivity } from './actions';
 import {
 DollarSign,
   Users,
@@ -31,7 +32,7 @@ interface ActivityItem {
   type: 'payment' | 'member' | 'commission' | 'fraud';
   message: string;
   timestamp: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 export default function AdminDashboard() {
@@ -41,37 +42,22 @@ export default function AdminDashboard() {
   const [timeRange, setTimeRange] = useState('30d');
 
   useEffect(() => {
-    fetchStats();
-    fetchActivities();
+    loadData();
   }, [timeRange]);
 
-  const fetchStats = async () => {
+  const loadData = async () => {
     try {
-      const response = await fetch(`/api/admin/stats?range=${timeRange}`, {
-        headers: {
-          'x-admin-token': 'e2e9e2ae1a4a7755111668aa55a22b59502f46eadd95705b0ad9f3882ef1a18d'
-        }
-      });
-      const data = await response.json();
-      setStats(data);
+      // Use server actions instead of hardcoded tokens
+      const [statsData, activityData] = await Promise.all([
+        fetchAdminStats(timeRange),
+        fetchAdminActivity(10),
+      ]);
+      setStats(statsData);
+      setActivities(activityData || []);
     } catch (error) {
-      logger.error('Failed to fetch stats:', error);
+      logger.error('Failed to fetch admin data:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchActivities = async () => {
-    try {
-      const response = await fetch('/api/admin/activity?limit=10', {
-        headers: {
-          'x-admin-token': 'e2e9e2ae1a4a7755111668aa55a22b59502f46eadd95705b0ad9f3882ef1a18d'
-        }
-      });
-      const data = await response.json();
-      setActivities(data);
-    } catch (error) {
-      logger.error('Failed to fetch activities:', error);
     }
   };
 
