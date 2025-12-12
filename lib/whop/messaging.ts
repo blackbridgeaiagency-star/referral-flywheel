@@ -1,5 +1,6 @@
 // lib/whop/messaging.ts
 import { sendDirectMessage } from './api-client';
+import { sendGraphQLDirectMessage, sendWelcomeDM } from './graphql-messaging';
 import { sendEmail } from '../email/resend-client';
 import { render } from '@react-email/render';
 import WelcomeMemberEmail from '../../emails/welcome-member';
@@ -61,10 +62,24 @@ Unlock exclusive rewards as you grow:
 Ready to start? View your dashboard to see your referral link and track your progress!`;
 
   try {
-    logger.info(` Sending welcome message to ${member.username} (${member.userId})`);
+    logger.info(`📨 Sending welcome message to ${member.username} (${member.userId})`);
 
-    // Attempt to send via Whop DM
-    const result = await sendDirectMessage(
+    // PRIMARY: Try GraphQL DM first (correct method)
+    const graphqlResult = await sendWelcomeDM(
+      member.userId,
+      member.username,
+      creator.companyName,
+      referralLink
+    );
+
+    if (graphqlResult.success) {
+      logger.info(`✅ Welcome message sent via GraphQL DM to ${member.username}`);
+      return { success: true, method: 'graphql_dm' };
+    }
+
+    // FALLBACK: Try REST API (legacy, may not work)
+    logger.warn(`⚠️ GraphQL DM failed, trying REST API fallback...`);
+    const restResult = await sendDirectMessage(
       member.userId,
       message,
       {
@@ -73,31 +88,27 @@ Ready to start? View your dashboard to see your referral link and track your pro
       }
     );
 
-    if (result.success) {
-      logger.info(`Welcome message sent via Whop DM to ${member.username}`);
-      return { success: true, method: 'whop_dm' };
-    } else {
-      // DM failed - log referral code for manual retrieval
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://referral-flywheel.vercel.app';
-      logger.warn(` Whop DM failed for ${member.username}`);
-      logger.info(` REFERRAL CODE: ${member.referralCode}`);
-      logger.info(` REFERRAL LINK: ${appUrl}/r/${member.referralCode}`);
-      logger.info(` User can find their code in the dashboard at ${appUrl}/customer/${creator.companyId}`);
-
-      // Don't try email fallback for now (domain not verified)
-      // return await sendWelcomeEmail(member, creator);
-      return { success: false, method: 'logged_to_console' };
+    if (restResult.success) {
+      logger.info(`✅ Welcome message sent via REST DM to ${member.username}`);
+      return { success: true, method: 'rest_dm' };
     }
+
+    // Both failed - log referral code for manual retrieval
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://referral-flywheel.vercel.app';
+    logger.warn(`⚠️ All DM methods failed for ${member.username}`);
+    logger.info(`📋 REFERRAL CODE: ${member.referralCode}`);
+    logger.info(`🔗 REFERRAL LINK: ${appUrl}/r/${member.referralCode}`);
+    logger.info(`📱 User can find their code in the dashboard at ${appUrl}/customer/${creator.companyId}`);
+
+    return { success: false, method: 'logged_to_console' };
   } catch (error) {
     logger.error(`❌ Error sending welcome message to ${member.username}:`, error);
     // Log referral code for manual retrieval
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://referral-flywheel.vercel.app';
-    logger.info(` REFERRAL CODE: ${member.referralCode}`);
-    logger.info(` REFERRAL LINK: ${appUrl}/r/${member.referralCode}`);
-    logger.info(` User can find their code in the dashboard at ${appUrl}/customer/${creator.companyId}`);
+    logger.info(`📋 REFERRAL CODE: ${member.referralCode}`);
+    logger.info(`🔗 REFERRAL LINK: ${appUrl}/r/${member.referralCode}`);
+    logger.info(`📱 User can find their code in the dashboard at ${appUrl}/customer/${creator.companyId}`);
 
-    // Don't try email fallback for now (domain not verified)
-    // return await sendWelcomeEmail(member, creator);
     return { success: false, method: 'logged_to_console' };
   }
 }

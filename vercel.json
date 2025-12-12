@@ -18,6 +18,9 @@
     },
     "app/api/earnings/history/route.ts": {
       "maxDuration": 5
+    },
+    "app/api/cron/send-notifications/route.ts": {
+      "maxDuration": 60
     }
   },
   "headers": [
@@ -59,6 +62,10 @@
     {
       "path": "/api/cron/backup-database",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/send-notifications",
+      "schedule": "0 9 * * *"
     }
   ]
 }

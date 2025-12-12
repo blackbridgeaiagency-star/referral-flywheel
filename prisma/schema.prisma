@@ -141,6 +141,19 @@ model Member {
   customRewardMessage       String? // e.g., "#3 This Week - iPhone 15 Pro!"
   customRewardTimeframeRank Int? // Rank in current timeframe (1-10)
 
+  // CUSTOM COMMISSION RATES (Creator-set overrides for VIP affiliates)
+  customCommissionRate Float?    // Override rate (0.10 to 0.25)
+  customRateSetBy      String?   // Creator ID who set it
+  customRateSetAt      DateTime? // When the custom rate was set
+  customRateReason     String?   // Why they got special rate
+
+  // DAILY STREAK TRACKING
+  currentStreak     Int       @default(0) // Consecutive days with referrals
+  longestStreak     Int       @default(0) // Best streak ever achieved
+  lastReferralDate  DateTime? // Date of most recent referral (for streak calculation)
+  streakUpdatedAt   DateTime? // When streak was last calculated
+  lastStreakNotification Int  @default(0) // Last streak milestone notified (to avoid spam)
+
   // METADATA
   welcomeMessageSent Boolean   @default(false)
   lastActive         DateTime?
@@ -241,10 +254,15 @@ model Commission {
   billingPeriod String? // "monthly" | "annual" | "lifetime" | null (for one-time)
   monthlyValue  Float? // Normalized monthly value (annual/12, monthly=same, lifetime=one-time)
 
-  // STATUS TRACKING
+  // STATUS TRACKING (Member payout)
   status        String    @default("pending") // pending | paid | failed | refunded | partial_refund
   paidAt        DateTime?
   failureReason String?
+
+  // PLATFORM SHARE COLLECTION (Auto-collected 20%)
+  platformCollected   Boolean   @default(false) // Has platform share been collected?
+  platformTransferId  String?   // Whop transfer ID for platform collection
+  platformCollectedAt DateTime? // When platform share was collected
 
   // INVOICE TRACKING (Revenue Share System)
   platformFeeInvoiced Boolean @default(false) // Has this sale been invoiced?

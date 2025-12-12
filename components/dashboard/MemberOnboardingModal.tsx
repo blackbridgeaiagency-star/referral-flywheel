@@ -9,13 +9,15 @@ interface MemberOnboardingModalProps {
   creatorName: string;
   referralLink: string;
   memberId: string;
+  forceShow?: boolean; // When true, shows modal even if user has seen it before (e.g., from program launch DM)
 }
 
 export function MemberOnboardingModal({
   memberName,
   creatorName,
   referralLink,
-  memberId
+  memberId,
+  forceShow = false
 }: MemberOnboardingModalProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -25,14 +27,14 @@ export function MemberOnboardingModal({
     // Check if user has seen the onboarding before
     const hasSeenOnboarding = localStorage.getItem(`member_onboarding_completed_${memberId}`);
 
-    // Show the modal after a short delay for better UX
-    if (!hasSeenOnboarding) {
+    // Show modal if: first time visitor OR forceShow is true (from ?welcome=true link)
+    if (!hasSeenOnboarding || forceShow) {
       const timer = setTimeout(() => {
         setIsVisible(true);
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [memberId]);
+  }, [memberId, forceShow]);
 
   const handleSkip = () => {
     // Just close the modal, don't save to localStorage

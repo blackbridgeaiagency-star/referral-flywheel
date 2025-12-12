@@ -1,6 +1,7 @@
 // app/customer/[experienceId]/page.tsx
 import { prisma } from '../../../lib/db/prisma';
 import { CompactReferralLinkCard } from '../../../components/dashboard/CompactReferralLinkCard';
+import { ReferralUrlGenerator } from '../../../components/dashboard/ReferralUrlGenerator';
 import { CustomCompetitionBanner } from '../../../components/dashboard/CustomCompetitionBanner';
 import { StatsGrid } from '../../../components/dashboard/StatsGrid';
 import { RewardProgress } from '../../../components/dashboard/RewardProgress';
@@ -10,6 +11,7 @@ import { MemberOnboardingModal } from '../../../components/dashboard/MemberOnboa
 import { WhopUsernameSetup } from '../../../components/dashboard/WhopUsernameSetup';
 import { EarningsCalculator } from '../../../components/dashboard/EarningsCalculator';
 import { CommissionTierBadge } from '../../../components/dashboard/TierProgressCard';
+import { StreakDisplay, StreakCard } from '../../../components/dashboard/StreakDisplay';
 import { formatCurrency } from '../../../lib/utils/commission';
 import { getCompleteMemberDashboardData } from '../../../lib/data/centralized-queries';
 import { getCommissionTier } from '../../../lib/utils/tiered-commission';
@@ -23,10 +25,14 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function MemberDashboard({
-  params
+  params,
+  searchParams
 }: {
   params: { experienceId: string }
+  searchParams: { welcome?: string }
 }) {
+  // Check if ?welcome=true is in URL (from program launch DM)
+  const forceShowOnboarding = searchParams.welcome === 'true';
   try {
     // ========================================
     // SIMPLIFIED AUTHENTICATION
@@ -151,7 +157,7 @@ export default async function MemberDashboard({
 
     return (
       <div className="min-h-screen bg-[#0F0F0F] text-white">
-      {/* Header with integrated Leaderboard button */}
+      {/* Header with integrated Leaderboard button and streak */}
       <header className="border-b border-gray-800 bg-[#1A1A1A]/50 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
@@ -165,9 +171,17 @@ export default async function MemberDashboard({
 
             {/* Header Text */}
             <div className="flex-1">
-              <h1 className="text-xl sm:text-2xl font-bold">
-                Welcome to {creator.companyName}'s Community
-              </h1>
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-bold">
+                  Welcome to {creator.companyName}'s Community
+                </h1>
+                {/* Streak Display - Compact badge near title */}
+                <StreakDisplay
+                  currentStreak={data.currentStreak}
+                  longestStreak={data.longestStreak}
+                  size="sm"
+                />
+              </div>
               <p className="text-gray-400 text-xs sm:text-sm">
                 Earn 10% lifetime commission on every referral
               </p>
@@ -177,12 +191,13 @@ export default async function MemberDashboard({
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
-        {/* Member Onboarding Modal - Shows as popup for new members */}
+        {/* Member Onboarding Modal - Shows as popup for new members or when ?welcome=true */}
         <MemberOnboardingModal
           memberName={data.username}
           creatorName={creator.companyName}
           referralLink={referralUrl}
           memberId={data.memberId}
+          forceShow={forceShowOnboarding}
         />
 
         {/* Whop Username Setup - Required for affiliate link to work (Strategy B) */}
@@ -194,8 +209,25 @@ export default async function MemberDashboard({
           />
         )}
 
-        {/* Compact Referral Link Card - MOVED TO TOP FOR PROMINENCE */}
-        <CompactReferralLinkCard code={data.referralCode} url={referralUrl} memberId={data.memberId} />
+        {/* Streak Card - Compact daily referral streak (above referral link) */}
+        <StreakCard
+          currentStreak={data.currentStreak}
+          longestStreak={data.longestStreak}
+          totalReferred={data.totalReferred}
+          tierThresholds={{
+            tier1Count: creator.tier1Count,
+            tier2Count: creator.tier2Count,
+            tier3Count: creator.tier3Count,
+            tier4Count: creator.tier4Count,
+          }}
+        />
+
+        {/* Enhanced Referral URL Generator - With sharing options and stats */}
+        <ReferralUrlGenerator
+          memberId={data.memberId}
+          referralCode={data.referralCode}
+          whopUsername={data.whopUsername}
+        />
 
         {/* Custom Competition Banner - Shows when creator enables competition */}
         <CustomCompetitionBanner
@@ -246,7 +278,7 @@ export default async function MemberDashboard({
           communityName={creator.companyName}
         />
 
-        {/* Reward Progress */}
+        {/* Reward Progress - Creator-defined reward tiers */}
         <RewardProgress
           currentReferrals={data.totalReferred}
           tiers={rewardTiers}

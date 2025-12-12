@@ -8,6 +8,8 @@ import { RewardManagementForm } from '../../../components/dashboard/RewardManage
 import { CreatorOnboardingBanner } from '../../../components/dashboard/CreatorOnboardingBanner';
 import { PartnershipImpactCard } from '../../../components/creator/PartnershipImpactCard';
 import { InvoiceHistory } from '../../../components/creator/InvoiceHistory';
+import { CustomRateManager } from '../../../components/dashboard/CustomRateManager';
+import { CreatorAnnouncementForm } from '../../../components/dashboard/CreatorAnnouncementForm';
 import { formatCurrency } from '../../../lib/utils/commission';
 import { getWhopContext, canAccessCreatorDashboard } from '../../../lib/whop/simple-auth';
 import logger from '../../../lib/logger';
@@ -277,6 +279,27 @@ export default async function CreatorDashboardPage({ params }: CreatorDashboardP
                 customReward4th={creator.customReward4th}
                 customReward5th={creator.customReward5th}
                 customReward6to10={creator.customReward6to10}
+              />
+            </Suspense>
+          </div>
+
+          {/* Broadcast Announcement - Send messages to all members */}
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold text-white">Community Announcements</h2>
+            <p className="text-gray-400 text-sm">
+              Send push notifications and direct messages to all your members at once.
+            </p>
+            <Suspense fallback={<LoadingCard />}>
+              <CreatorAnnouncementForm creatorId={creator.id} />
+            </Suspense>
+          </div>
+
+          {/* Custom Commission Rates - VIP affiliate management (compact) */}
+          <div className="space-y-2">
+            <Suspense fallback={<LoadingCard />}>
+              <CustomRateManager
+                creatorId={creator.id}
+                companyId={experienceId}
               />
             </Suspense>
           </div>

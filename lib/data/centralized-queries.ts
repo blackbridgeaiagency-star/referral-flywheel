@@ -1145,6 +1145,10 @@ export async function getCompleteMemberDashboardData(membershipId: string) {
         id: true,
         creatorId: true,
         whopUsername: true, // Strategy B: For affiliate link setup
+        // Streak tracking fields
+        currentStreak: true,
+        longestStreak: true,
+        lastReferralDate: true,
       },
     });
 
@@ -1171,6 +1175,10 @@ export async function getCompleteMemberDashboardData(membershipId: string) {
       earningsHistory,
       referrals,
       whopUsername: member.whopUsername, // Strategy B: Include for dashboard
+      // Streak data for dashboard display
+      currentStreak: member.currentStreak || 0,
+      longestStreak: member.longestStreak || 0,
+      lastReferralDate: member.lastReferralDate,
     };
   } catch (error) {
     logger.error('❌ Error fetching complete member dashboard data:', error);

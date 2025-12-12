@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db/prisma';
 import logger from '../../../../lib/logger';
+import { sendProgramLaunchDM, notifyProgramLaunch } from '../../../../lib/whop/graphql-messaging';
 
 
 /**
@@ -75,6 +76,86 @@ export async function POST(request: NextRequest) {
 
     logger.info(`Onboarding completed for ${updatedCreator.companyName}`);
 
+    // ========================================
+    // SEND PROGRAM LAUNCH DMs TO ALL MEMBERS
+    // ========================================
+    // This notifies all existing members that the referral program is live
+    // and invites them to start earning by sharing their referral links
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://referral-flywheel.vercel.app';
+
+    // Get all members for this creator
+    const members = await prisma.member.findMany({
+      where: { creatorId: updatedCreator.id },
+      select: {
+        id: true,
+        userId: true,
+        username: true,
+        membershipId: true,
+      },
+    });
+
+    logger.info(`Sending program launch DMs to ${members.length} members...`);
+
+    let dmsSent = 0;
+    let dmsFailed = 0;
+
+    // Send DMs in parallel batches to avoid overwhelming the API
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < members.length; i += BATCH_SIZE) {
+      const batch = members.slice(i, i + BATCH_SIZE);
+
+      await Promise.all(
+        batch.map(async (member) => {
+          try {
+            if (!member.userId) {
+              logger.warn(`Skipping member ${member.username} - no userId`);
+              return;
+            }
+
+            // Dashboard link includes membershipId to trigger onboarding wizard
+            const dashboardLink = `${appUrl}/customer/${member.membershipId}?welcome=true`;
+
+            // Send DM
+            const dmResult = await sendProgramLaunchDM(
+              member.userId,
+              member.username,
+              updatedCreator.companyName,
+              dashboardLink,
+              '10%' // Default starter commission rate
+            );
+
+            if (dmResult.success) {
+              dmsSent++;
+              logger.debug(`Program launch DM sent to ${member.username}`);
+            } else {
+              dmsFailed++;
+              logger.warn(`Failed to send DM to ${member.username}: ${dmResult.error}`);
+            }
+
+            // Also send push notification
+            await notifyProgramLaunch(
+              updatedCreator.companyId,
+              member.userId,
+              updatedCreator.companyName,
+              dashboardLink
+            ).catch(err => logger.warn(`Push notification failed for ${member.username}:`, err));
+
+          } catch (err) {
+            dmsFailed++;
+            logger.error(`Error sending DM to ${member.username}:`, err);
+          }
+        })
+      );
+
+      // Small delay between batches to be nice to the API
+      if (i + BATCH_SIZE < members.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    logger.info(`Program launch DMs complete: ${dmsSent} sent, ${dmsFailed} failed`);
+
     return NextResponse.json({
       success: true,
       message: 'Onboarding completed successfully',
@@ -82,6 +163,11 @@ export async function POST(request: NextRequest) {
         id: updatedCreator.id,
         companyName: updatedCreator.companyName,
         onboardingCompleted: updatedCreator.onboardingCompleted,
+      },
+      notifications: {
+        totalMembers: members.length,
+        dmsSent,
+        dmsFailed,
       },
     });
   } catch (error) {

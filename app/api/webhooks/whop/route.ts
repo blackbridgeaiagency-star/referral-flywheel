@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { prisma } from '../../../../lib/db/prisma';
 import { generateReferralCode } from '../../../../lib/utils/referral-code';
 import { calculateCommission } from '../../../../lib/utils/commission';
-import { calculateTieredCommission } from '../../../../lib/utils/tiered-commission';
+import { calculateTieredCommission, getTierInfo } from '../../../../lib/utils/tiered-commission';
 import { sendWelcomeMessage } from '../../../../lib/whop/messaging';
 import { withRetry } from '../../../../lib/utils/webhook-retry';
 import { withRateLimit } from '../../../../lib/security/rate-limit-utils';
@@ -16,6 +16,25 @@ import {
   normalizeBillingPeriod,
   calculateMonthlyValue,
 } from '../../../../lib/utils/billing';
+// NEW: Push notifications for key events
+import {
+  notifyWelcome,
+  notifyCommissionEarned,
+  notifyTierUpgrade,
+  notifyFirstReferral,
+  notifyMilestone,
+  notifyPaymentProcessed,
+} from '../../../../lib/whop/notifications';
+// NEW: GraphQL DMs for personal messages
+import {
+  sendTierUpgradeDM,
+  sendFirstReferralBonusDM,
+  sendCommissionEarnedDM,
+  sendMilestoneDM,
+  sendPaymentProcessedDM,
+} from '../../../../lib/whop/graphql-messaging';
+// NEW: Transfers API for automated payouts
+import { payCommission as payCommissionTransfer, checkPayoutEligibility } from '../../../../lib/whop/transfers';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -370,12 +389,17 @@ async function handleMembershipWentValid(data: any, webhookEventId: string) {
     },
   });
 
-  // Send welcome message
+  // Send welcome message via DM
   await sendWelcomeMessage(member, creator);
   await prisma.member.update({
     where: { id: member.id },
     data: { welcomeMessageSent: true },
   });
+
+  // NEW: Send push notification for welcome (non-blocking)
+  notifyWelcome(companyId, userId, member.username).catch(err =>
+    logger.error('Failed to send welcome push notification:', err)
+  );
 
   return {
     ok: true,
@@ -435,11 +459,15 @@ async function handlePaymentSucceeded(data: any, webhookEventId: string) {
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // NEW MEMBER from payment (fallback if membership.went_valid didn't fire)
+  // Auto-fetch ALL details from Whop API (Strategy B)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   logger.info('Creating member from payment webhook (fallback)...');
 
-  // Fetch affiliate info from Whop API (Strategy B)
-  const affiliateUsername = await fetchAffiliateUsername(data.membership_id);
+  // Fetch FULL membership details from Whop API (Strategy B)
+  // This gets both: who referred them AND their own Whop username
+  const membershipDetails = await fetchMembershipDetails(data.membership_id);
+  const affiliateUsername = membershipDetails.affiliateUsername;
+  const autoFetchedWhopUsername = membershipDetails.memberUsername;
 
   // Find referrer
   let referrer = null;
@@ -478,20 +506,32 @@ async function handlePaymentSucceeded(data: any, webhookEventId: string) {
   const subscriptionPrice = data.final_amount ? data.final_amount / 100 : 49.99;
   const memberMonthlyValue = calculateMonthlyValue(subscriptionPrice, billingPeriod as any);
 
+  // Prefer auto-fetched username from API over webhook data
   let username = 'user';
-  if (data.username) {
+  if (autoFetchedWhopUsername) {
+    username = autoFetchedWhopUsername;
+  } else if (data.username) {
     username = data.username;
   } else if (data.email) {
     username = data.email.split('@')[0];
+  }
+
+  // whopUsername is CRITICAL for Strategy B - auto-fetched from Whop API!
+  const whopUsername = autoFetchedWhopUsername || data.username || null;
+
+  if (whopUsername) {
+    logger.info(`Auto-captured Whop username (fallback): ${whopUsername}`);
+  } else {
+    logger.warn(`Could not auto-fetch Whop username for ${data.membership_id}`);
   }
 
   const newMember = await prisma.member.create({
     data: {
       userId: data.user_id || `user_${Date.now()}`,
       membershipId: data.membership_id,
-      email: data.email || 'temp@whop.com',
+      email: membershipDetails.memberEmail || data.email || 'temp@whop.com',
       username,
-      whopUsername: data.username || null,
+      whopUsername, // AUTO-FETCHED from Whop API - no manual entry needed!
       referralCode,
       referredBy: referredByCode,
       whopAffiliateUsername: affiliateUsername,
@@ -659,7 +699,8 @@ async function processCommission({
   const isFirstReferral = paymentType === 'initial' && referrer.totalReferred === 0;
 
   // Create commission record with tier info
-  await prisma.commission.create({
+  // Status starts as 'pending_payout' - will be updated after transfer attempt
+  const commission = await prisma.commission.create({
     data: {
       whopPaymentId: paymentId,
       whopMembershipId: membershipId,
@@ -668,15 +709,108 @@ async function processCommission({
       creatorShare,
       platformShare,
       paymentType,
-      status: 'paid',
-      paidAt: new Date(),
+      status: 'pending_payout',
       memberId: referrer.id,
       creatorId,
       productType,
       billingPeriod,
       monthlyValue,
+      appliedMemberRate,
+      appliedPlatformRate: platformShare / saleAmount,
+      appliedTier,
     },
   });
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // AUTO-PAYOUT: Attempt to pay commission via Whop Transfers API
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const creator = await prisma.creator.findUnique({ where: { id: creatorId } });
+  const companyId = creator?.companyId;
+
+  if (companyId && referrer.userId && memberShare > 0) {
+    logger.info(`Attempting auto-payout for commission ${commission.id}: $${memberShare.toFixed(2)}`);
+
+    // Try to pay the commission
+    const payoutResult = await payCommissionTransfer(
+      commission.id,
+      memberShare,
+      referrer.userId,
+      companyId
+    );
+
+    if (payoutResult.success) {
+      // Update commission status to 'paid'
+      await prisma.commission.update({
+        where: { id: commission.id },
+        data: {
+          status: 'paid',
+          paidAt: new Date(),
+        },
+      });
+      logger.info(`Commission ${commission.id} auto-paid successfully (Transfer: ${payoutResult.transferId})`);
+
+      // Send payment processed notification (Push + DM)
+      const paymentAmount = `$${memberShare.toFixed(2)}`;
+      notifyPaymentProcessed(companyId, referrer.userId, paymentAmount, 'Whop Balance').catch(err =>
+        logger.error('Failed to send payment processed notification:', err)
+      );
+      sendPaymentProcessedDM(referrer.userId, referrer.username, paymentAmount, 'Whop Balance').catch(err =>
+        logger.error('Failed to send payment processed DM:', err)
+      );
+    } else {
+      // Keep status as 'pending_payout' for manual retry or later processing
+      logger.warn(`Auto-payout failed for commission ${commission.id}: ${payoutResult.error}`);
+
+      // Log specific error codes that need attention
+      if (payoutResult.errorCode === 'VALIDATION_ERROR') {
+        logger.warn(`User ${referrer.userId} may not have payout method configured`);
+      }
+    }
+  } else {
+    // Cannot auto-pay - missing required info
+    if (!companyId) {
+      logger.warn(`Cannot auto-pay commission ${commission.id}: Missing company ID`);
+    }
+    if (!referrer.userId) {
+      logger.warn(`Cannot auto-pay commission ${commission.id}: Missing referrer user ID`);
+    }
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // AUTO-COLLECT PLATFORM SHARE (20%) via Whop Transfers API
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const PLATFORM_USER_ID = process.env.PLATFORM_WHOP_USER_ID;
+
+  if (companyId && PLATFORM_USER_ID && platformShare > 0) {
+    logger.info(`Attempting platform share collection for commission ${commission.id}: $${platformShare.toFixed(2)}`);
+
+    // Use different idempotence key for platform collection
+    const platformPayoutResult = await payCommissionTransfer(
+      `platform_${commission.id}`,  // Different key from member payout
+      platformShare,
+      PLATFORM_USER_ID,
+      companyId
+    );
+
+    if (platformPayoutResult.success) {
+      // Update commission with platform collection status
+      await prisma.commission.update({
+        where: { id: commission.id },
+        data: {
+          platformCollected: true,
+          platformTransferId: platformPayoutResult.transferId,
+          platformCollectedAt: new Date(),
+        },
+      });
+      logger.info(`Platform share collected for commission ${commission.id}: $${platformShare.toFixed(2)} (Transfer: ${platformPayoutResult.transferId})`);
+    } else {
+      logger.warn(`Platform share collection failed for commission ${commission.id}: ${platformPayoutResult.error}`);
+      // Platform collection failures are logged but don't block the process
+      // Can be retried later via admin tools or cron job
+    }
+  } else if (!PLATFORM_USER_ID) {
+    logger.warn(`Cannot collect platform share: PLATFORM_WHOP_USER_ID not configured`);
+  }
 
   // Update referrer stats and creator stats
   const updateData: any = {
@@ -709,8 +843,81 @@ async function processCommission({
   const tierEmoji = appliedTier === 'elite' ? '👑' : appliedTier === 'ambassador' ? '🌟' : '⭐';
   logger.info(`${tierEmoji} Commission processed: $${memberShare.toFixed(2)} (${(appliedMemberRate * 100).toFixed(0)}% ${appliedTier}) -> ${referrer.referralCode} (${paymentType})`);
 
-  if (isFirstReferral) {
-    logger.info(`🎉 FIRST REFERRAL SUCCESS for ${referrer.referralCode}!`);
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // NEW: PUSH NOTIFICATIONS & DMs FOR KEY EVENTS
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  // companyId already fetched above for auto-payout
+
+  if (companyId && referrer.userId) {
+    // 1. Commission earned notification (Push + DM)
+    const formattedAmount = `$${memberShare.toFixed(2)}`;
+    notifyCommissionEarned(companyId, referrer.userId, formattedAmount, 'a new member').catch(err =>
+      logger.error('Failed to send commission notification:', err)
+    );
+    // Also send DM for commission earned (more personal)
+    sendCommissionEarnedDM(referrer.userId, referrer.username, formattedAmount, 'a new member').catch(err =>
+      logger.error('Failed to send commission DM:', err)
+    );
+
+    // 2. First referral notification (Push + DM)
+    if (isFirstReferral) {
+      logger.info(`🎉 FIRST REFERRAL SUCCESS for ${referrer.referralCode}!`);
+      notifyFirstReferral(companyId, referrer.userId, referrer.username).catch(err =>
+        logger.error('Failed to send first referral notification:', err)
+      );
+      // Also send DM for first referral bonus
+      sendFirstReferralBonusDM(referrer.userId, referrer.username, formattedAmount).catch(err =>
+        logger.error('Failed to send first referral DM:', err)
+      );
+    }
+
+    // 3. Check for tier upgrade (Push + DM)
+    const newTotalReferrals = (referrer.totalReferred || 0) + (paymentType === 'initial' ? 1 : 0);
+    const previousTier = getTierInfo(referrer.totalReferred || 0);
+    const newTier = getTierInfo(newTotalReferrals);
+
+    if (newTier.tierName !== previousTier.tierName) {
+      // Tier upgrade detected!
+      logger.info(`🎊 TIER UPGRADE: ${referrer.referralCode} upgraded to ${newTier.displayName}!`);
+      notifyTierUpgrade(companyId, referrer.userId, newTier.displayName, newTier.rateFormatted).catch(err =>
+        logger.error('Failed to send tier upgrade notification:', err)
+      );
+      // Also send DM for tier upgrade
+      sendTierUpgradeDM(referrer.userId, referrer.username, newTier.displayName, newTier.rateFormatted, newTotalReferrals).catch(err =>
+        logger.error('Failed to send tier upgrade DM:', err)
+      );
+    }
+
+    // 4. Milestone notifications (Push + DM) - 10, 25, 50, 100, 250, 500, 1000 referrals
+    const milestones = [10, 25, 50, 100, 250, 500, 1000];
+    const nextMilestones: Record<number, number | undefined> = {
+      10: 25, 25: 50, 50: 100, 100: 250, 250: 500, 500: 1000, 1000: undefined
+    };
+    for (const milestone of milestones) {
+      if (newTotalReferrals === milestone) {
+        logger.info(`🏆 MILESTONE REACHED: ${referrer.referralCode} hit ${milestone} referrals!`);
+        // Push notification
+        notifyMilestone(companyId, referrer.userId, milestone).catch(err =>
+          logger.error(`Failed to send ${milestone} milestone notification:`, err)
+        );
+        // DM with more detail
+        sendMilestoneDM(
+          referrer.userId,
+          referrer.username,
+          milestone,
+          undefined, // reward - could fetch from creator settings
+          nextMilestones[milestone]
+        ).catch(err =>
+          logger.error(`Failed to send ${milestone} milestone DM:`, err)
+        );
+        break;
+      }
+    }
+  } else {
+    if (isFirstReferral) {
+      logger.info(`🎉 FIRST REFERRAL SUCCESS for ${referrer.referralCode}!`);
+    }
   }
 
   // Update rankings (non-blocking)

@@ -336,3 +336,25 @@ export function getTierRequirements(tierName: CommissionTierName): {
 
   return requirements[tierName];
 }
+
+/**
+ * Get comprehensive tier info for display and notifications
+ */
+export function getTierInfo(totalReferrals: number): {
+  tierName: CommissionTierName;
+  displayName: string;
+  icon: string;
+  rate: number;
+  rateFormatted: string;
+} {
+  const tier = getCommissionTier(totalReferrals);
+  const display = TIER_DISPLAY[tier.tierName];
+
+  return {
+    tierName: tier.tierName,
+    displayName: display.name,
+    icon: display.icon,
+    rate: tier.memberRate,
+    rateFormatted: formatRateAsPercent(tier.memberRate),
+  };
+}
