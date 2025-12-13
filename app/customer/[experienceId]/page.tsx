@@ -17,9 +17,9 @@ import { getCompleteMemberDashboardData } from '../../../lib/data/centralized-qu
 import { getCommissionTier } from '../../../lib/utils/tiered-commission';
 import { notFound } from 'next/navigation';
 import { getWhopContext, canAccessMemberDashboard } from '../../../lib/whop/simple-auth';
-import { getMembershipsByExperience, getCurrentUserMemberships, getExperience } from '../../../lib/whop';
-import { headers } from 'next/headers';
-import { getToken } from '@whop-apps/sdk';
+import { getExperienceById, findMembershipByExperienceAndUser, listMembershipsByCompany, getUserById, getMembershipById } from '../../../lib/whop';
+import { createCreatorWithWhopData } from '../../../lib/whop/sync-creator';
+import { generateReferralCode } from '../../../lib/utils/referral-code';
 import logger from '../../../lib/logger';
 
 
@@ -49,11 +49,10 @@ export default async function MemberDashboard({
 
     // ========================================
     // P0 FIX: Whop passes experienceId (exp_*), NOT membershipId (mem_*)
-    // We use FIVE strategies to find the member
+    // We use FOUR strategies to find the member, using official @whop/sdk
     // ========================================
 
     let member: { id: string; membershipId: string } | null = null;
-    const headersList = headers();
 
     // Strategy 1: If URL param is already a membershipId (mem_*), use it directly
     if (params.experienceId.startsWith('mem_')) {
@@ -66,7 +65,7 @@ export default async function MemberDashboard({
       }
     }
 
-    // Strategy 2: Look up by userId from JWT token
+    // Strategy 2: Look up by userId from JWT token (most common case)
     if (!member && authenticatedUserId) {
       member = await prisma.member.findUnique({
         where: { userId: authenticatedUserId },
@@ -77,93 +76,42 @@ export default async function MemberDashboard({
       }
     }
 
-    // Strategy 3: Use user token to call /v5/me/memberships (THE CORRECT WAY)
-    // This uses the user's own JWT token to get THEIR memberships
-    if (!member) {
-      logger.info(`[AUTH] Strategy 3: Trying /v5/me/memberships with user token`);
+    // Strategy 3: Use @whop/sdk to find membership via experience → company → memberships
+    if (!member && params.experienceId.startsWith('exp_') && authenticatedUserId) {
+      logger.info(`[AUTH] Strategy 3: Using @whop/sdk to find membership`);
       try {
-        const userToken = getToken({ headers: headersList, dontThrow: true });
-        if (userToken) {
-          const userMemberships = await getCurrentUserMemberships(userToken);
-          logger.info(`[AUTH] User has ${userMemberships.length} total memberships`);
+        const whopMembership = await findMembershipByExperienceAndUser(
+          params.experienceId,
+          authenticatedUserId
+        );
 
-          // If we have an experienceId, get its product_id to filter memberships
-          if (params.experienceId.startsWith('exp_')) {
-            const experience = await getExperience(params.experienceId);
-            if (experience?.product_id) {
-              logger.info(`[AUTH] Experience ${params.experienceId} belongs to product ${experience.product_id}`);
+        if (whopMembership) {
+          member = await prisma.member.findUnique({
+            where: { membershipId: whopMembership.id },
+            select: { id: true, membershipId: true }
+          });
 
-              // Find membership for this product
-              const matchingMembership = userMemberships.find((m: any) =>
-                m.product?.id === experience.product_id || m.product_id === experience.product_id
-              );
-
-              if (matchingMembership) {
-                member = await prisma.member.findUnique({
-                  where: { membershipId: matchingMembership.id },
-                  select: { id: true, membershipId: true }
-                });
-                if (member) {
-                  logger.info(`[AUTH] ✅ Strategy 3: Found member by /me/memberships + product match: ${matchingMembership.id}`);
-                }
-              }
-            }
+          if (member) {
+            logger.info(`[AUTH] ✅ Strategy 3: Found member via SDK: ${whopMembership.id}`);
           }
-
-          // If still no match, try each membership from /me/memberships
-          if (!member && userMemberships.length > 0) {
-            for (const whopMembership of userMemberships) {
-              member = await prisma.member.findUnique({
-                where: { membershipId: whopMembership.id },
-                select: { id: true, membershipId: true }
-              });
-              if (member) {
-                logger.info(`[AUTH] ✅ Strategy 3: Found member by /me/memberships scan: ${whopMembership.id}`);
-                break;
-              }
-            }
-          }
-        } else {
-          logger.warn(`[AUTH] Strategy 3: No user token available`);
         }
       } catch (error) {
         logger.error(`[AUTH] Strategy 3 failed:`, error);
       }
     }
 
-    // Strategy 4: Use APP API to query /v5/app/memberships with experience_id + user_id
+    // Strategy 4: Get experience's company_id and find member by creator association
+    // This is the fallback using our database relationships
     if (!member && params.experienceId.startsWith('exp_')) {
-      logger.info(`[AUTH] Strategy 4: Trying /v5/app/memberships with experience_id`);
-
-      const memberships = await getMembershipsByExperience(
-        params.experienceId,
-        authenticatedUserId || undefined
-      );
-
-      logger.info(`[AUTH] App API returned ${memberships.length} memberships`);
-
-      if (memberships.length > 0) {
-        const whopMembership = memberships[0];
-        member = await prisma.member.findUnique({
-          where: { membershipId: whopMembership.id },
-          select: { id: true, membershipId: true }
-        });
-
-        if (member) {
-          logger.info(`[AUTH] ✅ Strategy 4: Found member by /app/memberships: ${whopMembership.id}`);
-        }
-      }
-    }
-
-    // Strategy 5: Get experience's company_id and find member by creator association
-    if (!member && params.experienceId.startsWith('exp_')) {
-      logger.info(`[AUTH] Strategy 5: Trying experience -> company -> creator lookup`);
+      logger.info(`[AUTH] Strategy 4: Trying experience -> company -> creator lookup`);
       try {
-        const experience = await getExperience(params.experienceId);
-        if (experience?.company_id && authenticatedUserId) {
+        const experience = await getExperienceById(params.experienceId);
+        // SDK returns nested company object: experience.company.id
+        const companyId = experience?.company?.id;
+        if (companyId && authenticatedUserId) {
           // Find the creator for this company
           const creator = await prisma.creator.findUnique({
-            where: { companyId: experience.company_id },
+            where: { companyId: companyId },
             select: { id: true }
           });
 
@@ -178,28 +126,125 @@ export default async function MemberDashboard({
             });
 
             if (member) {
-              logger.info(`[AUTH] ✅ Strategy 5: Found member by userId + creatorId: ${member.membershipId}`);
+              logger.info(`[AUTH] ✅ Strategy 4: Found member by userId + creatorId: ${member.membershipId}`);
             }
           }
         }
       } catch (error) {
-        logger.error(`[AUTH] Strategy 5 failed:`, error);
+        logger.error(`[AUTH] Strategy 4 failed:`, error);
       }
     }
 
-    // If member doesn't exist, we need to create them
-    // SECURITY: Member must be created via webhook, not auto-created here
-    // This prevents the dangerous "most recent creator" fallback vulnerability
+    // ========================================
+    // STRATEGY 5: Auto-create member on page load
+    // If user has valid Whop access but no local member record,
+    // create one automatically. This handles cases where:
+    // - Webhooks didn't fire (common during initial setup)
+    // - Webhook processing failed
+    // - User was manually added by creator
+    // ========================================
+    if (!member && canAccess && authenticatedUserId && params.experienceId.startsWith('exp_')) {
+      logger.info(`[AUTH] Strategy 5: Attempting auto-create member for authenticated user`);
+
+      try {
+        // Get experience to find company
+        const experience = await getExperienceById(params.experienceId);
+        const companyId = experience?.company?.id;
+
+        if (companyId) {
+          // Find or create the creator for this company
+          let creator = await prisma.creator.findUnique({
+            where: { companyId },
+            select: { id: true, companyName: true }
+          });
+
+          if (!creator) {
+            // Auto-create creator (just like seller dashboard does)
+            logger.info(`[AUTH] Auto-creating creator for company: ${companyId}`);
+            try {
+              const creatorData = await createCreatorWithWhopData({
+                companyId,
+                productId: companyId, // Will be updated later if needed
+              });
+              creator = await prisma.creator.findUnique({
+                where: { id: creatorData.creatorId },
+                select: { id: true, companyName: true }
+              });
+            } catch (createError) {
+              logger.error(`[AUTH] Failed to auto-create creator:`, createError);
+            }
+          }
+
+          if (creator) {
+            // Get the user's membership from Whop
+            const whopMembership = await findMembershipByExperienceAndUser(
+              params.experienceId,
+              authenticatedUserId
+            );
+
+            if (whopMembership) {
+              // Get user details from Whop for username
+              let username = 'Member';
+              let whopUsername: string | null = null;
+              try {
+                const whopUser = await getUserById(authenticatedUserId);
+                if (whopUser) {
+                  username = whopUser.username || whopUser.name || 'Member';
+                  whopUsername = whopUser.username || null;
+                }
+              } catch (userError) {
+                logger.warn(`[AUTH] Could not fetch user details:`, userError);
+              }
+
+              // Generate unique referral code
+              const referralCode = generateReferralCode();
+
+              // Create the member record
+              const newMember = await prisma.member.create({
+                data: {
+                  userId: authenticatedUserId,
+                  membershipId: whopMembership.id,
+                  email: `${authenticatedUserId}@whop.member`, // Placeholder, will be updated by webhook
+                  username,
+                  whopUsername,
+                  referralCode,
+                  creatorId: creator.id,
+                  memberOrigin: 'auto_page_load',
+                  subscriptionPrice: 49.99, // Default, will be updated by webhook
+                },
+              });
+
+              // Create lifecycle record
+              await prisma.memberLifecycle.create({
+                data: {
+                  memberId: newMember.id,
+                  convertedAt: new Date(),
+                  currentStatus: 'active',
+                },
+              });
+
+              logger.info(`[AUTH] ✅ Strategy 5: Auto-created member ${referralCode} for user ${authenticatedUserId}`);
+              member = { id: newMember.id, membershipId: newMember.membershipId };
+            }
+          }
+        }
+      } catch (autoCreateError) {
+        logger.error(`[AUTH] Strategy 5 auto-create failed:`, autoCreateError);
+      }
+    }
+
+    // If member still doesn't exist after all strategies including auto-create
     if (!member) {
-      logger.warn(`[SECURITY] Member not found after all strategies`, {
+      logger.warn(`[SECURITY] Member not found after all strategies (including auto-create)`, {
         experienceId: params.experienceId,
         idType: params.experienceId.startsWith('exp_') ? 'experience' : params.experienceId.startsWith('mem_') ? 'membership' : 'unknown',
         userId: whopContext.userId,
         isAuthenticated: whopContext.isAuthenticated,
-        strategies: 'membershipId lookup, userId lookup, Whop API lookup'
+        canAccess,
+        strategies: 'membershipId lookup, userId lookup, Whop API lookup, creator association, auto-create'
       });
 
-      // Return a helpful error page instead of auto-creating with wrong creator
+      // Return a helpful error page with more diagnostic info
       return (
         <div className="min-h-screen bg-[#0F0F0F] flex items-center justify-center p-4">
           <div className="max-w-md w-full bg-[#1A1A1A] border border-yellow-500/30 rounded-xl p-8 text-center">
@@ -219,8 +264,10 @@ export default async function MemberDashboard({
               >
                 Refresh Page
               </a>
-              <p className="text-gray-600 text-xs">
-                Debug: {params.experienceId.substring(0, 15)}...
+              <p className="text-gray-600 text-xs mt-4">
+                Debug: exp={params.experienceId.substring(0, 12)}... |
+                auth={whopContext.isAuthenticated ? 'yes' : 'no'} |
+                access={canAccess ? 'yes' : 'no'}
               </p>
             </div>
           </div>
